@@ -1,0 +1,24 @@
+.ant-tag {
+    display: inline-block;
+    line-height: 20px;
+    height: 22px;
+    padding: 0 12px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, .5);
+    font-size: 12px;
+    transition: all 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86);
+    opacity: 1;
+    margin-top: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.ant-tag-pink {
+    color: #f5317f;
+    background: #fdd8e7;
+    border-color: #fdd8e7;
+}
+.ant-tag-orange {
+    color: #f56a00;
+    background: #fde3cf;
+    border-color: #fde3cf;
+}

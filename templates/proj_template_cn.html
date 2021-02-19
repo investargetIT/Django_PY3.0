@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>多维海拓 Investarget</title>
+    <link rel="shortcut icon" href="/static/image/logo.png" type="image/x-icon">
+    <link rel="stylesheet" href="/static/css/style.css" />
+    <style>
+    body {
+        font-family: sans-serif;
+    }
+    td {
+        text-align: center;
+        line-height: 22px;
+    }
+    p, h3 {
+        margin: 0;
+    }
+    .info-container {
+        overflow: auto;
+        line-height: 20px;
+        font-family: sans-serif;
+        font-size: 14px;
+        color: black;
+    }
+    .info-label {
+        float: left;
+        width: 100px;
+        text-align: right;
+        font-weight: 600;
+    }
+    .info-content, .detail-content {
+        font-size: 13px;
+        font-weight: 100;
+    }
+    .detail-label {
+        font-weight: 600;
+        margin: 10px 0;
+        font-size: 15px;
+        line-height: 32px;
+        padding-left: 10px;
+        border-left: 2px solid rgb(0, 95, 175);
+    }
+    .info-content {
+        margin-left: 120px;
+    }
+    .detail-content {
+        margin-left: 10px;
+        line-height: 1.6;
+    }
+    .even {
+        background: rgb(241, 241, 241);
+    }
+    .finance-value {
+        font-weight: 100;
+    }
+    .finance-label {
+        font-weight: 600;
+    }
+    </style>
+</head>
+<body style="margin: 0">
+    <div style="width: 773px;height: 1096px;overflow: hidden;position: relative;" class="ant-layout">
+            
+        <div style="padding-left: 20px; background: rgb(0, 95, 175); color: white; line-height: 84px">
+            <h1 style="margin: 0;font-family: sans-serif;font-size: 24px;font-weight: 300">{{ project.projtitleC }}</h1>
+        </div>
+
+        <div style="padding: 20px">
+
+            <div style="overflow: auto">
+            
+                <div style="float: left">
+
+                    <div class="info-container">
+                        <div class="info-label">交易类型</div>
+                        <div class="info-content">{{ project.transactionType.0.nameC }}</div>
+                    </div>
+
+                    <div class="info-container">
+                        <div class="info-label">行业</div>
+                        <div class="info-content">{{ project.industries.0.industry.Pindustry.industryC }} , {{ project.industries.0.nameC }}</div>
+                    </div>
+
+                    <div class="info-container">
+                        <div class="info-label">地区</div>
+                        <div class="info-content">{{ project.country.parent.countryC }} , {{ project.country.countryC }}</div>
+                    </div>
+
+                    <div class="info-container">
+                            <div class="info-label">交易规模</div>
+                            {% if project.country.id == 42 and project.currency.id == 1 %}
+    
+                            {% if project.financeAmount %}
+                            <div class="info-content money">CNY {{ project.financeAmount }}</div>
+                            {% else %}
+                            <div class="info-content">N/A</div>
+                            {% endif %}
+    
+                            {% else %}
+    
+                            {% if project.financeAmount_USD %}
+                            <div class="info-content money">USD {{ project.financeAmount_USD }}</div>
+                            {% else %}
+                            <div class="info-content">N/A</div>
+                            {% endif %}
+    
+                            {% endif %}
+                        </div>
+        
+                        <div class="info-container">
+                            <div class="info-label">公司估值</div>
+                            {% if project.country.id == 42 and project.currency.id == 1 %}
+                           
+                            {% if project.companyValuation %}
+                            <div class="info-content money">CNY {{ project.companyValuation }}</div>
+                            {% else %}
+                            <div class="info-content">N/A</div>
+                            {% endif %}
+    
+                            {% else %}
+    
+                            {% if project.companyValuation_USD %}
+                            <div class="info-content money">USD {{ project.companyValuation_USD }}</div>
+                            {% else %}
+                            <div class="info-content">N/A</div>
+                            {% endif %}
+    
+                            {% endif %}
+                        </div>
+                    
+                    <!-- <div class="info-container">
+                        <div class="info-label">项目负责人</div>
+                        <div class="info-content">{{ project.contactPerson }}</div>
+                    </div>
+
+                    <div class="info-container">
+                        <div class="info-label">手机</div>
+                        <div class="info-content mobile">{{ project.phoneNumber }}</div>
+                    </div>
+
+                    <div class="info-container">
+                        <div class="info-label">邮箱</div>
+                        <div class="info-content">{{ project.email }}</div>
+                    </div> -->
+
+                   
+                    <!-- 
+                    <div class="info-container">
+                        <div class="info-label">我的角色</div>
+                        <div class="info-content">{{ project.character.characterC }} </div>
+                    </div>
+                    -->
+
+                </div>
+            
+                <div style="position: relative;float: right">
+                    <img src="{{ project.industries.0.url }}" style="width: 320px; height: 180px;">
+                    <div style="position: absolute;top: 0px;left: 10px">
+                        {% for tag in project.tags %}
+                        <div data-show="true" class="ant-tag ant-tag">
+                            <span class="ant-tag-text" style="font-weight: 100">{{ tag.nameC }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            
+            </div>
+
+            {% if project.p_introducteC != None and project.p_introducteC != "" and project.p_introducteC != "暂无" %}
+            <div id="project-intro" class="detail-container">
+                <h3 class="detail-label">项目简介</h3>
+                <p class="detail-content">{{ project.p_introducteC|safe }}</p>
+            </div>
+            {% endif %}
+
+            {% if project.targetMarketC != None and project.targetMarketC != "" and project.targetMarketC != "暂无" %}
+            <div id="target-market" class="detail-container">
+                <h3 class="detail-label">目标市场</h3>
+                <p id="targetMarket" class="detail-content">
+                    {{ project.targetMarketC }}
+                </p>
+            </div>
+            {%  endif %}
+
+            {% if project.productTechnologyC != None and  project.productTechnologyC != "" and project.productTechnologyC != "暂无" %}
+            <div id="core-product" class="detail-container">
+                <h3 class="detail-label">核心产品</h3>
+                <p id="productTechnology" class="detail-content">{{ project.productTechnologyC }}</p>
+            </div>
+            {% endif %}
+
+            {% if project.businessModelC != None and project.businessModelC != "" and project.businessModelC != "暂无" %}
+            <div id="business-mode" class="detail-container">
+                <h3 class="detail-label">商业模式</h3>
+                <p id="businessModel" class="detail-content">{{ project.businessModelC }}</p>
+            </div>
+            {% endif %}
+
+            {% if project.brandChannelC != None and project.brandChannelC != "" and project.brandChannelC != "暂无" %}
+            <div id="brand-channel" class="detail-container">
+                <h3 class="detail-label">品牌渠道</h3>
+                <p id="brand-channel-content" class="detail-content">{{ project.brandChannelC }}</p>
+            </div>
+            {%  endif %}
+
+            {% if project.managementTeamC != None and project.managementTeamC != "" and project.managementTeamC != '暂无'  %}
+            <div id="management-team" class="detail-container">
+                <h3 class="detail-label">管理团队</h3>
+                <p id="management-team-content" class="detail-content">{{ project.managementTeamC }}</p>
+            </div>
+            {%  endif %}
+
+            {% if project.BusinesspartnersC != None and project.BusinesspartnersC != "" and project.BusinesspartnersC != "暂无" %}
+            <div id="business-partner" class="detail-container">
+                <h3 class="detail-label">商业伙伴</h3>
+                <p id="business-partner-content" class="detail-content">{{ project.BusinesspartnersC }}</p>
+            </div>
+            {%  endif %}
+
+            {% if project.useOfProceedC != None and project.useOfProceedC != "" and project.useOfProceedC != "暂无" %}
+            <div id="money-usage" class="detail-container">
+                <h3 class="detail-label">资金用途</h3>
+                <p id="money-usage-content" class="detail-content">{{ project.useOfProceedC }}</p>
+            </div>
+            {%  endif %}
+
+            {% if project.financingHistoryC != None and project.financingHistoryC != "" and project.financingHistoryC != "暂无" %}
+            <div id="finance-history" class="detail-container">
+                <h3 class="detail-label">融资历史</h3>
+                <p id="finance-history-content" class="detail-content">{{project.financingHistoryC }}</p>
+            </div>
+            {%  endif %}
+            
+            {% if project.operationalDataC != None and project.operationalDataC != "" and project.operationalDataC != "暂无" %}
+            <div id="operate-data">
+                <h3 class="detail-label">经营数据</h3>
+                <p id="operate-data-content" class="detail-content">{{ project.operationalDataC }}</p>
+            </div>
+            {%  endif %}
+
+
+                <div id="finance-data">
+                    <h3 class="detail-label">财务数据</h3>
+                    
+                    <table style="width: 100%;border-collapse: collapse;font-size: 13px">
+
+                        <thead>
+                            <tr>
+                            <th style="width: 25%">
+                            {% if project.country.id == 42 and project.currency.id == 1 %}
+                              CNY
+                            {% else %}
+                              USD
+                            {% endif %}
+                            </th>
+                            {% for item in finance %}
+                            <th>{{ item.fYear }}</th>
+                            {% endfor %}
+                            <tr>
+                        </thead>
+
+                        <tbody id="finance-data-content" style="border: 1px solid rgb(0, 95, 175);border-left: none;border-right: none">
+                            <tr id="revenue-container">
+                              <td class="finance-label">营业收入</td>
+
+                              {% if project.country.id == 42 and project.currency.id == 1 %}
+
+                              {% for item in finance %}
+                              {% if item.revenue %}
+                              <td class="finance-value money revenue">{{ item.revenue }}</td>
+                              {% else %}
+                              <td class="finance-value revenue">N/A</td>
+                              {% endif %}
+                              {% endfor %}
+
+                              {% else %}
+
+                              {% for item in finance %}
+                              {% if item.revenue_USD %}
+                              <td class="finance-value money revenue">{{ item.revenue_USD }}</td>
+                              {% else %}
+                              <td class="finance-value revenue">N/A</td>
+                              {% endif %}
+                              {% endfor %}
+                              
+                              {% endif %}
+                            </tr>
+
+                            <tr id="gross-profit-container">
+                            <td class="finance-label">毛利润</td>
+                            {% for item in finance %}
+                              {% if item.grossProfit %}
+                              <td class="finance-value money gross-profit">{{ item.grossProfit }}</td>
+                              {% else %}
+                              <td class="finance-value gross-profit">N/A</td>
+                              {% endif %}
+                            {% endfor %}
+                            </tr>
+
+                        <tr id="ebitda-container">
+                            <td class="finance-label">EBITDA</td>
+                            {% for item in finance %} {% if item.EBITDA %}
+                            <td class="finance-value money ebitda">{{ item.EBITDA }}</td>
+                            {% else %}
+                            <td class="finance-value ebitda">N/A</td>
+                            {% endif %} {% endfor %}
+                        </tr>
+
+                        <tr id="netincome-container">
+                            <td class="finance-label">净利润</td>
+                            {% if project.country.id == 42 and project.currency.id == 1 %}
+
+                            {% for item in finance %} {% if item.netIncome %}
+                            <td class="finance-value money netincome">{{ item.netIncome }}</td>
+                            {% else %}
+                            <td class="finance-value netincome">N/A</td>
+                            {% endif %} {% endfor %}
+
+                            {% else %}
+                           
+                            {% for item in finance %} {% if item.netIncome_USD %}
+                            <td class="finance-value money netincome">{{ item.netIncome_USD }}</td>
+                            {% else %}
+                            <td class="finance-value netincome">N/A</td>
+                            {% endif %} {% endfor %}
+
+                            {% endif %}
+                        </tr>
+
+                        <tr id="total-asset-container">
+                            <td class="finance-label">总资产</td>
+                            {% for item in finance %} {% if item.totalAsset %}
+                            <td class="finance-value money total-asset">{{ item.totalAsset }}</td>
+                            {% else %}
+                            <td class="finance-value total-asset">N/A</td>
+                            {% endif %} {% endfor %}
+                        </tr>
+
+                        <tr id="stockholder-container">
+                            <td class="finance-label">净资产</td>
+                            {% for item in finance %} {% if item.stockholdersEquity %}
+                            <td class="finance-value money stockholder">{{ item.stockholdersEquity }}</td>
+                            {% else %}
+                            <td class="finance-value stockholder">N/A</td>
+                            {% endif %} {% endfor %}
+                        </tr>
+
+                        <tr id="operation-container">
+                            <td class="finance-label">经营性现金流</td>
+                            {% for item in finance %} {% if item.operationalCashFlow %}
+                            <td class="finance-value money operation">{{ item.operationalCashFlow }}</td>
+                            {% else %}
+                            <td class="finance-value operation">N/A</td>
+                            {% endif %} {% endfor %}
+                        </tr>
+
+                        <tr id="gross-merchan-container">
+                            <td class="finance-label">净现金流</td>
+                            {% for item in finance %} {% if item.grossMerchandiseValue %}
+                            <td class="finance-value money gross-merchan">{{ item.grossMerchandiseValue }}</td>
+                            {% else %}
+                            <td class="finance-value gross-merchan">N/A</td>
+                            {% endif %} {% endfor %}
+                        </tr>
+                        </tbody>
+
+                    </table>
+
+                    
+                
+                </div>
+
+        </div>
+
+        <div style="height: 40px;position: absolute;bottom: 0;border-top: 1px solid rgb(0, 95, 175);">
+            <div style="margin-top: 4px;margin-left: 20px;width: 200px;float: left;"><img style="height: 28px;" src="/static/image/new-logo.png" /></div>
+            <div style="margin-left: 220px;margin-top: 8px;margin-right: 20px;color: #666;font-size: 10px;font-weight: 100;">This information is confidential and was prepared by InvesTarget solely for the use of our client; it is not to be relied on by any 3rd party without Investarget's prior written consent</div>
+        </div>
+
+    </div>
+
+
+    <div id="page-container-1" style="width: 773px;height: 1096px;overflow: hidden;display: none;position: relative;" class="ant-layout">
+    
+        <div style="padding-left: 20px; background: rgb(0, 95, 175); color: white; line-height: 84px">
+            <h1 style="margin: 0;font-family: sans-serif;font-size: 24px;font-weight: 300">{{ project.projtitleC }}</h1>
+        </div>
+    
+        <div id="page-1" style="padding: 20px">
+    
+            <div style="overflow: auto">
+    
+                <div style="float: left">
+    
+                    <div class="info-container">
+                        <div class="info-label">交易类型</div>
+                        <div class="info-content">{{ project.transactionType.0.nameC }}</div>
+                    </div>
+    
+                    <div class="info-container">
+                        <div class="info-label">行业</div>
+                        <div class="info-content">{{ project.industries.0.nameC }}</div>
+                    </div>
+    
+                    <div class="info-container">
+                        <div class="info-label">地区</div>
+                        <div class="info-content">{{ project.country.countryC }}</div>
+                    </div>
+    
+                    <div class="info-container">
+                        <div class="info-label">交易规模</div>
+                        {% if project.country.id == 42 and project.currency.id == 1 %}
+
+                        {% if project.financeAmount %}
+                        <div class="info-content money">CNY {{ project.financeAmount }}</div>
+                        {% else %}
+                        <div class="info-content">N/A</div>
+                        {% endif %}
+
+                        {% else %}
+
+                        {% if project.financeAmount_USD %}
+                        <div class="info-content money">USD {{ project.financeAmount_USD }}</div>
+                        {% else %}
+                        <div class="info-content">N/A</div>
+                        {% endif %}
+
+                        {% endif %}
+                    </div>
+    
+                    <div class="info-container">
+                        <div class="info-label">公司估值</div>
+                        {% if project.country.id == 42 and project.currency.id == 1 %}
+                       
+                        {% if project.companyValuation %}
+                        <div class="info-content money">CNY {{ project.companyValuation }}</div>
+                        {% else %}
+                        <div class="info-content">N/A</div>
+                        {% endif %}
+
+                        {% else %}
+
+                        {% if project.companyValuation_USD %}
+                        <div class="info-content money">USD {{ project.companyValuation_USD }}</div>
+                        {% else %}
+                        <div class="info-content">N/A</div>
+                        {% endif %}
+
+                        {% endif %}
+                    </div>
+    
+                    <!-- <div class="info-container">
+                        <div class="info-label">项目负责人</div>
+                        <div class="info-content">{{ project.contactPerson }}</div>
+                    </div>
+    
+                    <div class="info-container">
+                        <div class="info-label">手机</div>
+                        <div class="info-content mobile">{{ project.phoneNumber }}</div>
+                    </div>
+    
+                    <div class="info-container">
+                        <div class="info-label">邮箱</div>
+                        <div class="info-content">{{ project.email }}</div>
+                    </div> -->
+    
+    
+                    <!-- 
+                        <div class="info-container">
+                            <div class="info-label">我的角色</div>
+                            <div class="info-content">{{ project.character.characterC }} </div>
+                        </div>
+                        -->
+    
+                </div>
+    
+                <div style="position: relative;float: right">
+                    <img src="{{ project.industries.0.url }}" style="width: 320px; height: 180px;">
+                    <div style="position: absolute;top: 0px;left: 10px">
+                        {% for tag in project.tags %}
+                        <div data-show="true" class="ant-tag ant-tag">
+                            <span class="ant-tag-text" style="font-weight: 100">{{ tag.nameC }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+    
+            </div>
+    
+    
+    
+        </div>
+
+        <div style="height: 40px;position: absolute;bottom: 0;border-top: 1px solid rgb(0, 95, 175);">
+            <div style="margin-top: 4px;margin-left: 20px;width: 200px;float: left;"><img style="height: 28px;" src="/static/image/new-logo.png" /></div>
+            <div style="margin-left: 220px;margin-top: 8px;margin-right: 20px;color: #666;font-size: 10px;font-weight: 100;">This information is confidential and was prepared by InvesTarget solely for the use of our client; it is not to be relied on by any 3rd party without Investarget's prior written consent</div>
+        </div>
+
+    </div>
+
+    <div id="page-container-2" style="width: 773px;height: 1096px;overflow: hidden;display: none;position: relative;" class="ant-layout">
+    
+        <div style="padding-left: 20px; background: rgb(0, 95, 175); color: white; line-height: 84px">
+            <h1 style="margin: 0;font-family: sans-serif;font-size: 24px;font-weight: 300">{{ project.projtitleC }}</h1>
+        </div>
+    
+        <div id="page-2" style="padding: 20px">
+    
+            <div style="overflow: auto">
+    
+                <div style="float: left">
+    
+                    <div class="info-container">
+                        <div class="info-label">交易类型</div>
+                        <div class="info-content">{{ project.transactionType.0.nameC }}</div>
+                    </div>
+    
+                    <div class="info-container">
+                        <div class="info-label">行业</div>
+                        <div class="info-content">{{ project.industries.0.nameC }}</div>
+                    </div>
+    
+                    <div class="info-container">
+                        <div class="info-label">地区</div>
+                        <div class="info-content">{{ project.country.countryC }}</div>
+                    </div>
+    
+                    <div class="info-container">
+                            <div class="info-label">交易规模</div>
+                            {% if project.country.id == 42 and project.currency.id == 1 %}
+    
+                            {% if project.financeAmount %}
+                            <div class="info-content money">CNY {{ project.financeAmount }}</div>
+                            {% else %}
+                            <div class="info-content">N/A</div>
+                            {% endif %}
+    
+                            {% else %}
+    
+                            {% if project.financeAmount_USD %}
+                            <div class="info-content money">USD {{ project.financeAmount_USD }}</div>
+                            {% else %}
+                            <div class="info-content">N/A</div>
+                            {% endif %}
+    
+                            {% endif %}
+                        </div>
+        
+                        <div class="info-container">
+                            <div class="info-label">公司估值</div>
+                            {% if project.country.id == 42 and project.currency.id == 1 %}
+                           
+                            {% if project.companyValuation %}
+                            <div class="info-content money">CNY {{ project.companyValuation }}</div>
+                            {% else %}
+                            <div class="info-content">N/A</div>
+                            {% endif %}
+    
+                            {% else %}
+    
+                            {% if project.companyValuation_USD %}
+                            <div class="info-content money">USD {{ project.companyValuation_USD }}</div>
+                            {% else %}
+                            <div class="info-content">N/A</div>
+                            {% endif %}
+    
+                            {% endif %}
+                        </div>
+    
+                    <!-- <div class="info-container">
+                        <div class="info-label">项目负责人</div>
+                        <div class="info-content">{{ project.contactPerson }}</div>
+                    </div>
+    
+                    <div class="info-container">
+                        <div class="info-label">手机</div>
+                        <div class="info-content mobile">{{ project.phoneNumber }}</div>
+                    </div>
+    
+                    <div class="info-container">
+                        <div class="info-label">邮箱</div>
+                        <div class="info-content">{{ project.email }}</div>
+                    </div> -->
+    
+    
+                    <!-- 
+                        <div class="info-container">
+                            <div class="info-label">我的角色</div>
+                            <div class="info-content">{{ project.character.characterC }} </div>
+                        </div>
+                        -->
+    
+                </div>
+    
+                <div style="position: relative;float: right">
+                    <img src="{{ project.industries.0.url }}" style="width: 320px; height: 180px;">
+                    <div style="position: absolute;top: 0px;left: 10px">
+                        {% for tag in project.tags %}
+                        <div data-show="true" class="ant-tag ant-tag">
+                            <span class="ant-tag-text" style="font-weight: 100">{{ tag.nameC }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+    
+            </div>
+    
+    
+    
+        </div>
+
+        <div style="height: 40px;position: absolute;bottom: 0;border-top: 1px solid rgb(0, 95, 175);">
+            <div style="margin-top: 4px;margin-left: 20px;width: 200px;float: left;"><img style="height: 28px;" src="/static/image/new-logo.png" /></div>
+            <div style="margin-left: 220px;margin-top: 8px;margin-right: 20px;color: #666;font-size: 10px;font-weight: 100;">This information is confidential and was prepared by InvesTarget solely for the use of our client; it is not to be relied on by any 3rd party without Investarget's prior written consent</div>
+        </div>
+
+    </div>
+
+    <div id="page-container-3" style="width: 773px;height: 1096px;overflow: hidden;display: none;position: relative;" class="ant-layout">
+    
+        <div style="padding-left: 20px; background: rgb(0, 95, 175); color: white; line-height: 84px">
+            <h1 style="margin: 0;font-family: sans-serif;font-size: 24px;font-weight: 300">{{ project.projtitleC }}</h1>
+        </div>
+    
+        <div id="page-3" style="padding: 20px">
+    
+            <div style="overflow: auto">
+    
+                <div style="float: left">
+    
+                    <div class="info-container">
+                        <div class="info-label">交易类型</div>
+                        <div class="info-content">{{ project.transactionType.0.nameC }}</div>
+                    </div>
+    
+                    <div class="info-container">
+                        <div class="info-label">行业</div>
+                        <div class="info-content">{{ project.industries.0.nameC }}</div>
+                    </div>
+    
+                    <div class="info-container">
+                        <div class="info-label">地区</div>
+                        <div class="info-content">{{ project.country.countryC }}</div>
+                    </div>
+    
+                    <div class="info-container">
+                            <div class="info-label">交易规模</div>
+                            {% if project.country.id == 42 and project.currency.id == 1 %}
+    
+                            {% if project.financeAmount %}
+                            <div class="info-content money">CNY {{ project.financeAmount }}</div>
+                            {% else %}
+                            <div class="info-content">N/A</div>
+                            {% endif %}
+    
+                            {% else %}
+    
+                            {% if project.financeAmount_USD %}
+                            <div class="info-content money">USD {{ project.financeAmount_USD }}</div>
+                            {% else %}
+                            <div class="info-content">N/A</div>
+                            {% endif %}
+    
+                            {% endif %}
+                        </div>
+        
+                        <div class="info-container">
+                            <div class="info-label">公司估值</div>
+                            {% if project.country.id == 42 and project.currency.id == 1 %}
+                           
+                            {% if project.companyValuation %}
+                            <div class="info-content money">CNY {{ project.companyValuation }}</div>
+                            {% else %}
+                            <div class="info-content">N/A</div>
+                            {% endif %}
+    
+                            {% else %}
+    
+                            {% if project.companyValuation_USD %}
+                            <div class="info-content money">USD {{ project.companyValuation_USD }}</div>
+                            {% else %}
+                            <div class="info-content">N/A</div>
+                            {% endif %}
+    
+                            {% endif %}
+                        </div>
+    
+                    <!-- <div class="info-container">
+                        <div class="info-label">项目负责人</div>
+                        <div class="info-content">{{ project.contactPerson }}</div>
+                    </div>
+    
+                    <div class="info-container">
+                        <div class="info-label">手机</div>
+                        <div class="info-content mobile">{{ project.phoneNumber }}</div>
+                    </div>
+    
+                    <div class="info-container">
+                        <div class="info-label">邮箱</div>
+                        <div class="info-content">{{ project.email }}</div>
+                    </div> -->
+    
+    
+                    <!-- 
+                        <div class="info-container">
+                            <div class="info-label">我的角色</div>
+                            <div class="info-content">{{ project.character.characterC }} </div>
+                        </div>
+                        -->
+    
+                </div>
+    
+                <div style="position: relative;float: right">
+                    <img src="{{ project.industries.0.url }}" style="width: 320px; height: 180px;">
+                    <div style="position: absolute;top: 0px;left: 10px">
+                        {% for tag in project.tags %}
+                        <div data-show="true" class="ant-tag ant-tag">
+                            <span class="ant-tag-text" style="font-weight: 100">{{ tag.nameC }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+    
+            </div>
+    
+    
+    
+        </div>
+
+        <div style="height: 40px;position: absolute;bottom: 0;border-top: 1px solid rgb(0, 95, 175);">
+            <div style="margin-top: 4px;margin-left: 20px;width: 200px;float: left;"><img style="height: 28px;" src="/static/image/new-logo.png" /></div>
+            <div style="margin-left: 220px;margin-top: 8px;margin-right: 20px;color: #666;font-size: 10px;font-weight: 100;">This information is confidential and was prepared by InvesTarget solely for the use of our client; it is not to be relied on by any 3rd party without Investarget's prior written consent</div>
+        </div>
+
+    </div>
+
+    <script type="text/javascript">
+
+        var allDetailContentRaw = [
+          "{{ project.targetMarketC|escapejs }}",
+          "{{ project.productTechnologyC|escapejs }}",
+          "{{ project.businessModelC|escapejs }}",
+          "{{ project.brandChannelC|escapejs }}",
+          "{{ project.managementTeamC|escapejs }}",
+          "{{ project.BusinesspartnersC|escapejs }}",
+          "{{ project.useOfProceedC|escapejs }}",
+          "{{project.financingHistoryC|escapejs }}",
+          "{{ project.operationalDataC|escapejs }}",
+        ];
+        var allDetailContentIDs = [
+          'targetMarket',
+          'productTechnology',
+          'businessModel',
+          'brand-channel-content',
+          'management-team-content',
+          'business-partner-content',
+          'money-usage-content',
+          'finance-history-content',
+          'operate-data-content',
+        ];
+        for(var n = 0; n < allDetailContentRaw.length; n++) {
+            var detailValue = allDetailContentRaw[n];
+            detailValue = detailValue.replace(/\n/g, '<br/>');
+            var detailValueHtml = document.getElementById(allDetailContentIDs[n]);
+            if (detailValueHtml === null) continue;
+            detailValueHtml.innerHTML = detailValue;
+        }
+
+        // 将所有美元金额格式化显示
+        var allMoney = document.getElementsByClassName('money');
+        for (var i = 0; i< allMoney.length; i++) {
+            var money = allMoney[i];
+            console.log(money.innerText);
+            var formattedMoney = money.innerText.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            money.innerText = formattedMoney;
+        }
+
+        // 联系方式前加上+号
+        var allMobile = document.getElementsByClassName('mobile');
+        for (var j = 0; j < allMobile.length; j++) {
+            var mobile = allMobile[j];
+            if (mobile.innerText[0] ==='8') {
+                mobile.innerText = '+' + mobile.innerText;
+            }
+        }
+
+        // 财务数据一行如果都为空的话整行不显示
+        var financeData = ['revenue', 'gross-profit', 'ebitda', 'netincome', 'total-asset', 'stockholder', 'operation', 'gross-merchan'];
+        var financeDataContainer = ['revenue-container', 'gross-profit-container', 'ebitda-container', 'netincome-container', 'total-asset-container', 'stockholder-container', 'operation-container', 'gross-merchan-container'];
+        for (var l = 0; l < financeData.length; l++) {
+            var allRevenue = document.getElementsByClassName(financeData[l]);
+            var revenueWithoutValueNum = 0;
+            for (var k = 0; k < allRevenue.length; k++) {
+                var revenue = allRevenue[k];
+                if (revenue.innerText === 'N/A') {
+                    revenueWithoutValueNum++;
+                }
+            }
+            if (revenueWithoutValueNum === allRevenue.length) {
+                var nodeToBeRemoved = document.getElementById(financeDataContainer[l]);
+                nodeToBeRemoved.parentNode.removeChild(nodeToBeRemoved);
+            }
+        }
+        // 如果所有都为空隐藏整个板块
+        var financeDataContent = document.getElementById('finance-data-content');
+        if (financeDataContent.children.length === 0) {
+            var wholeFinanceData = document.getElementById('finance-data');
+            wholeFinanceData.parentNode.removeChild(wholeFinanceData);
+        } else {
+            for (var m = 0; m < financeDataContent.children.length; m++) {
+                if ((m + 1) % 2 === 0) {
+                    financeDataContent.children[m].classList.add('even');
+                }
+            }
+        }
+
+
+        var sections = ['project-intro', 'target-market', 'core-product', 'business-mode', 'brand-channel', 'management-team', 'business-partner', 'money-usage', 'finance-history', 'operate-data', 'finance-data'];
+        var page = 0;
+        for (var a = 0; a < sections.length; a++) {
+            var element = document.getElementById(sections[a]);
+            if (element === null) continue;
+            if (element.offsetTop + element.offsetHeight > 1096 - 40 - 20) {
+                page++;
+                document.getElementById('page-container-' + page).style.display = 'block';
+                for (var b = a; b < sections.length; b++) {
+                    var old = document.getElementById(sections[b]);
+                    if (old === null) continue;
+                    document.getElementById('page-' + page).appendChild(old);
+                }
+            }
+        }
+
+     </script>
+</body>
+
+</html>
