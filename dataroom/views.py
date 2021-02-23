@@ -32,8 +32,6 @@ import datetime
 from django_filters import FilterSet
 import os
 import shutil
-reload(sys)
-sys.setdefaultencoding("utf-8")
 
 class DataroomFilter(FilterSet):
     supportuser = RelationFilter(filterstr='proj__supportUser',lookup_method='in')
@@ -1146,7 +1144,7 @@ class User_Dataroom_TemplateView(viewsets.ModelViewSet):
                 user_dataroomserializer = User_DataroomTemplateCreateSerializer(data=data)
                 if user_dataroomserializer.is_valid():
                     instance = user_dataroomserializer.save()
-                    if data.has_key('password'):
+                    if 'password' in data:
                         dataroom_User_template.objects.filter(is_deleted=False, dataroom=instance.dataroom).update(password=instance.password)
                 else:
                     raise InvestError(code=20071, msg='data有误_%s' % user_dataroomserializer.errors)
@@ -1210,7 +1208,7 @@ class User_Dataroom_TemplateView(viewsets.ModelViewSet):
                 user_dataroomtempserializer = User_DataroomTemplateCreateSerializer(user_dataroom_temp, data=data)
                 if user_dataroomtempserializer.is_valid():
                     instance = user_dataroomtempserializer.save()
-                    if data.has_key('password'):
+                    if 'password' in data:
                         dataroom_User_template.objects.filter(is_deleted=False, dataroom=instance.dataroom).update(password=instance.password)
                 else:
                     raise InvestError(code=20071, msg='data有误_%s' % user_dataroomtempserializer.errors)

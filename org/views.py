@@ -1697,7 +1697,7 @@ def makeExportOrgExcel():
                                                             if invesdic:
                                                                 if isinstance(invesdic, dict):
                                                                     invest_with_list.append(invesdic.get('invst_name', ''))
-                                                                if isinstance(invesdic, unicode):
+                                                                if isinstance(invesdic, str):
                                                                     invest_with_list.append(invesdic)
                                                     invest_with_str = ','.join(invest_with_list)
                                                 else:

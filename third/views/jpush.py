@@ -3,8 +3,7 @@
 import time, random, json,  sys, os
 
 from third.thirdconfig import my_product, apns_production_boolean
-reload(sys)
-sys.setdefaultencoding('utf8')
+
 sys.path.insert(0, os.path.dirname(sys.path[0]))
 
 
@@ -33,7 +32,7 @@ import base64
 
 my_secret = '%s:%s'%(my_product['app_key'],my_product['master_secret'])
 #加密
-encode_secret = base64.b64encode(my_secret)
+encode_secret = base64.b64encode(my_secret.encode())
 
 def https_request(app_key, body, url, content_type=None, version=None, params=None):
     https = requests.Session()

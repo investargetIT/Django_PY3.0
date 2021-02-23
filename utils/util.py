@@ -52,7 +52,7 @@ def cache_delete_patternKey(key):
 #记录request error
 def catchexcption(request):
     now = datetime.datetime.now()
-    if request.META.has_key('HTTP_X_FORWARDED_FOR'):
+    if 'HTTP_X_FORWARDED_FOR' in request.META:
         ip = request.META['HTTP_X_FORWARDED_FOR']
     else:
         ip = request.META['REMOTE_ADDR']
@@ -87,7 +87,7 @@ def deleteExpireDir(rootpath, expire=1):
 
 
 def checkDirCtimeExpire(path, expire=1):
-    filePath = unicode(path, 'utf8')
+    filePath = str(path, 'utf8')
     timeStamp = os.path.getctime(filePath)
     datetimeStruct = datetime.datetime.fromtimestamp(timeStamp)
     if datetimeStruct < (datetime.datetime.now() - datetime.timedelta(hours=24 * expire)):
@@ -241,9 +241,9 @@ def returnDictChangeToLanguage(dictdata,lang=None):
     newdict = {'timezone':'+08:00'}
     if lang == 'en':
         for key,value in dictdata.items():
-            if key[-1] == 'E' and dictdata.has_key(key[0:-1]+'C'):
+            if key[-1] == 'E' and key[0:-1]+'C' in dictdata:
                 newdict[key[0:-1]] = value
-            elif key[-1] == 'C' and dictdata.has_key(key[0:-1]+'E'):
+            elif key[-1] == 'C' and key[0:-1]+'E' in dictdata:
                 pass
             else:
                 if isinstance(value,dict):
@@ -260,9 +260,9 @@ def returnDictChangeToLanguage(dictdata,lang=None):
                     newdict[key] = value
     elif lang == 'cn':
         for key,value in dictdata.items():
-            if key[-1] == 'E' and dictdata.has_key(key[0:-1]+'C'):
+            if key[-1] == 'E' and key[0:-1]+'C' in dictdata:
                 pass
-            elif key[-1] == 'C' and dictdata.has_key(key[0:-1]+'E'):
+            elif key[-1] == 'C' and key[0:-1]+'E' in dictdata:
                 newdict[key[0:-1]] = value
             else:
                 if isinstance(value,dict):
@@ -305,12 +305,15 @@ def requestDictChangeToLanguage(model,dictdata,lang=None):
                 newdict[key] = value
     else:
         for key, value in dictdata.items():
-            if dictdata.has_key(key + 'E') and dictdata.has_key(key + 'C'):
+            if dictdata.has_key(key + 'E') and key + 'C' in dictdata:
                 newdict[key[0:-1] + 'E'] = value
             else:
                 newdict[key] = value
     return newdict
 
+def removeDuclicates(nums):
+  nums[:] = set(nums)
+  return nums
 
 def mySortQuery(queryset, sortfield, desc, created=False):
     '''

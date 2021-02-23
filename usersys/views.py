@@ -627,7 +627,7 @@ class UserView(viewsets.ModelViewSet):
             if user == request.user:
                 if not user.check_password(oldpassword):
                     raise InvestError(code=2001, msg='密码错误')
-                if not password or not isinstance(password, (str,unicode)):
+                if not password or not isinstance(password, str):
                     raise InvestError(code=2001, msg='新密码输入有误')
                 if password == oldpassword:
                     raise InvestError(code=2001, msg='新旧密码不能相同')
@@ -1952,7 +1952,7 @@ def login(request):
         response['permissions'] = perimissions
         response['menulist'] = menulist
         response['is_superuser'] = user.is_superuser
-        if request.META.has_key('HTTP_X_FORWARDED_FOR'):
+        if 'HTTP_X_FORWARDED_FOR' in request.META:
             ip = request.META['HTTP_X_FORWARDED_FOR']
         else:
             ip = request.META['REMOTE_ADDR']

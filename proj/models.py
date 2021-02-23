@@ -13,12 +13,10 @@ from django.db import models
 from sourcetype.models import FavoriteType, ProjectStatus, CurrencyType, Tag, Country, TransactionType, Industry, \
     DataSource, CharacterType, Service,   IndustryGroup
 from usersys.models import MyUser
-import sys
 
 from utils.customClass import InvestError, MyForeignKey, MyModel
 from utils.util import add_perm, rem_perm
-reload(sys)
-sys.setdefaultencoding('utf-8')
+
 
 
 class project(MyModel):

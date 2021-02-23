@@ -5,7 +5,6 @@ import traceback
 import datetime
 
 import requests
-from SUBMAIL_PYTHON_SDK_MAIL_AND_MESSAGE_WITH_ADDRESSBOOK.mail_send import MAILSend
 from SUBMAIL_PYTHON_SDK_MAIL_AND_MESSAGE_WITH_ADDRESSBOOK.mail_xsend import MAILXsend
 from SUBMAIL_PYTHON_SDK_MAIL_AND_MESSAGE_WITH_ADDRESSBOOK.message_xsend import MESSAGEXsend
 from rest_framework.decorators import api_view, throttle_classes
@@ -133,7 +132,7 @@ def xsendEmail(destination,projectsign,vars=None):
 def sendSmscode(request):
     try :
         source = request.META['HTTP_SOURCE']
-        if request.META.has_key('HTTP_X_FORWARDED_FOR'):
+        if 'HTTP_X_FORWARDED_FOR' in request.META:
             ip = request.META['HTTP_X_FORWARDED_FOR']
         else:
             ip = request.META['REMOTE_ADDR']

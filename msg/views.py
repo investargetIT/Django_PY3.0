@@ -28,7 +28,6 @@ from utils.util import logexcption, loginTokenIsAvailable, SuccessResponse, Inve
     catchexcption, returnListChangeToLanguage, returnDictChangeToLanguage, mySortQuery, checkSessionToken, \
     checkRequestToken
 import xml.etree.cElementTree as ET
-requests.packages.urllib3.disable_warnings()
 
 def saveMessage(content,type,title,receiver,sender=None,modeltype=None,sourceid=None):
     try:

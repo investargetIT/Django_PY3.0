@@ -1,7 +1,7 @@
 #coding=utf-8
 import datetime
 import io
-
+from functools import reduce
 import operator
 from django.db import models
 from django.db.models import Q

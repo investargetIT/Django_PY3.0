@@ -969,7 +969,7 @@ class ProjAttachmentView(viewsets.ModelViewSet):
                     newfinances = []
                     for f in attachmentdata:
                         fid = f['id']
-                        if not isinstance(fid,(int,str,unicode)) or not fid:
+                        if not isinstance(fid,(int,str)) or not fid:
                             raise InvestError(2007,msg='attachment[\'id\'] must be a int/str type')
                         projAttachment = self.get_object(fid)
                         if request.user.has_perm('proj.admin_changeproj'):
@@ -1111,7 +1111,7 @@ class ProjFinanceView(viewsets.ModelViewSet):
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
             projid = request.GET.get('proj')
-            if projid and isinstance(projid,(str,int,unicode)):
+            if projid and isinstance(projid,(str,int)):
                 proj = self.get_proj(projid)
             else:
                 raise InvestError(2007, msg='proj 不能为空')
@@ -1183,7 +1183,7 @@ class ProjFinanceView(viewsets.ModelViewSet):
                     for f in financedata:
                         fid = f['id']
                         f.pop('proj')
-                        if not isinstance(fid,(int,str,unicode)) or not fid:
+                        if not isinstance(fid,(int,str)) or not fid:
                             raise InvestError(2007,msg='finances[\'id\'] must be a int/str type')
                         projfinance = self.get_object(fid)
                         if request.user.has_perm('proj.admin_changeproj'):

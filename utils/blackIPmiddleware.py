@@ -15,12 +15,12 @@ class IpMiddleware(MiddlewareMixin):
         # else:
         #     return JSONResponse(InvestErrorResponse(InvestError(8888,msg='source unknown')))
         # clienttype = request.META.get('HTTP_CLIENTTYPE')
-        # if clienttype and isinstance(clienttype,(str,int,unicode)) and clienttype in [1,2,3,4,'1','2','3','4']:
+        # if clienttype and isinstance(clienttype,(str,int)) and clienttype in [1,2,3,4,'1','2','3','4']:
         #     pass
         # else:
         #     return JSONResponse(InvestErrorResponse(InvestError(code=3007)))
         setrequestuser(request)
-        if request.META.has_key('HTTP_X_FORWARDED_FOR'):
+        if 'HTTP_X_FORWARDED_FOR' in request.META:
             ip = request.META['HTTP_X_FORWARDED_FOR']
         else:
             ip = request.META['REMOTE_ADDR']

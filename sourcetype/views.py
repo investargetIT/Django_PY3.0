@@ -1,6 +1,6 @@
 #coding=utf-8
 import traceback
-
+from functools import reduce
 from django.db import transaction
 from rest_framework import filters
 from rest_framework import viewsets
@@ -18,7 +18,7 @@ from sourcetype.serializer import tagSerializer, countrySerializer, industrySeri
     industryGroupSerializer
 from utils.customClass import  JSONResponse, InvestError
 from utils.util import SuccessResponse, InvestErrorResponse, ExceptionResponse, returnListChangeToLanguage, \
-    catchexcption, loginTokenIsAvailable
+    catchexcption, loginTokenIsAvailable, removeDuclicates
 
 
 class TagView(viewsets.ModelViewSet):
@@ -580,42 +580,41 @@ class AndroidAppVersionView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 def getmenulist(user):
-    qslist = []
     allmenuobj = webmenu.objects.all()
     if user.has_perm('dataroom.onlydataroom') and not user.is_superuser:
         return WebMenuSerializer(allmenuobj.filter(id__in=[6,30]),many=True).data
+    qslist = [1, 6, 7, 8, 10, 11, 14, 15, 16, 18, 20, 21, 24, 25, 26, 30]
     if user.has_perm('usersys.admin_getuser'):
-        qslist.append(allmenuobj.filter(id__in=[5]))
+        qslist.extend([5])
     if not user.has_perm('usersys.as_investor') or user.is_superuser:
-        qslist.append(allmenuobj.filter(id__in=[27, 28, 33]))
+        qslist.extend([27, 28, 33])
     if user.has_perm('usersys.as_trader') and not user.is_superuser:
-        qslist.append(allmenuobj.filter(id__in=[12]))
+        qslist.extend([12])
     if user.has_perm('usersys.as_trader') and user.has_perm('usersys.user_adduser'):
-        qslist.append(allmenuobj.filter(id__in=[34, 35]))                        # 周报、OKR
+        qslist.extend([34, 35])                        # 周报、OKR
     if user.has_perm('emailmanage.getemailmanage'):
-        qslist.append(allmenuobj.filter(id__in=[3]))
+        qslist.extend([3])
     if user.has_perm('BD.user_getProjectBD') or user.has_perm('BD.manageProjectBD'): # 项目bd管理
-        qslist.append(allmenuobj.filter(id__in=[22, 23]))
+        qslist.extend([22, 23])
     if user.has_perm('BD.user_getOrgBD') or user.has_perm('BD.manageOrgBD'):         # 机构bd管理
-        qslist.append(allmenuobj.filter(id__in=[2, 23]))
+        qslist.extend([2, 23])
     if user.has_perm('BD.user_getMeetBD') or user.has_perm('BD.manageMeetBD'):         # 会议bd管理
-        qslist.append(allmenuobj.filter(id__in=[29, 23]))
+        qslist.extend([29, 23])
     if user.has_perm('APILog.manage_userinfolog'):#日志查询
-        qslist.append(allmenuobj.filter(id__in=[9]))
+        qslist.extend([9])
     if user.has_perm('msg.user_onlineTest'):  #在线测试
-        qslist.append(allmenuobj.filter(id__in=[36]))
+        qslist.extend([36])
     if user.is_superuser:
-        qslist.append(allmenuobj.filter(id__in=[17, 34]))
+        qslist.extend([17, 34])
     if user.has_perm('proj.admin_addproj') or user.has_perm('proj.user_addproj'):
-        qslist.append(allmenuobj.filter(id__in=[19]))
+        qslist.extend([19])
     if user.has_perm('dataroom.get_companydataroom'):
-        qslist.append(allmenuobj.filter(id__in=[31]))
+        qslist.extend([31])
     if user.has_perm('org.export_org'):
-        qslist.append(allmenuobj.filter(id__in=[28, 32]))
+        qslist.extend([28, 32])
     if user.has_perm('timeline.admin_getline'):
-        qslist.append(allmenuobj.filter(id__in=[4]))
+        qslist.extend([4])
     if user.has_perm('usersys.getProjReport'):
-        qslist.append(allmenuobj.filter(id__in=[37]))
-    qslist.append(allmenuobj.filter(id__in=[1, 6, 7, 8, 10, 11, 14, 15, 16, 18, 20, 21, 24, 25, 26, 30]))
-    qsres = reduce(lambda x,y:x|y,qslist).distinct().filter(is_deleted=False).order_by('index')
+        qslist.extend([37])
+    qsres = allmenuobj.filter(id__in=removeDuclicates(qslist), is_deleted=False).order_by('index')
     return WebMenuSerializer(qsres,many=True).data

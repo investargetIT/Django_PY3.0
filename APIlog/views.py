@@ -24,7 +24,7 @@ def viewprojlog(userid,projid,sourceid):
     userviewprojlog(user=userid,proj=projid,source=sourceid).save()
 
 def apilog(request,modeltype,request_before,request_after,modelID=None,datasource=None,model_name=None):
-    if request.META.has_key('HTTP_X_FORWARDED_FOR'):
+    if 'HTTP_X_FORWARDED_FOR' in request.META:
         ip = request.META['HTTP_X_FORWARDED_FOR']
     else:
         ip = request.META['REMOTE_ADDR']

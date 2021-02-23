@@ -35,7 +35,7 @@ def qiniu_coverupload(request):
             uploaddata = data_dict[key]
         q = qiniu.Auth(ACCESS_KEY, SECRET_KEY)
         filetype = str(uploaddata.name).split('.')[-1]
-        randomPrefix = datetime.datetime.now().strftime('%Y%m%d%H%M%s') + ''.join(random.sample(string.ascii_lowercase, 6))
+        randomPrefix = datetime.datetime.now().strftime('%Y%m%d%H%M%S') + ''.join(random.sample(string.ascii_lowercase, 6))
         inputFileKey = randomPrefix + '.' + filetype
         outputFileKey = randomPrefix + '.' + 'pdf'
         params = {'x:a': 'a'}
@@ -88,7 +88,7 @@ def bigfileupload(request):
             uploaddata = data_dict[key]
         q = qiniu.Auth(ACCESS_KEY, SECRET_KEY)
         filetype = str(uploaddata.name).split('.')[-1]
-        randomPrefix = datetime.datetime.now().strftime('%Y%m%d%H%M%s') + ''.join(
+        randomPrefix = datetime.datetime.now().strftime('%Y%m%d%H%M%S') + ''.join(
             random.sample(string.ascii_lowercase, 6))
         inputFileKey = randomPrefix + '.' + filetype
         outputFileKey = randomPrefix + '.' + 'pdf'
@@ -199,7 +199,7 @@ def qiniuuploadfile(filepath, bucket_name, bucket_key=None):
     q = qiniu.Auth(ACCESS_KEY, SECRET_KEY)
     if not bucket_key:
         filetype = filepath.split('.')[-1]
-        bucket_key = datetime.datetime.now().strftime('%Y%m%d%H%M%s') + ''.join(random.sample(string.ascii_lowercase, 6)) + filetype
+        bucket_key = datetime.datetime.now().strftime('%Y%m%d%H%M%S') + ''.join(random.sample(string.ascii_lowercase, 6)) + filetype
     token = q.upload_token(bucket_name, bucket_key, 3600, policy={}, strict_policy=True)
     ret, info = put_file(token, bucket_key, filepath)
     if info is not None:

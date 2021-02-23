@@ -146,7 +146,7 @@ def sendProjEmailToUser(proj,user,datasource):
         }
         response = xsendEmail(emailaddress, Email_project_sign, varsdict)
         if response.get('status') in ['success', True, 1]:
-            if response.has_key('return'):
+            if 'return' in response:
                 if len(response['return']) > 0:
                     data['isSend'] = True
                     data['send_id'] = response['return'][0].get('send_id')
