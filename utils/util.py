@@ -305,7 +305,7 @@ def requestDictChangeToLanguage(model,dictdata,lang=None):
                 newdict[key] = value
     else:
         for key, value in dictdata.items():
-            if dictdata.has_key(key + 'E') and key + 'C' in dictdata:
+            if key + 'E' in dictdata and key + 'C' in dictdata:
                 newdict[key[0:-1] + 'E'] = value
             else:
                 newdict[key] = value

@@ -215,8 +215,8 @@ class UserView(viewsets.ModelViewSet):
             with transaction.atomic():
                 data = request.data
                 lang = request.GET.get('lang')
-                mobilecode = data.pop('mobilecode', None)
-                mobilecodetoken = data.pop('mobilecodetoken', None)
+                mobilecode = data.get('mobilecode', None)
+                mobilecodetoken = data.get('mobilecodetoken', None)
                 mobile = data.get('mobile')
                 email = data.get('email')
                 source = request.META.get('HTTP_SOURCE')
@@ -232,7 +232,7 @@ class UserView(viewsets.ModelViewSet):
                     raise InvestError(code=2007, msg='mobile、email cannot all be null')
 
                 if not mobilecodetoken or not mobilecode:
-                        raise InvestError(code=20072,msg='验证码缺失')
+                    raise InvestError(code=20072,msg='验证码缺失')
                 try:
                     mobileauthcode = MobileAuthCode.objects.get(mobile=mobile, code=mobilecode, token=mobilecodetoken)
                 except MobileAuthCode.DoesNotExist:
@@ -246,7 +246,7 @@ class UserView(viewsets.ModelViewSet):
                     raise InvestError(code=20042)
                 try:
                     groupname = None
-                    type = data.pop('type', None)
+                    type = data.get('type', None)
                     if type in ['trader', u'trader']:
                         groupname = '初级交易师'
                     elif type in ['investor', u'investor']:
@@ -256,9 +256,9 @@ class UserView(viewsets.ModelViewSet):
                     else:
                         group = Group.objects.get(id=type, datasource=userdatasource)
                 except Exception:
-                    raise InvestError(code=2007,msg='(type)用户类型不可用')
+                    raise InvestError(code=2007,msg='(%s)用户类型不可用' % type)
                 data['groups'] = [group.id]
-                orgname = data.pop('orgname', None)
+                orgname = data.get('orgname', None)
                 if orgname:
                     filters = Q(orgfullname=orgname)
                     orgset = organization.objects.filter(filters,is_deleted=False)
@@ -273,7 +273,7 @@ class UserView(viewsets.ModelViewSet):
                         org.save()
                     data['org'] = org.id
                 user = MyUser(email=email,mobile=mobile,datasource=userdatasource)
-                password = data.pop('password', None)
+                password = data.get('password', None)
                 user.set_password(password)
                 user.save()
                 tags = data.pop('tags', None)
