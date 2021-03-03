@@ -55,10 +55,6 @@ checkrealtion = views.UserRelationView.as_view({
         'post': 'checkUserRelation',
 })
 
-checkFriendship = views.UserFriendshipView.as_view({
-        'post': 'checkUserFriendShip',
-})
-
 
 detail_relationone = views.UserRelationView.as_view({
         'get': 'retrieve',
@@ -158,7 +154,6 @@ urlpatterns = [
     url(r'^event/(?P<pk>\d+)/$', user_events_detail, name='user_events-detail'),
     url(r'^relationship/$', user_relationshiplist, name='user-relationshiplist'),
     url(r'^exist/userrelation/$', checkrealtion, name='user-checkrealtionexist'),
-    url(r'^exist/userfriendship/$', checkFriendship, name='user-checkfriendshipexist'),
     url(r'^relationship/(?P<pk>\d+)/$', detail_relationone, name='user-relationshipone'),
     url(r'^register/$', regist_user),
     url(r'^login/$', views.login),

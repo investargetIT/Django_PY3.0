@@ -30,7 +30,7 @@ import msg.urls
 import emailmanage.urls
 import activity.urls
 import BD.urls
-schema_view = get_swagger_view(title='investarget-api-3.0')
+schema_view = get_swagger_view(title='investarget-api-py3')
 
 urlpatterns = [
     url(r'^$', schema_view)

@@ -1653,24 +1653,6 @@ class UserFriendshipView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable()
-    def checkUserFriendShip(self, request, *args, **kwargs):
-        try:
-            userid = request.data.get('user', None)
-            if not userid:
-                raise InvestError(2007, msg='user 不能空')
-            qs = self.get_queryset().filter(
-                Q(user_id=userid, friend_id=request.user.id, is_deleted=False) | Q(friend_id=userid, user_id=request.user.id, is_deleted=False))
-            if qs.exists():
-                res = True
-            else:
-                res = False
-            return JSONResponse(SuccessResponse(res))
-        except InvestError as err:
-            return JSONResponse(InvestErrorResponse(err))
-        except Exception:
-            catchexcption(request)
-            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 class GroupPermissionView(viewsets.ModelViewSet):
     """
