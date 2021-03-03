@@ -92,7 +92,6 @@ user_friendship = views.UserFriendshipView.as_view({
 })
 
 user_friendship_detail = views.UserFriendshipView.as_view({
-        'put': 'update',
         'delete': 'destroy',
 })
 
@@ -157,13 +156,10 @@ urlpatterns = [
     url(r'^relationship/(?P<pk>\d+)/$', detail_relationone, name='user-relationshipone'),
     url(r'^register/$', regist_user),
     url(r'^login/$', views.login),
-    url(r'^friend/$', user_friendship, name='user-friendship'),
     url(r'^friend/(?P<pk>\d+)/$', user_friendship_detail, name='user-friendship-detail'),
     url(r'^group/$', group_list, name='group-list'),
     url(r'^group/(?P<pk>\d+)/$', group_permission, name='group_permission-detail'),
     url(r'^perm/$', permission, name='permission-list'),
-    url(r'^unuser/$',unreachuser_list, name='unreachuser-list'),
-    url(r'^unuser/(?P<pk>\d+)/$', unreachuser_deteil, name='unreachuser_-detail'),
     url(r'^remark/$',userremark_list, name='userremark-list'),
     url(r'^remark/(?P<pk>\d+)/$', userremark_detail, name='userremark-detail'),
     url(r'^session/$', views.SessionView.as_view()),
