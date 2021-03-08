@@ -1844,47 +1844,52 @@ class PermissionView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
-class SessionView(View):
+@api_view(['GET'])
+@checkRequestToken()
+def getSessionToken(request):
     """
-        get: 获取sessionToken
-        post: 验证sessionToken
+    获取sessionToken
     """
-    def get(self, request, *args, **kwargs):
-        try:
-            session_key = request.COOKIES.get('sid', None)
-            if not session_key:
-                session = SessionStore()
-                session.create()
-                session.update({'stoken': True})
-                session.save()
-            else:
-                session = SessionStore(session_key)
-                session['stoken'] = True
-                session.save()
-            res = JSONResponse(SuccessResponse({}))
-            res.set_cookie('sid', session.session_key, httponly=True)
-            return res
-        except InvestError as err:
-            return JSONResponse(InvestErrorResponse(err))
-        except Exception:
-            catchexcption(request)
-            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
-    def post(self, request, *args, **kwargs):
-        try:
-            session_key = request.COOKIES.get('sid', None)
+    try:
+        session_key = request.COOKIES.get('sid', None)
+        if not session_key:
+            session = SessionStore()
+            session.create()
+            session.update({'stoken': True})
+            session.save()
+        else:
             session = SessionStore(session_key)
-            session_data = session.load()
-            if session_data.get('stoken', None):
-                session.delete()
-            else:
-                raise InvestError(3008)
-            return JSONResponse(SuccessResponse({}))
-        except InvestError as err:
-            return JSONResponse(InvestErrorResponse(err))
-        except Exception:
-            catchexcption(request)
-            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+            session['stoken'] = True
+            session.save()
+        res = JSONResponse(SuccessResponse({}))
+        res.set_cookie('sid', session.session_key, httponly=True)
+        return res
+    except InvestError as err:
+        return JSONResponse(InvestErrorResponse(err))
+    except Exception:
+        catchexcption(request)
+        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+@api_view(['GET'])
+@checkRequestToken()
+def checkRequestSessionToken(request):
+    """
+    验证sessionToken
+    """
+    try:
+        session_key = request.COOKIES.get('sid', None)
+        session = SessionStore(session_key)
+        session_data = session.load()
+        if session_data.get('stoken', None):
+            session.delete()
+        else:
+            raise InvestError(3008)
+        return JSONResponse(SuccessResponse({}))
+    except InvestError as err:
+        return JSONResponse(InvestErrorResponse(err))
+    except Exception:
+        catchexcption(request)
+        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
 @api_view(['POST'])

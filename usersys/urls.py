@@ -86,11 +86,6 @@ user_events_detail = views.UserEventView.as_view({
 })
 
 
-user_friendship = views.UserFriendshipView.as_view({
-        'get': 'list',
-        'post': 'create',
-})
-
 user_friendship_detail = views.UserFriendshipView.as_view({
         'delete': 'destroy',
 })
@@ -143,7 +138,7 @@ urlpatterns = [
     url(r'^regsource$', getRegistSource, name='getRegistSource', ),
     url(r'^mobile$', getFalseMobile, name='getAvaibleFalseMobileNumber', ),
     url(r'^count$', getUserCount, name='getUserCount', ),
-    url(r'^exist/user/$', checkUserAccountExist,name='user-checkUserAccountExist',),
+    url(r'^checkexists/$', checkUserAccountExist,name='user-checkUserAccountExist',),
     url(r'^(?P<pk>\d+)/$', user_detail,name='user-one'),
     url(r'^password/$', find_password ,name='find-password'),
     url(r'^password/(?P<pk>\d+)/$', change_password ,name='change-password'),
@@ -152,7 +147,7 @@ urlpatterns = [
     url(r'^event/$',user_events, name='user_events-list'),
     url(r'^event/(?P<pk>\d+)/$', user_events_detail, name='user_events-detail'),
     url(r'^relationship/$', user_relationshiplist, name='user-relationshiplist'),
-    url(r'^exist/userrelation/$', checkrealtion, name='user-checkrealtionexist'),
+    url(r'^checkrelation/$', checkrealtion, name='user-checkrealtion'),
     url(r'^relationship/(?P<pk>\d+)/$', detail_relationone, name='user-relationshipone'),
     url(r'^register/$', regist_user),
     url(r'^login/$', views.login),
@@ -162,6 +157,7 @@ urlpatterns = [
     url(r'^perm/$', permission, name='permission-list'),
     url(r'^remark/$',userremark_list, name='userremark-list'),
     url(r'^remark/(?P<pk>\d+)/$', userremark_detail, name='userremark-detail'),
-    url(r'^session/$', views.SessionView.as_view()),
+    url(r'^session/$', views.getSessionToken),
+    url(r'^checksession/$', views.checkRequestSessionToken),
     # url(r'^test/$',views.test)
 ]
