@@ -171,7 +171,8 @@ class MySearchFilter(SearchFilter):
                 ]
             qs = queryset.filter(reduce(operator.or_, queries))
             qslist.append(qs)
-        queryset = reduce(lambda x,y:x|y,qslist).distinct()
+        if len(qslist) > 0:
+            queryset = reduce(lambda x,y:x|y, qslist).distinct()
         return queryset
 
 

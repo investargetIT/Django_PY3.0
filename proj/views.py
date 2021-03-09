@@ -132,7 +132,7 @@ class ProjectView(viewsets.ModelViewSet):
                 raise InvestError(code=8888, msg='unavailable source')
             if not max_size:
                 max_size = 10
-            if not skip_count or skip_count < 1:
+            if not skip_count or int(skip_count) < 1:
                 skip_count = 0
             setrequestuser(request)
             queryset = self.filter_queryset(queryset).exclude(id=499)
@@ -185,6 +185,7 @@ class ProjectView(viewsets.ModelViewSet):
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
+            catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
     @loginTokenIsAvailable(['proj.admin_addproj','proj.user_addproj'])
