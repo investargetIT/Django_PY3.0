@@ -627,10 +627,10 @@ class ScheduleView(viewsets.ModelViewSet):
             time = request.GET.get('time')
             queryset = self.filter_queryset(self.queryset.filter(datasource_id=request.user.datasource_id))
             if date:
-                date = datetime.datetime.strptime(date.encode('utf-8'), "%Y-%m-%d")
+                date = datetime.datetime.strptime(date, "%Y-%m-%d")
                 queryset = queryset.filter(scheduledtime__year=date.year,scheduledtime__month=date.month)
             if time:
-                time = datetime.datetime.strptime(time.encode('utf-8'), "%Y-%m-%dT%H:%M:%S")
+                time = datetime.datetime.strptime(time, "%Y-%m-%dT%H:%M:%S")
                 queryset = queryset.filter(scheduledtime__gt=time)
             if request.user.has_perm('msg.admin_manageSchedule'):
                 queryset = queryset
@@ -650,6 +650,7 @@ class ScheduleView(viewsets.ModelViewSet):
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
+            catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
