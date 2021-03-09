@@ -875,7 +875,7 @@ def getICSFile(data):
     calendar = MyCalendar(calendar_name)
     add_CalendarEvent(calendar, summary, startDate, endDate, description, location)
     calendar.save_as_ics_file(path)
-    return os.path.join(path, '{}.ics'.format(calendar_name)).decode('utf-8')
+    return os.path.join(path, '{}.ics'.format(calendar_name))
 
 
 class InternOnlineTestView(viewsets.ModelViewSet):

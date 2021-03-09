@@ -231,7 +231,7 @@ class MyUploadProgressRecorder(UploadProgressRecorder):
     #
     def get_upload_record(self, file_name, key):
         key = '{0}.{1}.doc'.format(key,'p')
-        key = base64.urlsafe_b64encode(key.encode('utf-8'))
+        key = base64.urlsafe_b64encode(key.encode('utf-8')).decode('utf-8')
         upload_record_file_path = os.path.join(self.record_folder,
                                                key)
         if not os.path.isfile(upload_record_file_path):
@@ -242,14 +242,14 @@ class MyUploadProgressRecorder(UploadProgressRecorder):
 
     def set_upload_record(self, file_name, key, data):
         key = '{0}.{1}.doc'.format(key, 'p')
-        key = base64.urlsafe_b64encode(key.encode('utf-8'))
+        key = base64.urlsafe_b64encode(key.encode('utf-8')).decode('utf-8')
         upload_record_file_path = os.path.join(self.record_folder, key)
         with open(upload_record_file_path, 'w') as f:
             json.dump(data, f)
 
     def delete_upload_record(self, file_name, key):
         key = '{0}.{1}.doc'.format(key, 'p')
-        key = base64.urlsafe_b64encode(key.encode('utf-8'))
+        key = base64.urlsafe_b64encode(key.encode('utf-8')).decode('utf-8')
         record_file_path = os.path.join(self.record_folder,
                                         key)
         os.remove(record_file_path)
@@ -311,7 +311,7 @@ class MyCalendar:
             savePath = os.path.join(path, "%s.ics" % self.calendar_name)
         else:
             savePath = "%s.ics" % self.calendar_name
-        ics_text = self.get_ics_text().decode('utf-8')
+        ics_text = self.get_ics_text()
         io.open(savePath, "w", encoding="utf-8").write(ics_text)  # 使用utf8编码生成ics文件，否则日历软件打开是乱码
 
     def open_ics_file(self):
