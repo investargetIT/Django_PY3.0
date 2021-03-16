@@ -20,21 +20,23 @@ from dataroom.models import dataroom_User_file
 from dataroom.views import pulishProjectCreateDataroom
 from invest.settings import PROJECTPDF_URLPATH, APILOG_PATH
 from proj.models import project, finance, projectTags, projectIndustries, projectTransactionType, favoriteProject, \
-    ShareToken, attachment, projServices, projTraders
+    ShareToken, attachment, projServices, projTraders, projectTaxiRecord
 from proj.serializer import ProjSerializer, FinanceSerializer, ProjCreatSerializer, \
     ProjCommonSerializer, FinanceChangeSerializer, FinanceCreateSerializer, FavoriteSerializer, \
-    FavoriteCreateSerializer, ProjAttachmentSerializer, ProjListSerializer_admin , ProjListSerializer_user, \
-    ProjDetailSerializer_admin_withoutsecretinfo, ProjDetailSerializer_admin_withsecretinfo, ProjDetailSerializer_user_withoutsecretinfo, \
+    FavoriteCreateSerializer, ProjAttachmentSerializer, ProjListSerializer_admin, ProjListSerializer_user, \
+    ProjDetailSerializer_admin_withoutsecretinfo, ProjDetailSerializer_admin_withsecretinfo, \
+    ProjDetailSerializer_user_withoutsecretinfo, \
     ProjDetailSerializer_user_withsecretinfo, ProjAttachmentCreateSerializer, ProjIndustryCreateSerializer, \
-    ProjDetailSerializer_all, ProjTradersCreateSerializer, ProjTradersSerializer
+    ProjDetailSerializer_all, ProjTradersCreateSerializer, ProjTradersSerializer, TaxiRecordSerializer
 from sourcetype.models import Tag, TransactionType, DataSource, Service
 from third.views.qiniufile import deleteqiniufile
 from usersys.models import MyUser
 from utils.somedef import addWaterMark, file_iterator
 from utils.sendMessage import sendmessage_favoriteproject, sendmessage_projectpublish
-from utils.util import catchexcption, read_from_cache, write_to_cache, loginTokenIsAvailable, returnListChangeToLanguage, \
+from utils.util import catchexcption, read_from_cache, write_to_cache, loginTokenIsAvailable, \
+    returnListChangeToLanguage, \
     returnDictChangeToLanguage, SuccessResponse, InvestErrorResponse, ExceptionResponse, setrequestuser, \
-    setUserObjectPermission, cache_delete_key, checkrequesttoken, logexcption
+    setUserObjectPermission, cache_delete_key, checkrequesttoken, logexcption, mySortQuery
 from utils.customClass import JSONResponse, InvestError, RelationFilter
 from django_filters import FilterSet
 
@@ -1446,6 +1448,40 @@ class ProjectFavoriteView(viewsets.ModelViewSet):
         except Exception:
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+class ProjTextRecordView(viewsets.ModelViewSet):
+    """
+    list:获取打车订单信息
+    """
+    filter_backends = (filters.DjangoFilterBackend,)
+    queryset = projectTaxiRecord.objects.all().filter(is_deleted=False)
+    filter_fields = ('proj', 'orderNumber', 'orderType', 'startPlace', 'endPlace')
+    serializer_class = TaxiRecordSerializer
+
+    @loginTokenIsAvailable(['usersys.as_trader', 'usersys.as_admin'])
+    def list(self, request, *args, **kwargs):
+        try:
+            page_size = request.GET.get('page_size', 10)
+            page_index = request.GET.get('page_index', 1)
+            lang = request.GET.get('lang', 'cn')
+            queryset = self.filter_queryset(self.queryset.filter(datasource_id=request.user.datasource_id))
+            sortfield = request.GET.get('sort', 'lastmodifytime')
+            desc = request.GET.get('desc', 0)
+            queryset = mySortQuery(queryset, sortfield, desc)
+            try:
+                count = queryset.count()
+                queryset = Paginator(queryset, page_size)
+                queryset = queryset.page(page_index)
+            except EmptyPage:
+                return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(SuccessResponse({'count':count,'data':returnListChangeToLanguage(serializer.data, lang)}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
 
 
 def isProjectTrader(proj_id, user_id):
