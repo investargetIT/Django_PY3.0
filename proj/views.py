@@ -20,14 +20,14 @@ from dataroom.models import dataroom_User_file
 from dataroom.views import pulishProjectCreateDataroom
 from invest.settings import PROJECTPDF_URLPATH, APILOG_PATH
 from proj.models import project, finance, projectTags, projectIndustries, projectTransactionType, favoriteProject, \
-    ShareToken, attachment, projServices, projTraders, projectTaxiRecord
+    ShareToken, attachment, projServices, projTraders, projectDiDiRecord
 from proj.serializer import ProjSerializer, FinanceSerializer, ProjCreatSerializer, \
     ProjCommonSerializer, FinanceChangeSerializer, FinanceCreateSerializer, FavoriteSerializer, \
     FavoriteCreateSerializer, ProjAttachmentSerializer, ProjListSerializer_admin, ProjListSerializer_user, \
     ProjDetailSerializer_admin_withoutsecretinfo, ProjDetailSerializer_admin_withsecretinfo, \
     ProjDetailSerializer_user_withoutsecretinfo, \
     ProjDetailSerializer_user_withsecretinfo, ProjAttachmentCreateSerializer, ProjIndustryCreateSerializer, \
-    ProjDetailSerializer_all, ProjTradersCreateSerializer, ProjTradersSerializer, TaxiRecordSerializer
+    ProjDetailSerializer_all, ProjTradersCreateSerializer, ProjTradersSerializer, DiDiRecordSerializer
 from sourcetype.models import Tag, TransactionType, DataSource, Service
 from third.views.qiniufile import deleteqiniufile
 from usersys.models import MyUser
@@ -1450,14 +1450,14 @@ class ProjectFavoriteView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
-class ProjTextRecordView(viewsets.ModelViewSet):
+class ProjDiDiRecordView(viewsets.ModelViewSet):
     """
     list:获取打车订单信息
     """
     filter_backends = (filters.DjangoFilterBackend,)
-    queryset = projectTaxiRecord.objects.all().filter(is_deleted=False)
+    queryset = projectDiDiRecord.objects.all().filter(is_deleted=False)
     filter_fields = ('proj', 'orderNumber', 'orderType', 'startPlace', 'endPlace')
-    serializer_class = TaxiRecordSerializer
+    serializer_class = DiDiRecordSerializer
 
     @loginTokenIsAvailable(['usersys.as_trader', 'usersys.as_admin'])
     def list(self, request, *args, **kwargs):

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from proj.models import project, finance, favoriteProject, attachment, projServices, projectIndustries, projTraders, \
-    projectTaxiRecord
+    projectDiDiRecord
 from sourcetype.serializer import tagSerializer, transactionTypeSerializer, serviceSerializer, countrySerializer, \
     industryWithPIndustrySerializer, countryWithContinentSerializer
 from third.views.qiniufile import getUrlWithBucketAndKey
@@ -535,16 +535,16 @@ class ProjDetailSerializer_all(serializers.ModelSerializer):
         return None
 
 
-class TaxiRecordSerializer(serializers.ModelSerializer):
+class DiDiRecordSerializer(serializers.ModelSerializer):
     proj = ProjSimpleSerializer()
 
     class Meta:
-        model = projectTaxiRecord
+        model = projectDiDiRecord
         exclude = ('createuser', 'deleteduser', 'is_deleted', 'deletedtime', 'lastmodifytime')
 
 class TaxiRecordCreateSerializer(serializers.ModelSerializer):
     proj = ProjSimpleSerializer()
 
     class Meta:
-        model = projectTaxiRecord
+        model = projectDiDiRecord
         fields = '__all__'
