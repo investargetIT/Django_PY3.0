@@ -57,7 +57,7 @@ class dataroom(MyModel):
              update_fields=None):
         if not self.proj:
             raise InvestError(code=7004,msg='proj缺失')
-        if self.proj.projstatus_id < 4:
+        if self.proj.projstatus.id < 4:
             raise InvestError(5003,msg='项目尚未终审发布')
         super(dataroom, self).save(force_insert, force_update, using, update_fields)
 

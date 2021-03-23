@@ -659,11 +659,10 @@ class ScheduleView(viewsets.ModelViewSet):
         try:
             checkSessionToken(request)
             data = request.data
-            map(lambda x: x.update({'createuser': request.user.id if not x.get('createuser') else x['createuser'],
-                                    'manager': request.user.id if not x.get('manager') else x['manager']
-                                    }), data)
             with transaction.atomic():
                 for i in range(0, len(data)):
+                    data[i].update({'createuser': request.user.id if not data[i].get('createuser') else data[i]['createuser'],
+                         'manager': request.user.id if not data[i].get('manager') else data[i]['manager']})
                     if data[i]['type'] == 4 and not data[i].get('meeting'):
                         if request.user.has_perm('msg.createMeeting') or request.user.has_perm('msg.manageMeeting'):
                             pass
@@ -797,7 +796,8 @@ class WebEXUserView(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         try:
             data = request.data
-            map(lambda x: x.update({'createuser': request.user.id if not x.get('createuser') else x['createuser']}), data)
+            for data_one in data:
+                data_one.update({'createuser': request.user.id if not data_one.get('createuser') else data_one['createuser']})
             with transaction.atomic():
                 instanceSerializer = self.serializer_class(data=data, many=True)
                 if instanceSerializer.is_valid():

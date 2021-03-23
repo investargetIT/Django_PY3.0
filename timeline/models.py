@@ -42,9 +42,9 @@ class timeline(MyModel):
              update_fields=None):
         if not self.datasource:
             raise InvestError(20071,msg='datasource/proj/investor/trader cannot be null')
-        if self.proj.projstatus_id < 4:
+        if self.proj.projstatus.id < 4:
             raise InvestError(5003,msg='项目尚未终审发布')
-        if self.trader.userstatus_id != 2:
+        if self.trader.userstatus.id != 2:
             raise InvestError(2022)
         try:
             if self.pk:

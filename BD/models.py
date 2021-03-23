@@ -165,7 +165,7 @@ class OrgBD(MyModel):
             self.isSolved = True
         if self.is_deleted is False:
             if self.proj:
-                if self.proj.projstatus < 4:
+                if self.proj.projstatus.id < 4:
                     raise InvestError(5003,msg='项目尚未终审发布')
         kwargs['automodifytime'] = False
         return super(OrgBD, self).save(*args, **kwargs)

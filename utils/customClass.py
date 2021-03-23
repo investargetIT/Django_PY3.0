@@ -153,7 +153,7 @@ class MySearchFilter(SearchFilter):
 
     def filter_queryset(self, request, queryset, view):
         search_fields = getattr(view, 'search_fields', None)
-        search_terms = map(lambda x: x.strip(), self.get_search_terms(request))
+        search_terms = list(map(lambda x: x.strip(), self.get_search_terms(request)))
 
         if not search_fields or not search_terms:
             return queryset

@@ -1753,13 +1753,13 @@ class GroupPermissionView(viewsets.ModelViewSet):
             with transaction.atomic():
                 data['datasource'] = request.user.datasource.id
                 permissionsIdList = data.get('permissions',None)
-                if not isinstance(permissionsIdList,list):
+                if not isinstance(permissionsIdList, list):
                     raise InvestError(2007,msg='permissions must be an ID list')
                 groupserializer = GroupCreateSerializer(data=data)
                 if groupserializer.is_valid():
                     newgroup = groupserializer.save()
                     permissions = Permission.objects.filter(id__in=permissionsIdList)
-                    map(newgroup.permissions.add, permissions)
+                    newgroup.permissions = permissions
                 else:
                     raise InvestError(code=20071, msg='%s' % groupserializer.errors)
                 return JSONResponse(SuccessResponse(groupserializer.data))
