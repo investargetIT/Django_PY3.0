@@ -87,7 +87,7 @@ def deleteExpireDir(rootpath, expire=1):
 
 
 def checkDirCtimeExpire(path, expire=1):
-    filePath = str(path, 'utf8')
+    filePath = str(path)
     timeStamp = os.path.getctime(filePath)
     datetimeStruct = datetime.datetime.fromtimestamp(timeStamp)
     if datetimeStruct < (datetime.datetime.now() - datetime.timedelta(hours=24 * expire)):
