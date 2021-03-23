@@ -237,27 +237,6 @@ class projectTransactionType(MyModel):
         db_table = "project_TransactionType"
 
 
-class projectDiDiRecord(MyModel):
-    proj = MyForeignKey(project, related_name='project_DiDiRecords')
-    orderNumber = models.CharField(max_length=32, blank=True, help_text='订单号')
-    orderType = models.CharField(max_length=64, null=True, blank=True, help_text='订单类型')
-    orderDate = models.DateTimeField(blank=True, null=True, help_text='订单日期')
-    startPlace = models.TextField(blank=True, null=True, help_text='出发地')
-    endPlace = models.TextField(blank=True, null=True, help_text='目的地')
-    money = models.IntegerField(blank=True, null=True, help_text='车费（单位/分）')
-    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_projDiDiRecords')
-    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_projDiDiRecords')
-
-    class Meta:
-        db_table = "project_didiRecord"
-
-    def save(self, *args, **kwargs):
-        if projectDiDiRecord.objects.exclude(pk=self.pk).filter(orderNumber=self.orderNumber, is_deleted=False).exists():
-            raise InvestError(4010, msg='订单已存在')
-        return super(projectDiDiRecord, self).save(*args, **kwargs)
-
-
-
 #收藏只能 新增/删除/查看/  ，不能修改
 class favoriteProject(MyModel):
     proj = MyForeignKey(project,related_name='proj_favorite')

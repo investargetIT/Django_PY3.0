@@ -43,11 +43,6 @@ proj_attachment = views.ProjAttachmentView.as_view({
         'delete': 'destroy'
 })
 
-
-proj_didiRecord = views.ProjDiDiRecordView.as_view({
-        'get': 'list',
-})
-
 userfavorite_proj = views.ProjectFavoriteView.as_view({
         'get': 'list',
         'post': 'create',
@@ -77,7 +72,6 @@ urlpatterns = [
         url(r'^finance/$', proj_finance, name='proj_finance'),
         url(r'^attachment/$', proj_attachment, name='proj_attachment'),
         url(r'^favorite/$' , userfavorite_proj,name='user_favoriteproj'),
-        url(r'^didi/$', proj_didiRecord, name='proj_didiRecord'),
         url(r'^share/(?P<pk>\d+)/$',getshareprojtoken,name='getshareprojtoken'),
         url(r'^shareproj/$',getshareproj,name='getshareprojdetail'),
         url(r'^pdf/(?P<pk>\d+)/$',getprojpdf,name='getprojpdf'),
