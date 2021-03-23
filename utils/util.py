@@ -32,22 +32,22 @@ def ExceptionResponse(msg):
     return response
 #读
 def read_from_cache(key):
-    value = cache.get(key)
+    value = cache.get(key.encode('utf-8'))
     return value
 #写
 def write_to_cache(key, value, time_out=REDIS_TIMEOUT):
-    cache.set(key, value, time_out)
+    cache.set(key.encode('utf-8'), value, time_out)
 
 #删除全部
 def cache_clearALL():
     cache.clear()
 #删除
 def cache_delete_key(key):
-    cache.delete(key)
+    cache.delete(key.encode('utf-8'))
 
 #批量删除（通配符）
 def cache_delete_patternKey(key):
-    cache.delete_pattern(key)
+    cache.delete_pattern(key.encode('utf-8'))
 
 #记录request error
 def catchexcption(request):
@@ -98,7 +98,7 @@ def checkDirCtimeExpire(path, expire=1):
 
 
 def checkIPAddressCanPass(ip):
-    key = 'ip_%s'%str(ip)
+    key = 'ip_%s'%str(ip).encode('utf-8')
     times = cache.get(key)
     if times:
         if times >= 3:
