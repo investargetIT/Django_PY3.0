@@ -340,7 +340,7 @@ def getRemainingTime(rootpath, file_qs):
         else:
             filesizes = filesizes + filesize
     times = filesizes / downloadSpeed + 2
-    return times
+    return round(times, 2)
 
 
 def checkDirectoryLatestdate(direcory_path, file_qs):
