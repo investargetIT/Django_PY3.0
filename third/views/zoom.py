@@ -31,7 +31,7 @@ def requestOAuthCodeRedirectURI(request):
         token_url = 'https://zoom.us/oauth/token'
         data = {'grant_type': 'authorization_code', 'redirect_uri': zoom_redirect_uri, 'code': code}
         basic = '{0}:{1}'.format(zoom_clientId, zoom_clientSecrect)
-        headers = {'Authorization': 'Basic {}'.format(base64.b64encode(basic))}
+        headers = {'Authorization': 'Basic {}'.format(str(base64.b64encode(basic.encode('utf-8')),'utf-8'))}
         response = requests.post(token_url, data=data, headers=headers)
         if response.status_code == 200:
             access_token = response.json()['access_token']
@@ -55,7 +55,7 @@ def refreshAccessToken():
             raise InvestError(9100, msg='refresh_token不存在')
         data = {'grant_type': 'refresh_token', 'refresh_token': refresh_token}
         basic = '{0}:{1}'.format(zoom_clientId, zoom_clientSecrect)
-        headers = {'Authorization': 'Basic {}'.format(base64.b64encode(basic))}
+        headers = {'Authorization': 'Basic {}'.format(str(base64.b64encode(basic.encode('utf-8')),'utf-8'))}
         response = requests.post(token_url, params=data, headers=headers)
         if response.status_code == 200:
             access_token = response.json()['access_token']
