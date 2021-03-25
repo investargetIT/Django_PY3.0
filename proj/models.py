@@ -238,22 +238,30 @@ class projectTransactionType(MyModel):
 
 
 class projectDiDiRecord(MyModel):
-    proj = MyForeignKey(project, related_name='project_DiDiRecords')
-    orderNumber = models.CharField(max_length=32, blank=True, help_text='订单号')
-    orderType = models.CharField(max_length=64, null=True, blank=True, help_text='订单类型')
-    orderDate = models.DateTimeField(blank=True, null=True, help_text='订单日期')
-    startPlace = models.TextField(blank=True, null=True, help_text='出发地')
-    endPlace = models.TextField(blank=True, null=True, help_text='目的地')
-    money = models.IntegerField(blank=True, null=True, help_text='车费（单位/分）')
+    proj = MyForeignKey(project, blank=True, null=True, related_name='project_DiDiRecords')
+    projName = models.TextField(blank=True, null=True, help_text="项目名称")
+    orderNumber = models.CharField(max_length=32, blank=True, help_text='专快订单号')
+    orderDate = models.DateTimeField(blank=True, null=True, help_text='支付时间')
+    orderPerm = models.CharField(max_length=64, blank=True, null=True, help_text='用车权限')
+    city = models.CharField(max_length=64, blank=True, null=True, help_text='用车城市')
+    startPlace = models.TextField(blank=True, null=True, help_text='实际出发地')
+    endPlace = models.TextField(blank=True, null=True, help_text='实际目的地')
+    money = models.FloatField(blank=True, null=True, help_text='企业实付金额')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_projDiDiRecords')
     createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_projDiDiRecords')
+    datasource = MyForeignKey(DataSource, blank=True, help_text='数据源')
 
     class Meta:
         db_table = "project_didiRecord"
 
     def save(self, *args, **kwargs):
-        if projectDiDiRecord.objects.exclude(pk=self.pk).filter(orderNumber=self.orderNumber, is_deleted=False).exists():
-            raise InvestError(4010, msg='订单已存在')
+        if self.proj:
+            self.datasource = self.proj.datasource
+        if not self.is_deleted:
+            if projectDiDiRecord.objects.exclude(pk=self.pk).filter(orderNumber=self.orderNumber, is_deleted=False).exists():
+                raise InvestError(4010, msg='订单号已存在')
+            if not self.money or (self.money and self.money <= 0):
+               raise InvestError(2007, msg='实际付款不符合条件')
         return super(projectDiDiRecord, self).save(*args, **kwargs)
 
 

@@ -28,7 +28,7 @@ class JSONResponse(HttpResponse):
         super(JSONResponse, self).__init__(content , **kwargs)
 
 class InvestError(Exception):
-    def __init__(self, code,msg=None):
+    def __init__(self, code, msg=None):
         self.code = code
         if msg:
             self.msg = msg

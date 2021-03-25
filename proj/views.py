@@ -1,4 +1,5 @@
 #coding=utf-8
+import csv
 import json
 import os
 import traceback
@@ -27,7 +28,8 @@ from proj.serializer import ProjSerializer, FinanceSerializer, ProjCreatSerializ
     ProjDetailSerializer_admin_withoutsecretinfo, ProjDetailSerializer_admin_withsecretinfo, \
     ProjDetailSerializer_user_withoutsecretinfo, \
     ProjDetailSerializer_user_withsecretinfo, ProjAttachmentCreateSerializer, ProjIndustryCreateSerializer, \
-    ProjDetailSerializer_all, ProjTradersCreateSerializer, ProjTradersSerializer, DiDiRecordSerializer
+    ProjDetailSerializer_all, ProjTradersCreateSerializer, ProjTradersSerializer, DiDiRecordSerializer, \
+    TaxiRecordCreateSerializer
 from sourcetype.models import Tag, TransactionType, DataSource, Service
 from third.views.qiniufile import deleteqiniufile
 from usersys.models import MyUser
@@ -1454,9 +1456,10 @@ class ProjDiDiRecordView(viewsets.ModelViewSet):
     """
     list:获取打车订单信息
     """
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (filters.DjangoFilterBackend, filters.SearchFilter)
     queryset = projectDiDiRecord.objects.all().filter(is_deleted=False)
-    filter_fields = ('proj', 'orderNumber', 'orderType', 'startPlace', 'endPlace')
+    filter_fields = ('proj', 'projName', 'orderNumber', 'orderDate', 'orderPerm', 'city', 'startPlace', 'endPlace')
+    search_fields = ('projName', 'orderPerm', 'city', 'orderNumber')
     serializer_class = DiDiRecordSerializer
 
     @loginTokenIsAvailable(['usersys.as_trader', 'usersys.as_admin'])
@@ -1480,8 +1483,26 @@ class ProjDiDiRecordView(viewsets.ModelViewSet):
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
+            catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
+    @loginTokenIsAvailable(['usersys.as_trader', 'usersys.as_admin'])
+    def create(self, request, *args, **kwargs):
+        try:
+            data = request.data
+            with transaction.atomic():
+                data['createuser'] = request.user.id
+                newInstance = TaxiRecordCreateSerializer(data=data)
+                if newInstance.is_valid():
+                    newInstance.save()
+                else:
+                    raise InvestError(code=4011, msg='打车信息存储失败_%s' % newInstance.error_messages)
+            return JSONResponse(SuccessResponse(newInstance.data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
 def isProjectTrader(proj_id, user_id):
@@ -1509,3 +1530,43 @@ def testPdf(request):
     else:
         res = render(request, 'proj_template_en.html', aaa)
     return res
+
+
+def readDidiRecord(csvFilePath):
+    modelKeyField = {'成本中心名称': 'projName', '成本中心id': 'proj', '专快订单号': 'orderNumber', '支付时间': 'orderDate',
+                     '用车权限': 'orderPerm', '用车城市': 'city', '实际出发地': 'startPlace', '实际目的地': 'endPlace', '企业实付金额': 'money'}
+    values = ['成本中心名称', '成本中心id', '专快订单号', '支付时间', '用车权限', '用车城市', '实际出发地', '实际目的地', '企业实付金额']
+    valuesdic, data_list = {}, []
+    with open(csvFilePath, 'r', encoding='utf-8')as f:
+        f_csv = csv.reader(f)
+        line_count = 0
+        for row in f_csv:
+            line_count += 1
+            if line_count == 1:
+                for i in range(0, len(values)):
+                    for j in range(0, len(row)):
+                        if row[j] == values[i]:
+                            valuesdic[values[i]] = j
+                            break
+            else:
+                data = {'createuser': 1, 'datasource': 1}
+                for key, value in modelKeyField.items():
+                    data.update({value: row[valuesdic[key]].replace('\t', '')})
+                data_list.append(data)
+    return data_list
+
+def importDidiRecord(data_list):
+    for data in data_list:
+        try:
+            newInstance = TaxiRecordCreateSerializer(data=data)
+            if newInstance.is_valid():
+                newInstance.save()
+        except Exception as e:
+            logexcption()
+
+def importDidiRecordCsvFile():
+    csvFilePath = APILOG_PATH['didiRecordCsvFilePath']
+    if os.path.exists(csvFilePath):
+        recordData = readDidiRecord(csvFilePath)
+        importDidiRecord(recordData)
+

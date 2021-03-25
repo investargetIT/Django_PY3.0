@@ -540,10 +540,9 @@ class DiDiRecordSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = projectDiDiRecord
-        exclude = ('createuser', 'deleteduser', 'is_deleted', 'deletedtime', 'lastmodifytime')
+        exclude = ('createuser', 'deleteduser', 'datasource', 'is_deleted', 'deletedtime', 'lastmodifytime')
 
 class TaxiRecordCreateSerializer(serializers.ModelSerializer):
-    proj = ProjSimpleSerializer()
 
     class Meta:
         model = projectDiDiRecord

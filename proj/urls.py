@@ -46,6 +46,7 @@ proj_attachment = views.ProjAttachmentView.as_view({
 
 proj_didiRecord = views.ProjDiDiRecordView.as_view({
         'get': 'list',
+        'post':'create',
 })
 
 userfavorite_proj = views.ProjectFavoriteView.as_view({

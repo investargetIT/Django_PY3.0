@@ -11,6 +11,7 @@ from dataroom.views import downloadDataroomPDFs
 from emailmanage.views import getAllProjectsNeedToSendMail, sendEmailToUser
 from msg.models import schedule
 from org.views import downloadOrgAttachments
+from proj.views import importDidiRecordCsvFile
 from third.views.huanxin import downloadChatMessages
 from third.views.zoom import refreshAccessToken
 from timeline.models import timelineTransationStatu
@@ -67,6 +68,11 @@ def task7_sendWorkReportMsg():
 
 
 
+def task8_importDidiRecordCsv():
+    class task8_Thread(threading.Thread):
+        def run(self):
+            importDidiRecordCsvFile()
+    task8_Thread().start()
 
 
 
