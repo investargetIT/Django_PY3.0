@@ -1567,6 +1567,9 @@ def importDidiRecord(data_list):
 def importDidiRecordCsvFile():
     csvFilePath = APILOG_PATH['didiRecordCsvFilePath']
     if os.path.exists(csvFilePath):
-        recordData = readDidiRecord(csvFilePath)
-        importDidiRecord(recordData)
-
+        try:
+            recordData = readDidiRecord(csvFilePath)
+            importDidiRecord(recordData)
+            os.remove(csvFilePath)
+        except Exception as e:
+            logexcption()
