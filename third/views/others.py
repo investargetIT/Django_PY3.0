@@ -28,8 +28,8 @@ def getcurrencyreat(request):
         scur = request.GET.get('scur', None)
         if not tcur or not scur:
             raise InvestError(20072)
-        response = requests.get('https://sapi.k780.com/?app=finance.rate&scur=%s&tcur=%s&appkey=18220&sign=9b97118c7cf61df11c736c79ce94dcf9'% (scur, tcur)).content
-        response = json.loads(response)
+        response = requests.get('https://api.nowapi.com/?app=finance.rate&scur=%s&tcur=%s&appkey=18220&sign=9b97118c7cf61df11c736c79ce94dcf9'% (scur, tcur)).content
+        response = json.loads(response.decode())
         if isinstance(response,dict):
             success = response.get('success',False)
             if success in ['1',True]:
@@ -54,8 +54,8 @@ def getMobilePhoneAddress(request):
         mobile = request.GET.get('mobile', None)
         if not mobile:
             raise InvestError(20072, msg='mobile 不能为空')
-        response = requests.get('http://api.k780.com/?app=phone.get&phone=%s&appkey=18220&sign=9b97118c7cf61df11c736c79ce94dcf9&format=json' % mobile).content
-        response = json.loads(response)
+        response = requests.get('https://api.nowapi.com/?app=phone.get&phone=%s&appkey=18220&sign=9b97118c7cf61df11c736c79ce94dcf9&format=json' % mobile).content
+        response = json.loads(response.decode())
         if isinstance(response,dict):
             success = response.get('success',False)
             if success in ['1',True]:
