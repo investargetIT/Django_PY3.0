@@ -237,11 +237,8 @@ def convertAndUploadOffice(inputpath, outputpath, bucket_name, bucket_key):
     class convertAndUploadOfficeThread(threading.Thread):
         def run(self):
             try:
-                import time
-                time.sleep(10)
-                commandstr = 'python /opt/openoffice4/program/officeConvert.py %s %s' % (inputpath, outputpath)
-                import commands
-                commands.getstatusoutput(commandstr)  #执行完毕程序才会往下进行
+                import subprocess
+                subprocess.check_output(['unoconv', '-f', 'pdf', inputpath])  # 执行完毕程序才会往下进行
             except ImportError:
                 logexcption(msg='引入模块失败')
             except Exception:
