@@ -136,7 +136,7 @@ class MergeFinanceDataView(viewsets.ModelViewSet):
                 if proj.count() > 0:
                     proj = proj.first()
                     if event.investormerge == 1:
-                        if proj.invse_date < event.date:
+                        if not proj.invse_date or proj.invse_date < event.date:
                             proj.update(invse_date=event.date)
                             proj.update(invse_detail_money=event.money)
                             proj.update(invse_round_id=event.round)
