@@ -1,5 +1,6 @@
 #coding=utf-8
 import json
+import subprocess
 import threading
 import traceback
 import sys
@@ -386,7 +387,8 @@ def startMakeDataroomZip(directory_qs, file_qs, path, watermarkcontent=None, pas
                 if watermarkcontent is not None:
                     addWaterMarkToPdfFiles(filepaths, watermarkcontent)
                 if password is not None:
-                    encryptPdfFilesWithPassword(filepaths, password)
+                    subprocess.run(['python2', '/var/www/encryptPDF.py', self.path, password, APILOG_PATH['excptionlogpath'],
+                         APILOG_PATH['encryptPdfLogPath']], shell=True)  # 执行完毕程序才会往下进行
 
         def zipDirectory(self):
             import zipfile
