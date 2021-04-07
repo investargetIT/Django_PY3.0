@@ -387,10 +387,14 @@ def startMakeDataroomZip(directory_qs, file_qs, path, watermarkcontent=None, pas
                 if watermarkcontent is not None:
                     addWaterMarkToPdfFiles(filepaths, watermarkcontent)
                 if password is not None:
-                    subprocess.run(['python2', '/var/www/encryptPDF.py', self.path, password, APILOG_PATH['excptionlogpath'],
-                         APILOG_PATH['encryptPdfLogPath']], shell=True)  # 执行完毕程序才会往下进行
+                    print('开始加密')
+                    subprocess.check_output(
+                        ['python2', '/var/www/encryptPDF.py', self.path, password, APILOG_PATH['excptionlogpath'],
+                         APILOG_PATH['encryptPdfLogPath']])  # 执行完毕程序才会往下进行
+                    print('加密完成')
 
         def zipDirectory(self):
+            print('加密压缩')
             import zipfile
             zipf = zipfile.ZipFile(self.path + '.zip', 'w')
             pre_len = len(os.path.dirname(self.path))
