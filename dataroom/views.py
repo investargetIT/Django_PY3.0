@@ -394,16 +394,17 @@ def startMakeDataroomZip(directory_qs, file_qs, path, watermarkcontent=None, pas
 
 
         def zipDirectory(self):
-            print('开始压缩')
-            import zipfile
-            zipf = zipfile.ZipFile(self.path + '.zip', 'w')
-            pre_len = len(os.path.dirname(self.path))
-            for parent, dirnames, filenames in os.walk(self.path):
-                for filename in filenames:
-                    pathfile = os.path.join(parent, filename)
-                    arcname = pathfile[pre_len:].strip(os.path.sep)  # 相对路径
-                    zipf.write(pathfile, arcname)
-            zipf.close()
+            print('加密压缩')
+            if not os.path.exists(self.path + '.zip'):
+                import zipfile
+                zipf = zipfile.ZipFile(self.path + '.zip', 'w')
+                pre_len = len(os.path.dirname(self.path))
+                for parent, dirnames, filenames in os.walk(self.path):
+                    for filename in filenames:
+                        pathfile = os.path.join(parent, filename)
+                        arcname = pathfile[pre_len:].strip(os.path.sep)  # 相对路径
+                        zipf.write(pathfile, arcname)
+                zipf.close()
             if os.path.exists(self.path):
                 shutil.rmtree(self.path)
 
