@@ -1,13 +1,10 @@
 import uwsgi
-
+from utils import workerFunc
 
 
 def worker(arguments):
-    func_name = str(arguments.get('func_name'))
-
-
-    module_name = __import__("utils.workerFunc")
-    be_called_function = getattr(module_name, func_name)
+    func_name = arguments.get(b'func_name').decode()
+    be_called_function = getattr(workerFunc, func_name)
     be_called_function(arguments)
     return uwsgi.SPOOL_OK
 
