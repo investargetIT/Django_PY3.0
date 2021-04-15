@@ -1424,5 +1424,5 @@ class DataroomUserDiscussView(viewsets.ModelViewSet):
 def test(request):
     folder_path = request.GET.get('path')
     password = request.GET.get('password')
-    uwsgi.spool({b'folder_path': folder_path.encode(encoding='utf-8'), b'password': password.encode(encoding='utf-8')})
+    uwsgi.spool({b'folder_path': folder_path.encode(encoding='utf-8'), b'password': password.encode(encoding='utf-8'), b'func_name': b'func_makeDataroomZipFile'})
     return JSONResponse(SuccessResponse('done'))
