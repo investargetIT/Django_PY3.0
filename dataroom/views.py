@@ -3,7 +3,7 @@ import json
 import subprocess
 import threading
 import traceback
-import sys
+import uwsgi
 from django.core.paginator import Paginator, EmptyPage
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
@@ -25,7 +25,7 @@ from proj.models import project
 from third.views.qiniufile import deleteqiniufile, downloadFileToPath
 from utils.customClass import InvestError, JSONResponse, RelationFilter
 from utils.sendMessage import sendmessage_dataroomuseradd, sendmessage_dataroomuserfileupdate
-from utils.somedef import file_iterator, addWaterMarkToPdfFiles, encryptPdfFilesWithPassword
+from utils.somedef import file_iterator, addWaterMarkToPdfFiles
 from utils.util import returnListChangeToLanguage, loginTokenIsAvailable, \
     returnDictChangeToLanguage, catchexcption, SuccessResponse, InvestErrorResponse, ExceptionResponse, \
     logexcption, checkrequesttoken, deleteExpireDir
@@ -1419,3 +1419,10 @@ class DataroomUserDiscussView(viewsets.ModelViewSet):
         except Exception:
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+def test(request):
+    folder_path = request.GET.get('path')
+    password = request.GET.get('password')
+    uwsgi.spool({b'folder_path': folder_path.encode(encoding='utf-8'), b'password': password.encode(encoding='utf-8')})
+    return JSONResponse(SuccessResponse('done'))

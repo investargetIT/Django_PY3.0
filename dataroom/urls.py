@@ -118,4 +118,5 @@ urlpatterns = [
     url(r'^discuss/$', user_dataroom_discuss, name='user_dataroom_discuss-list', ),
     url(r'^discuss/group/$', user_dataroom_discuss_group, name='user_dataroom_discuss-group', ),
     url(r'^discuss/(?P<pk>\d+)/$', user_dataroom_discuss_one, name='user_dataroom_discuss_one', ),
+    url(r'^test/$', views.test)
 ]

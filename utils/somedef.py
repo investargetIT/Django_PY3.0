@@ -2,6 +2,7 @@
 import os
 
 import datetime
+import shutil
 import traceback
 from PIL import Image, ImageDraw, ImageFont
 import random
@@ -163,16 +164,42 @@ def addWaterMarkToPdfFiles(pdfpaths, watermarkcontent=None):
         os.remove(watermarkpath)
     return
 
+
+def logEncryptProcess(encryptLogPath, msg):
+    f = open(encryptLogPath, 'a')
+    f.writelines('%s--%s' % (msg, datetime.datetime.now().strftime('%H:%M:%S')) + '\n')
+    f.close()
+
+def zipDirectory(folder):
+    import zipfile
+    zip_path = folder + '.zip'
+    if not os.path.exists(zip_path):
+        zipf = zipfile.ZipFile(zip_path, 'w')
+        pre_len = len(os.path.dirname(folder))
+        for parent, dirnames, filenames in os.walk(folder):
+            for filename in filenames:
+                pathfile = os.path.join(parent, filename)
+                arcname = pathfile[pre_len:].strip(os.path.sep)  # 相对路径
+                zipf.write(pathfile, arcname)
+        zipf.close()
+        if os.path.exists(folder):
+            shutil.rmtree(folder)
+
 '''
 pypdf2加密
 '''
 
-def encryptPdfFilesWithPassword(filepaths, password):
+def encryptPdfFilesWithPassword(foler_path, password):
     try:
-        if password and len(filepaths) > 0:
+        if password and os.path.exists(foler_path):
+            filepaths = []
+            encryptLogPath = os.path.join(APILOG_PATH['encryptPdfLogPath'], datetime.datetime.now().strftime('%Y-%m-%d'))
+            for path, subdirs, files in os.walk(foler_path):
+                for file in files:
+                    if os.path.splitext(file)[-1] == '.pdf':
+                        filepaths.append(os.path.join(path, file))
             for input_filepath in filepaths:
-                now = datetime.datetime.now()
-                print('加密pdf--%s--源文件%s' % (now, input_filepath))
+                logEncryptProcess(encryptLogPath, 'start--%s' % input_filepath)
                 (filepath, tempfilename) = os.path.split(input_filepath)
                 (filename, filetype) = os.path.splitext(tempfilename)
                 out_path = os.path.join(filepath, filename + '-encryout.pdf')
@@ -186,20 +213,20 @@ def encryptPdfFilesWithPassword(filepaths, password):
                         pdf_writer.write(out)
                     os.remove(input_filepath)
                     os.rename(out_path, input_filepath)
+                    logEncryptProcess(encryptLogPath, 'end--%s' % input_filepath)
                 except Exception as err:
+                    logEncryptProcess(encryptLogPath, 'error--%s' % input_filepath)
                     if os.path.exists(out_path) and os.path.exists(input_filepath):
                         os.remove(out_path)
-                    print('加密pdf--%s--源文件%s' % (now, input_filepath))
-                    filepath = APILOG_PATH['excptionlogpath'] + '/' + now.strftime('%Y-%m-%d')
-                    f = open(filepath, 'a')
-                    f.writelines(now.strftime('%H:%M:%S')+ '加密pdf失败（文件路径%s）'% input_filepath  + '\n' + traceback.format_exc() + '\n\n')
+                    excptionLogPath = APILOG_PATH['excptionlogpath'] + '/' + datetime.datetime.now().strftime('%Y-%m-%d')
+                    f = open(excptionLogPath, 'a')
+                    f.writelines(datetime.datetime.now().strftime('%H:%M:%S')+ '加密pdf失败（文件路径%s）'% input_filepath  + '\n' + str(err) + '\n\n')
                     f.close()
+            logEncryptProcess(encryptLogPath, 'encrypt Done--%s' % foler_path)
     except Exception as err:
-        print('加密pdf失败')
-        now = datetime.datetime.now()
-        filepath = APILOG_PATH['excptionlogpath'] + '/' + now.strftime('%Y-%m-%d')
+        filepath = APILOG_PATH['excptionlogpath'] + '/' + datetime.datetime.now().strftime('%Y-%m-%d')
         f = open(filepath, 'a')
-        f.writelines(now.strftime('%H:%M:%S') + '\n' + traceback.format_exc() + '\n\n')
+        f.writelines(datetime.datetime.now().strftime('%H:%M:%S') + '\n' + traceback.format_exc() + '\n\n')
         f.close()
 
 
