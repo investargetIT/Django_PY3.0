@@ -74,6 +74,11 @@ def func_makeDataroomZipFile(arguments):
     encryptPdfFilesWithPassword(folder_path, password)
     zipDirectory(folder_path)
 
+
+def logremainTime(folder_path):
+    pass
+
+
 @spool(pass_arguments=True)
 def makeDataroomZipFile(*args, **kwargs):
     func_makeDataroomZipFile(kwargs)
