@@ -269,9 +269,7 @@ class DataroomView(viewsets.ModelViewSet):
                 else:
                     virtual = None if nowater else str(request.GET.get('water', '').replace('@', '[at]')).split(',')
                     directory_qs = dataroominstance.dataroom_directories.all().filter(is_deleted=False, isFile=False)
-                    # startMakeDataroomZip(directory_qs, file_qs, direcpath, virtual, password)
-                    makeDirWithdirectoryobjs(directory_qs, direcpath)
-                    makeDataroomZipFile.spool(func_name='func_makeDataroomZipFile', folder_path=direcpath, file_qs=file_qs, password=password, virtual=virtual)
+                    makeDataroomZipFile.spool(func_name='func_makeDataroomZipFile', folder_path=direcpath, directory_qs=directory_qs, file_qs=file_qs, password=password, virtual=virtual)
                     response = JSONResponse(SuccessResponse({'code': 8002, 'msg': '文件不存在', 'seconds': seconds}))
             return response
         except InvestError as err:
@@ -335,11 +333,9 @@ class DataroomView(viewsets.ModelViewSet):
 def getRemainingTime(rootpath, file_qs, encrypt):
     downloadSpeed = 2 * 1024 * 1024   # bytes/s
     filesizes = 0
-    allfilesizes = 0
     for file_obj in file_qs:
         path = getPathWithFile(file_obj, rootpath)
         filesize = file_obj.size if file_obj.size else 10 * 1024 * 1024   # 若文件大小丢失，则默认为 10 MB （10*1024*1024 bytes）
-        allfilesizes = allfilesizes + filesize
         if os.path.exists(path):
             if filesize > os.path.getsize(path):
                 filesizes = filesizes + (filesize - os.path.getsize(path))
@@ -347,18 +343,15 @@ def getRemainingTime(rootpath, file_qs, encrypt):
             filesizes = filesizes + filesize
     time = filesizes / downloadSpeed + 2
     if encrypt:
+        encrySize = 0
         dencryptSpeed = 1 * 1024 * 1024  # bytes/s
-        if filesizes > 10 * 1024 * 1024:
-            time = time + allfilesizes / dencryptSpeed + 2
-        else:
-            encrySize = 0
-            for path, subdirs, files in os.walk(rootpath):
-                for file in files:
-                    if os.path.splitext(file)[-1] == '.pdf' and '-encryout.pdf' not in file:
-                        pdf = pdfrw.PdfReader(os.path.join(path, file))
-                        if str(pdf.Encrypt.P) != '-3904':
-                            encrySize = encrySize + os.path.getsize(os.path.join(path, file))
-            time = time + filesizes / dencryptSpeed
+        for file_obj in file_qs:
+            file_path = getPathWithFile(file_obj, rootpath)
+            if os.path.splitext(file_path)[-1] == '.pdf' and '-encryout.pdf' not in file_path:
+                pdf = pdfrw.PdfReader(file_path)
+                if str(pdf.Encrypt.P) != '-3904':
+                    encrySize = encrySize + os.path.getsize(file_path)
+            time = time + encrySize / dencryptSpeed
     return round(time, 2)
 
 
