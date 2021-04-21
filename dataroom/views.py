@@ -270,7 +270,8 @@ class DataroomView(viewsets.ModelViewSet):
                     virtual = None if nowater else str(request.GET.get('water', '').replace('@', '[at]')).split(',')
                     directory_qs = dataroominstance.dataroom_directories.all().filter(is_deleted=False, isFile=False)
                     # startMakeDataroomZip(directory_qs, file_qs, direcpath, virtual, password)
-                    makeDataroomZipFile.spool(func_name='func_makeDataroomZipFile', folder_path=direcpath, directory_qs=directory_qs, file_qs=file_qs, password=password, virtual=virtual)
+                    makeDirWithdirectoryobjs(directory_qs, direcpath)
+                    makeDataroomZipFile.spool(func_name='func_makeDataroomZipFile', folder_path=direcpath, file_qs=file_qs, password=password, virtual=virtual)
                     response = JSONResponse(SuccessResponse({'code': 8002, 'msg': '文件不存在', 'seconds': seconds}))
             return response
         except InvestError as err:

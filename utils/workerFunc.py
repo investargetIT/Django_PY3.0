@@ -1,6 +1,9 @@
 #coding=utf-8
 import os
 import shutil
+import os,django
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "invest.settings")
+django.setup()
 from third.views.qiniufile import downloadFileToPath
 from utils.somedef import encryptPdfFilesWithPassword, zipDirectory, addWaterMarkToPdfFiles
 
@@ -60,9 +63,9 @@ def getPathWithFile(file_obj,rootpath,currentpath=None):
 #     zipDirectory(folder_path)
 
 
-def downloadDataroomFiles(folder_path, file_qs, directory_qs):
+def downloadDataroomFiles(folder_path, file_qs):
     # 建立dataroom各级文件夹
-    makeDirWithdirectoryobjs(directory_qs, folder_path)
+    # makeDirWithdirectoryobjs(directory_qs, folder_path)
     # 下载dataroom文件到对应文件夹下
     filepaths = []
     for file_obj in file_qs:
@@ -82,10 +85,10 @@ def func_makeDataroomZipFile(arguments):
     password = arguments.get('password')
 
     file_qs = arguments.get('file_qs')
-    directory_qs = arguments.get('directory_qs')
+    # directory_qs = arguments.get('directory_qs')
     virtual = arguments.get('virtual')
 
-    filepaths = downloadDataroomFiles(folder_path, file_qs, directory_qs)
+    filepaths = downloadDataroomFiles(folder_path, file_qs)
     addWaterMarkToPdfFiles(filepaths, virtual)
     encryptPdfFilesWithPassword(folder_path, password)
     zipDirectory(folder_path)

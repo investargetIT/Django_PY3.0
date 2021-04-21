@@ -1,6 +1,6 @@
 import uwsgi
 from utils import workerFunc
-from uwsgidecorators import spool
+from uwsgidecorators import *
 
 
 # def worker(arguments):
@@ -20,3 +20,5 @@ def makeDataroomZipFile(arguments):
     func_name = arguments.get('func_name')
     be_called_function = getattr(workerFunc, func_name)
     be_called_function(arguments)
+
+# uwsgi.spooler = makeDataroomZipFile
