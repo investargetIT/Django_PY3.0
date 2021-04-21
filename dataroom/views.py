@@ -350,7 +350,7 @@ def getRemainingTime(rootpath, file_qs, encrypt):
             if os.path.splitext(file_path)[-1] == '.pdf' and '-encryout.pdf' not in file_path:
                 if os.path.exists(file_path):
                     pdf = pdfrw.PdfReader(file_path)
-                    if str(pdf.Encrypt.P) != '-3904':
+                    if pdf.Encrypt and str(pdf.Encrypt.P) != '-3904':
                         encrySize = encrySize + os.path.getsize(file_path)
                 else:
                     filesize = file_obj.size if file_obj.size else 10 * 1024 * 1024
