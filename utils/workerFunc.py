@@ -1,7 +1,6 @@
 #coding=utf-8
 import os
 import shutil
-from dataroom.views import getPathWithFile
 from third.views.qiniufile import downloadFileToPath
 from utils.somedef import encryptPdfFilesWithPassword, zipDirectory, addWaterMarkToPdfFiles
 
@@ -17,6 +16,15 @@ def makeDirWithdirectoryobjs(directory_objs ,rootpath):
             os.makedirs(path)
         except OSError:
             pass
+
+def getPathWithFile(file_obj,rootpath,currentpath=None):
+    if currentpath is None:
+        currentpath = file_obj.filename
+    if file_obj.parent is None:
+        return rootpath + '/' + currentpath
+    else:
+        currentpath = file_obj.parent.filename + '/' + currentpath
+        return getPathWithFile(file_obj.parent, rootpath, currentpath)
 
 # def downloadDataroomFiles(folder_path, file_ids, directory_ids):
 #     # 建立dataroom各级文件夹
