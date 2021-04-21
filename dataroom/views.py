@@ -341,7 +341,7 @@ def getRemainingTime(rootpath, file_qs, encrypt):
                 filesizes = filesizes + (filesize - os.path.getsize(path))
         else:
             filesizes = filesizes + filesize
-    time = filesizes / downloadSpeed + 2
+    time = filesizes / downloadSpeed
     if encrypt:
         encrySize = 0
         dencryptSpeed = 1 * 1024 * 1024  # bytes/s
