@@ -3,15 +3,16 @@ import json
 import subprocess
 import threading
 import traceback
-import uwsgi
+
+import pdfrw
 from django.core.paginator import Paginator, EmptyPage
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
-from django.db.models import F, QuerySet, Q, Count, Max
+from django.db.models import F, Q, Count
 from django.http import StreamingHttpResponse
 from elasticsearch import Elasticsearch
 from rest_framework import filters, viewsets
-
+from utils.worker import makeDataroomZipFile
 from dataroom.models import dataroom, dataroomdirectoryorfile, publicdirectorytemplate, dataroom_User_file, \
     dataroom_User_template, dataroomUserSeeFiles, dataroom_user_discuss
 from dataroom.serializer import DataroomSerializer, DataroomCreateSerializer, DataroomdirectoryorfileCreateSerializer, \
@@ -262,13 +263,14 @@ class DataroomView(viewsets.ModelViewSet):
                 response = JSONResponse(SuccessResponse({'code': 8005, 'msg': '压缩文件已备好', 'seconds': 0}))
             else:
                 checkDirectoryLatestdate(direcpath, file_qs)
-                seconds = getRemainingTime(direcpath, file_qs)
+                seconds = getRemainingTime(direcpath, file_qs, password)
                 if os.path.exists(direcpath):
                     response = JSONResponse(SuccessResponse({'code': 8004, 'msg': '压缩中', 'seconds': seconds}))
                 else:
-                    watermarkcontent = None if nowater else str(request.GET.get('water', '').replace('@', '[at]')).split(',')
+                    virtual = None if nowater else str(request.GET.get('water', '').replace('@', '[at]')).split(',')
                     directory_qs = dataroominstance.dataroom_directories.all().filter(is_deleted=False, isFile=False)
-                    startMakeDataroomZip(directory_qs, file_qs, direcpath, watermarkcontent, password)
+                    # startMakeDataroomZip(directory_qs, file_qs, direcpath, virtual, password)
+                    makeDataroomZipFile.spool(func_name='func_makeDataroomZipFile', folder_path=direcpath, directory_qs=directory_qs, file_qs=file_qs, password=password, virtual=virtual)
                     response = JSONResponse(SuccessResponse({'code': 8002, 'msg': '文件不存在', 'seconds': seconds}))
             return response
         except InvestError as err:
@@ -329,19 +331,34 @@ class DataroomView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-def getRemainingTime(rootpath, file_qs):
+def getRemainingTime(rootpath, file_qs, encrypt):
     downloadSpeed = 2 * 1024 * 1024   # bytes/s
     filesizes = 0
+    allfilesizes = 0
     for file_obj in file_qs:
         path = getPathWithFile(file_obj, rootpath)
         filesize = file_obj.size if file_obj.size else 10 * 1024 * 1024   # 若文件大小丢失，则默认为 10 MB （10*1024*1024 bytes）
+        allfilesizes = allfilesizes + filesize
         if os.path.exists(path):
             if filesize > os.path.getsize(path):
                 filesizes = filesizes + (filesize - os.path.getsize(path))
         else:
             filesizes = filesizes + filesize
-    times = filesizes / downloadSpeed + 2
-    return round(times, 2)
+    time = filesizes / downloadSpeed + 2
+    if encrypt:
+        dencryptSpeed = 1 * 1024 * 1024  # bytes/s
+        if filesizes > 0:
+            time = time + allfilesizes / dencryptSpeed + 2
+        else:
+            encrySize = 0
+            for path, subdirs, files in os.walk(rootpath):
+                for file in files:
+                    if os.path.splitext(file)[-1] == '.pdf' and '-encryout.pdf' not in file:
+                        pdf = pdfrw.PdfReader(os.path.join(path, file))
+                        if str(pdf.Encrypt.P) != '-3904':
+                            encrySize = encrySize + os.path.getsize(os.path.join(path, file))
+            time = time + filesizes / dencryptSpeed
+    return round(time, 2)
 
 
 def checkDirectoryLatestdate(direcory_path, file_qs):
@@ -1420,9 +1437,3 @@ class DataroomUserDiscussView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-
-def test(request):
-    folder_path = request.GET.get('path')
-    password = request.GET.get('password')
-    uwsgi.spool({b'folder_path': folder_path.encode(encoding='utf-8'), b'password': password.encode(encoding='utf-8'), b'func_name': b'func_makeDataroomZipFile'})
-    return JSONResponse(SuccessResponse('done'))

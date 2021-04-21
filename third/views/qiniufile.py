@@ -222,6 +222,7 @@ def downloadFileToPath(key,bucket,path):
         with open(path, "wb") as code:
             code.write(r.content)
     except Exception:
+        logexcption(msg='download error')
         return None
     else:
         return path
