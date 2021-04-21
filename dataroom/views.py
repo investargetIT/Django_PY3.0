@@ -269,6 +269,7 @@ class DataroomView(viewsets.ModelViewSet):
                 else:
                     virtual = None if nowater else str(request.GET.get('water', '').replace('@', '[at]')).split(',')
                     directory_qs = dataroominstance.dataroom_directories.all().filter(is_deleted=False, isFile=False)
+                    os.makedirs(direcpath)
                     makeDataroomZipFile.spool(func_name='func_makeDataroomZipFile', folder_path=direcpath, directory_qs=directory_qs, file_qs=file_qs, password=password, virtual=virtual)
                     response = JSONResponse(SuccessResponse({'code': 8002, 'msg': '文件不存在', 'seconds': seconds}))
             return response
@@ -353,6 +354,9 @@ def getRemainingTime(rootpath, file_qs, encrypt):
                         pdf = pdfrw.PdfReader(file_path)
                         if pdf.Encrypt and str(pdf.Encrypt.P) != '-3904':
                             encrySize = encrySize + os.path.getsize(file_path)
+                        else:
+                            filesize = file_obj.size if file_obj.size else 10 * 1024 * 1024
+                            encrySize = encrySize + filesize
                     except Exception:
                         encrySize = encrySize + os.path.getsize(file_path)
                 else:
