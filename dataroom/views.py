@@ -4,6 +4,8 @@ import subprocess
 import threading
 import traceback
 import sys
+
+import pdfrw
 from django.core.paginator import Paginator, EmptyPage
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
@@ -262,7 +264,7 @@ class DataroomView(viewsets.ModelViewSet):
                 response = JSONResponse(SuccessResponse({'code': 8005, 'msg': '压缩文件已备好', 'seconds': 0}))
             else:
                 checkDirectoryLatestdate(direcpath, file_qs)
-                seconds = getRemainingTime(direcpath, file_qs)
+                seconds = getRemainingTime(direcpath, file_qs, password)
                 if os.path.exists(direcpath):
                     response = JSONResponse(SuccessResponse({'code': 8004, 'msg': '压缩中', 'seconds': seconds}))
                 else:
@@ -329,7 +331,7 @@ class DataroomView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-def getRemainingTime(rootpath, file_qs):
+def getRemainingTime(rootpath, file_qs, encrypt):
     downloadSpeed = 2 * 1024 * 1024   # bytes/s
     filesizes = 0
     for file_obj in file_qs:
@@ -340,8 +342,28 @@ def getRemainingTime(rootpath, file_qs):
                 filesizes = filesizes + (filesize - os.path.getsize(path))
         else:
             filesizes = filesizes + filesize
-    times = filesizes / downloadSpeed + 2
-    return round(times, 2)
+    time = filesizes / downloadSpeed + 2
+    if encrypt:
+        encrySize = 0
+        dencryptSpeed = 2 * 1024 * 1024  # bytes/s
+        for file_obj in file_qs:
+            file_path = getPathWithFile(file_obj, rootpath)
+            if os.path.splitext(file_path)[-1] == '.pdf' and '-encryout.pdf' not in file_path:
+                if os.path.exists(file_path):
+                    try:
+                        pdf = pdfrw.PdfReader(file_path)
+                    except Exception:
+                        encrySize = encrySize + os.path.getsize(file_path)
+                    else:
+                        if pdf.Encrypt and str(pdf.Encrypt.P) == '-3904':
+                            pass
+                        else:
+                            encrySize = encrySize + os.path.getsize(file_path)
+                else:
+                    filesize = file_obj.size if file_obj.size else 10 * 1024 * 1024
+                    encrySize = encrySize + filesize
+            time = time + encrySize / dencryptSpeed + 2
+    return round(time, 2)
 
 
 def checkDirectoryLatestdate(direcory_path, file_qs):
