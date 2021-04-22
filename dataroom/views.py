@@ -345,24 +345,24 @@ def getRemainingTime(rootpath, file_qs, encrypt):
     time = filesizes / downloadSpeed + 2
     if encrypt:
         encrySize = 0
-        dencryptSpeed = 1 * 1024 * 1024  # bytes/s
+        dencryptSpeed = 2 * 1024 * 1024  # bytes/s
         for file_obj in file_qs:
             file_path = getPathWithFile(file_obj, rootpath)
             if os.path.splitext(file_path)[-1] == '.pdf' and '-encryout.pdf' not in file_path:
                 if os.path.exists(file_path):
                     try:
                         pdf = pdfrw.PdfReader(file_path)
-                        if pdf.Encrypt and str(pdf.Encrypt.P) != '-3904':
-                            encrySize = encrySize + os.path.getsize(file_path)
-                        else:
-                            filesize = file_obj.size if file_obj.size else 10 * 1024 * 1024
-                            encrySize = encrySize + filesize
                     except Exception:
                         encrySize = encrySize + os.path.getsize(file_path)
+                    else:
+                        if pdf.Encrypt and str(pdf.Encrypt.P) == '-3904':
+                            pass
+                        else:
+                            encrySize = encrySize + os.path.getsize(file_path)
                 else:
                     filesize = file_obj.size if file_obj.size else 10 * 1024 * 1024
                     encrySize = encrySize + filesize
-            time = time + encrySize / dencryptSpeed + 2
+        time = time + encrySize / dencryptSpeed + 2
     return round(time, 2)
 
 
