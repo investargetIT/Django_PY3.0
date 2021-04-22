@@ -362,7 +362,7 @@ def getRemainingTime(rootpath, file_qs, encrypt):
                 else:
                     filesize = file_obj.size if file_obj.size else 10 * 1024 * 1024
                     encrySize = encrySize + filesize
-            time = time + encrySize / dencryptSpeed + 2
+        time = time + encrySize / dencryptSpeed + 2
     return round(time, 2)
 
 
