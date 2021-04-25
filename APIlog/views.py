@@ -131,7 +131,8 @@ class UserInfoUpdateLogView(viewsets.ModelViewSet):
     queryset = userinfoupdatelog.objects.filter(is_deleted=False)
     serializer_class = UserInfoUpdateLogSerializer
 
-    @loginTokenIsAvailable(['APILog.manage_userinfolog'])
+
+    @loginTokenIsAvailable(['APIlog.manage_userinfolog'])
     def list(self, request, *args, **kwargs):
         try:
             page_size = request.GET.get('page_size', 10)
