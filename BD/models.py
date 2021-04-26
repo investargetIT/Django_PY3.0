@@ -74,7 +74,7 @@ class ProjectBD(MyModel):
         if not self.source:
             if self.source_type == 0:
                 self.source = '全库搜索'
-        if not self.manager.onjob and not self.is_deleted:
+        if not self.pk and not self.manager.onjob:
             raise InvestError(2024)
         return super(ProjectBD, self).save(*args, **kwargs)
 
@@ -150,7 +150,7 @@ class OrgBD(MyModel):
             self.usermobile = self.bduser.mobile
             self.usertitle = self.bduser.title
         self.datasource = self.manager.datasource
-        if not self.manager.onjob and not self.is_deleted:
+        if not self.pk and not self.manager.onjob:
             raise InvestError(2024)
         if not self.is_deleted:
             if self.bduser:
