@@ -3,16 +3,17 @@ import json
 import subprocess
 import threading
 import traceback
+import sys
 
 import pdfrw
 from django.core.paginator import Paginator, EmptyPage
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
-from django.db.models import F, Q, Count
+from django.db.models import F, QuerySet, Q, Count, Max
 from django.http import StreamingHttpResponse
 from elasticsearch import Elasticsearch
 from rest_framework import filters, viewsets
-from utils.worker import makeDataroomZipFile
+
 from dataroom.models import dataroom, dataroomdirectoryorfile, publicdirectorytemplate, dataroom_User_file, \
     dataroom_User_template, dataroomUserSeeFiles, dataroom_user_discuss
 from dataroom.serializer import DataroomSerializer, DataroomCreateSerializer, DataroomdirectoryorfileCreateSerializer, \
@@ -26,7 +27,7 @@ from proj.models import project
 from third.views.qiniufile import deleteqiniufile, downloadFileToPath
 from utils.customClass import InvestError, JSONResponse, RelationFilter
 from utils.sendMessage import sendmessage_dataroomuseradd, sendmessage_dataroomuserfileupdate
-from utils.somedef import file_iterator, addWaterMarkToPdfFiles
+from utils.somedef import file_iterator, addWaterMarkToPdfFiles, encryptPdfFilesWithPassword
 from utils.util import returnListChangeToLanguage, loginTokenIsAvailable, \
     returnDictChangeToLanguage, catchexcption, SuccessResponse, InvestErrorResponse, ExceptionResponse, \
     logexcption, checkrequesttoken, deleteExpireDir
@@ -267,10 +268,9 @@ class DataroomView(viewsets.ModelViewSet):
                 if os.path.exists(direcpath):
                     response = JSONResponse(SuccessResponse({'code': 8004, 'msg': '压缩中', 'seconds': seconds}))
                 else:
-                    virtual = None if nowater else str(request.GET.get('water', '').replace('@', '[at]')).split(',')
+                    watermarkcontent = None if nowater else str(request.GET.get('water', '').replace('@', '[at]')).split(',')
                     directory_qs = dataroominstance.dataroom_directories.all().filter(is_deleted=False, isFile=False)
-                    os.makedirs(direcpath)
-                    makeDataroomZipFile.spool(func_name='func_makeDataroomZipFile', folder_path=direcpath, directory_qs=directory_qs, file_qs=file_qs, password=password, virtual=virtual)
+                    startMakeDataroomZip(directory_qs, file_qs, direcpath, watermarkcontent, password)
                     response = JSONResponse(SuccessResponse({'code': 8002, 'msg': '文件不存在', 'seconds': seconds}))
             return response
         except InvestError as err:
@@ -410,10 +410,10 @@ def startMakeDataroomZip(directory_qs, file_qs, path, watermarkcontent=None, pas
                     addWaterMarkToPdfFiles(filepaths, watermarkcontent)
                 if password is not None:
                     print('开始加密')
-                    subprocess.check_output(
-                        ['python2', '/var/www/encryptPDF.py', self.path, password, APILOG_PATH['excptionlogpath'],
+                    subprocess.check_output(['python3', '/var/www/encryptPDF.py', self.path, password, APILOG_PATH['excptionlogpath'],
                          APILOG_PATH['encryptPdfLogPath']])  # 执行完毕程序才会往下进行
                     print('加密完成')
+
 
         def zipDirectory(self):
             print('加密压缩')
@@ -1441,4 +1441,3 @@ class DataroomUserDiscussView(viewsets.ModelViewSet):
         except Exception:
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
