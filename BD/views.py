@@ -312,9 +312,10 @@ class ProjectBDManagersView(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         try:
             data = request.data
+            projBDinstance = ProjectBD.objects.get(id=data['projectBD'], is_deleted=False)
             if request.user.has_perm('BD.manageProjectBD'):
                 pass
-            elif request.user.has_perm('BD.user_addProjectBD'):
+            elif request.user == projBDinstance.createuser:
                 pass
             else:
                 raise InvestError(2009)
@@ -341,7 +342,9 @@ class ProjectBDManagersView(viewsets.ModelViewSet):
             instance = self.get_object()
             if request.user.has_perm('BD.manageProjectBD'):
                 pass
-            elif request.user.has_perm('BD.user_addProjectBD'):
+            elif request.user == instance.projectBD.createuser:
+                pass
+            elif request.user == instance.createuser:
                 pass
             else:
                 raise InvestError(2009)
