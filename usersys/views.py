@@ -14,13 +14,13 @@ from rest_framework import filters, viewsets
 from rest_framework.decorators import api_view, detail_route, list_route
 
 from APIlog.views import logininlog, apilog
+from dataroom.models import dataroom
 from org.models import organization
 from sourcetype.views import getmenulist
 from third.models import MobileAuthCode
 from third.views.huanxin import registHuanXinIMWithUser, deleteHuanXinIMWithUser
 from third.views.qiniufile import deleteqiniufile
 from third.views.weixinlogin import get_openid
-from timeline.models import timeline
 from usersys.models import MyUser, UserRelation, userTags, UserFriendship, MyToken, UnreachUser, UserRemarks, \
     userAttachments, userEvents, UserContrastThirdAccount, registersourcechoice
 from usersys.serializer import UserSerializer, UserListSerializer, UserRelationSerializer, \
@@ -1279,16 +1279,24 @@ class UserRelationView(viewsets.ModelViewSet):
         try:
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
+            dataroom_id = request.GET.get('dataroom')
             if not page_size:
                 page_size = 10
             else:
                 page_size = 100 if int(page_size) > 100 else page_size
             lang = request.GET.get('lang', 'cn')
             queryset = self.filter_queryset(self.get_queryset())
-            if request.user.has_perm('usersys.admin_getuserrelation'):
-                pass
+            if dataroom_id:
+                dataroominstance = dataroom.objects.get(id=dataroom_id, is_deleted=False)
+                if request.user.has_perm('usersys.admin_getuserrelation') or dataroominstance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+                    queryset = queryset.filter(traderuser__in=dataroominstance.proj.proj_traders.all().filter(is_deleted=False).values_list('user_id'))
+                else:
+                    raise InvestError(2009, msg='没有权限查看该dataroom承揽承做对接投资人')
             else:
-                queryset = queryset.filter(Q(traderuser=request.user) | Q(investoruser=request.user))
+                if request.user.has_perm('usersys.admin_getuserrelation'):
+                    pass
+                else:
+                    queryset = queryset.filter(Q(traderuser=request.user) | Q(investoruser=request.user))
             countres = queryset.values_list('familiar').annotate(Count('familiar'))
             countlist = []
             for manager_count in countres:
