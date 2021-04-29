@@ -347,7 +347,7 @@ class ProjectBDManagersView(viewsets.ModelViewSet):
             elif request.user == instance.createuser:
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='没有相关删除权限')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
