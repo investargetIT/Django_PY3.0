@@ -15,13 +15,13 @@ from elasticsearch import Elasticsearch
 from rest_framework import filters, viewsets
 
 from dataroom.models import dataroom, dataroomdirectoryorfile, publicdirectorytemplate, dataroom_User_file, \
-    dataroom_User_template, dataroomUserSeeFiles, dataroom_user_discuss
+    dataroom_User_template, dataroomUserSeeFiles, dataroom_user_discuss, dataroom_user_readFileRecord
 from dataroom.serializer import DataroomSerializer, DataroomCreateSerializer, DataroomdirectoryorfileCreateSerializer, \
     DataroomdirectoryorfileSerializer, DataroomdirectoryorfileUpdateSerializer, User_DataroomfileSerializer, \
     User_DataroomSerializer, User_DataroomfileCreateSerializer, User_DataroomTemplateSerializer, \
     User_DataroomTemplateCreateSerializer, DataroomdirectoryorfilePathSerializer, User_DataroomSeefilesSerializer, \
     User_DataroomSeefilesCreateSerializer, DataroomUserDiscussSerializer, DataroomUserDiscussCreateSerializer, \
-    DataroomUserDiscussUpdateSerializer
+    DataroomUserDiscussUpdateSerializer, DataroomUserReadFileRecordSerializer
 from invest.settings import APILOG_PATH, HAYSTACK_CONNECTIONS
 from proj.models import project
 from third.views.qiniufile import deleteqiniufile, downloadFileToPath
@@ -1436,6 +1436,90 @@ class DataroomUserDiscussView(viewsets.ModelViewSet):
                 instance.deleteduser = request.user
                 instance.save()
                 return JSONResponse(SuccessResponse({'isDeleted':True}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+
+class DataroomUserReadFileRecordFilter(FilterSet):
+    dataroom = RelationFilter(filterstr='file__dataroom', lookup_method='in')
+    user = RelationFilter(filterstr='user', lookup_method='in')
+    file = RelationFilter(filterstr='file', lookup_method='in')
+    class Meta:
+        model = dataroom_user_readFileRecord
+        fields = ('dataroom', 'user', 'file')
+
+class DataroomUserReadFileRecordView(viewsets.ModelViewSet):
+    """
+        list: 获取用户读取文件时间列表
+        listGroupBy: 获取有标注的dataroom/file列表（groupby（dataroom）/(file)）
+        create: 用户发起提问/标注
+        update: 交易师回复提问/标注
+        destroy: 删除标注
+        """
+    filter_backends = (filters.DjangoFilterBackend,)
+    queryset = dataroom_user_readFileRecord.objects.all().filter(is_deleted=False, file__is_deleted=False)
+    filter_class = DataroomUserReadFileRecordFilter
+    serializer_class = DataroomUserReadFileRecordSerializer
+    Model = dataroom_user_readFileRecord
+
+    @loginTokenIsAvailable()
+    def list(self, request, *args, **kwargs):
+        try:
+            page_size = request.GET.get('page_size', 10)
+            page_index = request.GET.get('page_index', 1)
+            lang = request.GET.get('lang', 'cn')
+            queryset = self.filter_queryset(self.get_queryset())
+            if request.user.has_perm('dataroom.admin_getdataroom'):
+                queryset = queryset
+            else:
+                queryset = queryset.filter(Q(file__in=dataroomUserSeeFiles.objects.filter(is_deleted=False, dataroomUserfile__user=request.user).values_list('file')) |
+                                           Q(file__dataroom__proj__proj_traders__user=request.user, file__dataroom__proj__proj_traders__is_deleted=False)).distinct()
+            sortfield = request.GET.get('sort', 'lastmodifytime')
+            desc = request.GET.get('desc', 1)
+            if desc in ('1', u'1', 1):
+                sortfield = '-' + sortfield
+            queryset = queryset.order_by(sortfield)
+            try:
+                count = queryset.count()
+                queryset = Paginator(queryset, page_size)
+                queryset = queryset.page(page_index)
+            except EmptyPage:
+                return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(
+                SuccessResponse({'count': count, 'data': returnListChangeToLanguage(serializer.data, lang)}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+    @loginTokenIsAvailable()
+    def create(self, request, *args, **kwargs):
+        try:
+            type = request.data.get('type', 0)
+            if type in ('0', u'0', 0):
+                timeField = 'startTime'
+            else:
+                timeField = 'endTime'
+            with transaction.atomic():
+                requestTime = datetime.datetime.now()
+                file = request.data.get('file')
+                if self.queryset.filter(file=file, user=request.user).exists():
+                    self.queryset.filter(file=file, user=request.user).update(**{timeField: requestTime})
+                else:
+                    data = {'user': request.user.id, 'file': file, timeField: requestTime}
+                    serializer = self.serializer_class(data=data)
+                    if serializer.is_valid():
+                        serializer.save()
+                    else:
+                        raise InvestError(code=20071, msg='data有误_%s' % serializer.errors)
+                return JSONResponse(SuccessResponse({timeField: requestTime}))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:

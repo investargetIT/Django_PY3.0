@@ -226,7 +226,31 @@ class dataroom_user_discuss(MyModel):
             if not self.user:
                 raise InvestError(code=2004, msg='user 不能为空')
             if not self.file.isFile:
-                raise InvestError(code=2004, msg='必须是文件类型')
+                raise InvestError(code=2004, msg='file 必须是文件类型')
         return super(dataroom_user_discuss, self).save(*args, **kwargs)
+
+
+class dataroom_user_readFileRecord(MyModel):
+    file = MyForeignKey(dataroomdirectoryorfile, blank=True, related_name='dataroomFile_userReadRecord', on_delete=models.CASCADE)
+    user = MyForeignKey(MyUser, blank=True, related_name='userReadRecord_dataroomFile', on_delete=models.CASCADE)
+    startTime = models.DateTimeField(blank=True, null=True)
+    endTime = models.DateTimeField(blank=True, null=True)
+    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='userCreate_dataroomReadRecord')
+    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='userModify_dataroomuserReadRecord')
+    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userDelete_dataroomReadRecord')
+    datasource = MyForeignKey(DataSource, help_text='数据源', blank=True, default=1)
+
+    class Meta:
+        db_table = 'dataroom_user_readFileRecord'
+
+    def save(self, *args, **kwargs):
+        if not self.datasource:
+            self.datasource = self.user.datasource
+        if not self.is_deleted:
+            if not self.user:
+                raise InvestError(code=20071, msg='user 不能为空')
+            if not self.file.isFile:
+                raise InvestError(code=20071, msg='file 必须是文件类型')
+        return super(dataroom_user_readFileRecord, self).save(*args, **kwargs)
 
 
