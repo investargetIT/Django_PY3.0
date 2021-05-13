@@ -233,8 +233,8 @@ class dataroom_user_discuss(MyModel):
 class dataroom_user_readFileRecord(MyModel):
     file = MyForeignKey(dataroomdirectoryorfile, blank=True, related_name='dataroomFile_userReadRecord', on_delete=models.CASCADE)
     user = MyForeignKey(MyUser, blank=True, related_name='userReadRecord_dataroomFile', on_delete=models.CASCADE)
-    startTime = models.DateTimeField(blank=True, null=True)
-    endTime = models.DateTimeField(blank=True, null=True)
+    startTime = models.DateTimeField(blank=True)
+    endTime = models.DateTimeField(blank=True)
     createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='userCreate_dataroomReadRecord')
     lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='userModify_dataroomuserReadRecord')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userDelete_dataroomReadRecord')
@@ -247,6 +247,10 @@ class dataroom_user_readFileRecord(MyModel):
         if not self.datasource:
             self.datasource = self.user.datasource
         if not self.is_deleted:
+            if not self.startTime:
+                self.startTime = datetime.datetime.now()
+            if not self.endTime:
+                self.endTime = self.startTime
             if not self.user:
                 raise InvestError(code=20071, msg='user 不能为空')
             if not self.file.isFile:

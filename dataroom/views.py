@@ -1511,7 +1511,9 @@ class DataroomUserReadFileRecordView(viewsets.ModelViewSet):
                 requestTime = datetime.datetime.now()
                 file = request.data.get('file')
                 if self.queryset.filter(file=file, user=request.user).exists():
-                    self.queryset.filter(file=file, user=request.user).update(**{timeField: requestTime})
+                    instance = self.queryset.filter(file=file, user=request.user).first()
+                    instance.__dict__.update(**{timeField: requestTime})
+                    instance.save()
                 else:
                     data = {'user': request.user.id, 'file': file, timeField: requestTime}
                     serializer = self.serializer_class(data=data)
