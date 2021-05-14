@@ -249,7 +249,7 @@ class dataroom_user_readFileRecord(MyModel):
         if not self.is_deleted:
             if not self.startTime:
                 self.startTime = datetime.datetime.now()
-            if not self.endTime:
+            if not self.endTime or self.endTime < self.startTime:
                 self.endTime = self.startTime
             if not self.user:
                 raise InvestError(code=20071, msg='user 不能为空')
