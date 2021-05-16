@@ -1455,10 +1455,7 @@ class DataroomUserReadFileRecordFilter(FilterSet):
 class DataroomUserReadFileRecordView(viewsets.ModelViewSet):
     """
         list: 获取用户读取文件时间列表
-        listGroupBy: 获取有标注的dataroom/file列表（groupby（dataroom）/(file)）
-        create: 用户发起提问/标注
-        update: 交易师回复提问/标注
-        destroy: 删除标注
+        create: 记录用户读取时间开始/结束
         """
     filter_backends = (filters.DjangoFilterBackend,)
     queryset = dataroom_user_readFileRecord.objects.all().filter(is_deleted=False, file__is_deleted=False)
