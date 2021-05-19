@@ -416,7 +416,7 @@ def startMakeDataroomZip(directory_qs, file_qs, path, watermarkcontent=None, pas
                     addWaterMarkToPdfFiles(filepaths, watermarkcontent)
                 if password is not None:
                     print('开始加密')
-                    subprocess.check_output(['python3', APILOG_PATH['encryptShellPath'], self.path, password, APILOG_PATH['excptionlogpath'],
+                    subprocess.check_output(['python3', '/var/www/encryptPDF2.py', self.path, password, APILOG_PATH['excptionlogpath'],
                          APILOG_PATH['encryptPdfLogPath']])  # 执行完毕程序才会往下进行
                     print('加密完成')
 
