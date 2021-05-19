@@ -332,37 +332,43 @@ class DataroomView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 def getRemainingTime(rootpath, file_qs, encrypt):
-    downloadSpeed = 2 * 1024 * 1024   # bytes/s
-    filesizes = 0
-    for file_obj in file_qs:
-        path = getPathWithFile(file_obj, rootpath)
-        filesize = file_obj.size if file_obj.size else 10 * 1024 * 1024   # 若文件大小丢失，则默认为 10 MB （10*1024*1024 bytes）
-        if os.path.exists(path):
-            if filesize > os.path.getsize(path):
-                filesizes = filesizes + (filesize - os.path.getsize(path))
-        else:
-            filesizes = filesizes + filesize
-    time = filesizes / downloadSpeed + 2
+    # 若文件大小丢失，则默认为 10 MB （10*1024*1024 bytes）
+    downloadSpeed, dencryptSpeed, missSize = 2 * 1024 * 1024, 2 * 1024 * 1024, 10 * 1024 * 1024    # bytes/s
+    filesizes, encrySize = 0, 0
     if encrypt:
-        encrySize = 0
-        dencryptSpeed = 2 * 1024 * 1024  # bytes/s
-        for file_obj in file_qs:
-            file_path = getPathWithFile(file_obj, rootpath)
-            if os.path.splitext(file_path)[-1] == '.pdf' and '-encryout.pdf' not in file_path:
-                if os.path.exists(file_path):
-                    try:
-                        pdf = pdfrw.PdfReader(file_path)
-                    except Exception:
-                        encrySize = encrySize + os.path.getsize(file_path)
-                    else:
-                        if pdf.Encrypt and str(pdf.Encrypt.P) == '-3904':
-                            pass
-                        else:
-                            encrySize = encrySize + os.path.getsize(file_path)
+        encryptPath = os.path.join(rootpath, 'encrypt')
+        if not os.path.exists(encryptPath):
+            for file_obj in file_qs:
+                path = getPathWithFile(file_obj, rootpath)
+                filesize = file_obj.size if file_obj.size else missSize
+                if os.path.exists(path):
+                    if filesize > os.path.getsize(path):
+                        filesizes = filesizes + (filesize - os.path.getsize(path))
                 else:
-                    filesize = file_obj.size if file_obj.size else 10 * 1024 * 1024
+                    filesizes = filesizes + filesize
+                if os.path.splitext(path)[-1] == '.pdf':
                     encrySize = encrySize + filesize
-        time = time + encrySize / dencryptSpeed + 2
+            time = filesizes / downloadSpeed + encrySize / dencryptSpeed + 2
+        else:
+            with open(encryptPath, 'r') as f:
+                progress = f.readlines()
+            progress = [i.replace('\n', '') for i in progress]
+            for file_obj in file_qs:
+                path = getPathWithFile(file_obj, rootpath)
+                if os.path.splitext(path)[-1] == '.pdf' and path not in progress:
+                    filesize = file_obj.size if file_obj.size else missSize
+                    encrySize = encrySize + filesize
+            time = encrySize / dencryptSpeed + 1
+    else:
+        for file_obj in file_qs:
+            path = getPathWithFile(file_obj, rootpath)
+            filesize = file_obj.size if file_obj.size else missSize
+            if os.path.exists(path):
+                if filesize > os.path.getsize(path):
+                    filesizes = filesizes + (filesize - os.path.getsize(path))
+            else:
+                filesizes = filesizes + filesize
+        time = filesizes / downloadSpeed + encrySize / dencryptSpeed + 2
     return round(time, 2)
 
 
@@ -410,8 +416,8 @@ def startMakeDataroomZip(directory_qs, file_qs, path, watermarkcontent=None, pas
                     addWaterMarkToPdfFiles(filepaths, watermarkcontent)
                 if password is not None:
                     print('开始加密')
-                    subprocess.check_output(['python3', '/var/www/encryptPDF.py', self.path, password, APILOG_PATH['excptionlogpath'],
-                         APILOG_PATH['encryptPdfLogPath']])  # 执行完毕程序才会往下进行
+                    subprocess.check_output(['python3', APILOG_PATH['encryptShellPath'], self.path, password, APILOG_PATH['excptionlogpath'],
+                                             APILOG_PATH['encryptPdfLogPath']])  # 执行完毕程序才会往下进行
                     print('加密完成')
 
 
