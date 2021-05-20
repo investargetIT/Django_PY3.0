@@ -427,7 +427,7 @@ def startMakeDataroomZipThread(directory_qs, file_qs, path, watermarkcontent=Non
         def saveFileSize(self, size):
             with open(self.progress_path, 'r') as load_f:
                 load_data = json.load(load_f)
-            load_data['unDownloadSize'] = load_data['unDownloadSize'] - size
+            load_data['unDownloadSize'] = 0 if load_data['unDownloadSize'] < size else load_data['unDownloadSize'] - size
             with open(self.progress_path, "w") as dump_f:
                 json.dump(load_data, dump_f)
 
