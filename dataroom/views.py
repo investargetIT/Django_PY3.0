@@ -371,7 +371,7 @@ def getRemainingTime(rootpath):
     progress_path = os.path.join(rootpath, 'zipProgress')
     time = 999
     if os.path.exists(progress_path):
-        with open(progress_path, 'r') as load_f:
+        with open(progress_path, encoding='utf-8', mode='r') as load_f:
             load_data = json.load(load_f)
         time = load_data['unDownloadSize'] / downloadSpeed + load_data['unEncryptSize'] / encryptSpeed + 2
     return round(time, 2)
@@ -421,14 +421,14 @@ def startMakeDataroomZipThread(directory_qs, file_qs, path, watermarkcontent=Non
                     fileSizes = fileSizes + fileSize
             data = {'unDownloadSize': fileSizes, 'allDownloadSize': fileSizes,
                     'unEncryptSize': encrySizes, 'allEncryptSize': encrySizes}
-            with open(self.progress_path, "w") as f:
+            with open(self.progress_path, encoding='utf-8', mode="w") as f:
                 json.dump(data, f)
 
         def saveFileSize(self, size):
-            with open(self.progress_path, 'r') as load_f:
+            with open(self.progress_path, encoding='utf-8', mode='r') as load_f:
                 load_data = json.load(load_f)
             load_data['unDownloadSize'] = 0 if load_data['unDownloadSize'] < size else load_data['unDownloadSize'] - size
-            with open(self.progress_path, "w") as dump_f:
+            with open(self.progress_path, encoding='utf-8', mode="w") as dump_f:
                 json.dump(load_data, dump_f)
 
 
