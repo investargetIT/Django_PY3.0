@@ -52,6 +52,8 @@ class DataroomView(viewsets.ModelViewSet):
        retrieve:查看dataroom目录结构
        update:关闭dataroom
        destroy:删除dataroom
+       checkZipStatus: 开始打包压缩任务
+       downloadDataroomZip: 下载压缩包
     """
     filter_backends = (filters.SearchFilter,filters.DjangoFilterBackend,)
     queryset = dataroom.objects.all().filter(is_deleted=False)
@@ -264,20 +266,52 @@ class DataroomView(viewsets.ModelViewSet):
                 response = JSONResponse(SuccessResponse({'code': 8005, 'msg': '压缩文件已备好', 'seconds': 0}))
             else:
                 checkDirectoryLatestdate(direcpath, file_qs)
-                seconds = getRemainingTime(direcpath, file_qs, password)
                 if os.path.exists(direcpath):
+                    seconds = getRemainingTime(direcpath)
                     response = JSONResponse(SuccessResponse({'code': 8004, 'msg': '压缩中', 'seconds': seconds}))
                 else:
                     watermarkcontent = None if nowater else str(request.GET.get('water', '').replace('@', '[at]')).split(',')
                     directory_qs = dataroominstance.dataroom_directories.all().filter(is_deleted=False, isFile=False)
-                    startMakeDataroomZip(directory_qs, file_qs, direcpath, watermarkcontent, password)
-                    response = JSONResponse(SuccessResponse({'code': 8002, 'msg': '文件不存在', 'seconds': seconds}))
+                    startMakeDataroomZipThread(directory_qs, file_qs, direcpath, watermarkcontent, password)
+                    response = JSONResponse(SuccessResponse({'code': 8002, 'msg': '文件不存在', 'seconds': 999}))
             return response
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    # @loginTokenIsAvailable()
+    # def checkZipStatus(self, request, *args, **kwargs):
+    #     try:
+    #         dataroominstance = self.get_object()
+    #         files = request.GET.get('files')
+    #         userid = int(request.GET.get('user', request.user.id))
+    #         nowater = True if request.GET.get('nowater') in ['1', 1, u'1'] else False
+    #         if nowater:
+    #             zipfile_prefix = 'novirtual_dataroom'
+    #         else:
+    #             zipfile_prefix = 'virtual_dataroom'
+    #         if files:
+    #             path = '%s_%s%s_part' % (zipfile_prefix, dataroominstance.id, ('_%s' % userid) if userid else '' )
+    #         else:
+    #             path = '%s_%s%s' % (zipfile_prefix, dataroominstance.id, ('_%s' % userid) if userid else '')
+    #         direcpath = os.path.join(APILOG_PATH['dataroomFilePath'], path)  # 文件夹路径
+    #         zipfilepath = direcpath + '.zip'    # 压缩文件路径
+    #         if os.path.exists(zipfilepath):
+    #             response = JSONResponse(SuccessResponse({'code': 8005, 'msg': '压缩文件已备好', 'seconds': 0}))
+    #         else:
+    #                 seconds = getRemainingTime(direcpath)
+    #                 if os.path.exists(direcpath):
+    #                     response = JSONResponse(SuccessResponse({'code': 8004, 'msg': '压缩中', 'seconds': seconds}))
+    #                 else:
+    #                     response = JSONResponse(SuccessResponse({'code': 8002, 'msg': '文件不存在', 'seconds': seconds}))
+    #         return response
+    #     except InvestError as err:
+    #         return JSONResponse(InvestErrorResponse(err))
+    #     except Exception:
+    #         catchexcption(request)
+    #         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
     def downloadDataroomZip(self, request, *args, **kwargs):
         try:
@@ -331,44 +365,15 @@ class DataroomView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-def getRemainingTime(rootpath, file_qs, encrypt):
+def getRemainingTime(rootpath):
     # 若文件大小丢失，则默认为 10 MB （10*1024*1024 bytes）
-    downloadSpeed, dencryptSpeed, missSize = 2 * 1024 * 1024, 2 * 1024 * 1024, 10 * 1024 * 1024    # bytes/s
-    filesizes, encrySize = 0, 0
-    if encrypt:
-        encryptPath = os.path.join(rootpath, 'encrypt')
-        if not os.path.exists(encryptPath):
-            for file_obj in file_qs:
-                path = getPathWithFile(file_obj, rootpath)
-                filesize = file_obj.size if file_obj.size else missSize
-                if os.path.exists(path):
-                    if filesize > os.path.getsize(path):
-                        filesizes = filesizes + (filesize - os.path.getsize(path))
-                else:
-                    filesizes = filesizes + filesize
-                if os.path.splitext(path)[-1] == '.pdf':
-                    encrySize = encrySize + filesize
-            time = filesizes / downloadSpeed + encrySize / dencryptSpeed + 2
-        else:
-            with open(encryptPath, 'r') as f:
-                progress = f.readlines()
-            progress = [i.replace('\n', '') for i in progress]
-            for file_obj in file_qs:
-                path = getPathWithFile(file_obj, rootpath)
-                if os.path.splitext(path)[-1] == '.pdf' and path not in progress:
-                    filesize = file_obj.size if file_obj.size else missSize
-                    encrySize = encrySize + filesize
-            time = encrySize / dencryptSpeed + 1
-    else:
-        for file_obj in file_qs:
-            path = getPathWithFile(file_obj, rootpath)
-            filesize = file_obj.size if file_obj.size else missSize
-            if os.path.exists(path):
-                if filesize > os.path.getsize(path):
-                    filesizes = filesizes + (filesize - os.path.getsize(path))
-            else:
-                filesizes = filesizes + filesize
-        time = filesizes / downloadSpeed + encrySize / dencryptSpeed + 2
+    downloadSpeed, encryptSpeed = 2 * 1024 * 1024, 2 * 1024 * 1024  # bytes/s
+    progress_path = os.path.join(rootpath, 'zipProgress')
+    time = 999
+    if os.path.exists(progress_path):
+        with open(progress_path, 'r') as load_f:
+            load_data = json.load(load_f)
+        time = load_data['unDownloadSize'] / downloadSpeed + load_data['unDownloadSize'] / encryptSpeed + 2
     return round(time, 2)
 
 
@@ -385,26 +390,56 @@ def checkDirectoryLatestdate(direcory_path, file_qs):
             shutil.rmtree(direcory_path)
 
 
-def startMakeDataroomZip(directory_qs, file_qs, path, watermarkcontent=None, password=None):
+def startMakeDataroomZipThread(directory_qs, file_qs, path, watermarkcontent=None, password=None):
     class downloadAllDataroomFile(threading.Thread):
         def __init__(self, directory_qs, file_qs, path):
             self.directory_qs = directory_qs
             self.file_qs = file_qs
             self.path = path
+            self.progress_path = os.path.join(self.path, 'zipProgress')
             threading.Thread.__init__(self)
 
         def run(self):
-            self.downloadFiles(self.file_qs)
-            self.zipDirectory()
-
-        def downloadFiles(self, files):
             if os.path.exists(self.path):
                 shutil.rmtree(self.path)
+            os.makedirs(self.path)
+            self.saveAllFileSize()
+            self.downloadFiles()
+            self.zipDirectory()
+
+        def saveAllFileSize(self):
+            fileSizes, encrySizes = 0, 0
+            if password:
+                for file_obj in self.file_qs:
+                    fileSize = file_obj.size if file_obj.size else 10 * 1024 * 1024
+                    if os.path.splitext(file_obj.filename)[-1] == '.pdf':
+                        encrySizes = encrySizes + fileSize
+                    fileSizes = fileSizes + fileSize
+            else:
+                for file_obj in self.file_qs:
+                    fileSize = file_obj.size if file_obj.size else 10 * 1024 * 1024
+                    fileSizes = fileSizes + fileSize
+            data = {'unDownloadSize': fileSizes, 'allDownloadSize': fileSizes,
+                    'unEncryptSize': encrySizes, 'allEncryptSize': encrySizes}
+            with open(self.progress_path, "w") as f:
+                json.dump(data, f)
+
+        def saveFileSize(self, size):
+            with open(self.progress_path, 'r') as load_f:
+                load_data = json.load(load_f)
+            load_data['unDownloadSize'] = load_data['unDownloadSize'] - size
+            with open(self.progress_path, "w") as dump_f:
+                json.dump(load_data, dump_f)
+
+
+        def downloadFiles(self):
             makeDirWithdirectoryobjs(self.directory_qs, self.path)
             filepaths = []
-            for file_obj in files:
+            for file_obj in self.file_qs:
                 path = getPathWithFile(file_obj, self.path)
                 savepath = downloadFileToPath(key=file_obj.realfilekey, bucket=file_obj.bucket, path=path)
+                filesize = file_obj.size if file_obj.size else 10 * 1024 * 1024
+                self.saveFileSize(filesize)
                 if savepath:
                     filetype = path.split('.')[-1]
                     if filetype in ['pdf', u'pdf']:
@@ -414,10 +449,10 @@ def startMakeDataroomZip(directory_qs, file_qs, path, watermarkcontent=None, pas
             if len(filepaths) > 0:
                 if watermarkcontent is not None:
                     addWaterMarkToPdfFiles(filepaths, watermarkcontent)
-                if password is not None:
+                if password:
                     print('开始加密')
                     subprocess.check_output(['python3', APILOG_PATH['encryptShellPath'], self.path, password, APILOG_PATH['excptionlogpath'],
-                                             APILOG_PATH['encryptPdfLogPath']])  # 执行完毕程序才会往下进行
+                         APILOG_PATH['encryptPdfLogPath']])  # 执行完毕程序才会往下进行
                     print('加密完成')
 
 
@@ -440,9 +475,6 @@ def startMakeDataroomZip(directory_qs, file_qs, path, watermarkcontent=None, pas
     d.start()
 
 def makeDirWithdirectoryobjs(directory_objs ,rootpath):
-    if os.path.exists(rootpath):
-        shutil.rmtree(rootpath)
-    os.makedirs(rootpath)
     for file_obj in directory_objs:
         try:
             path = getPathWithFile(file_obj,rootpath)
