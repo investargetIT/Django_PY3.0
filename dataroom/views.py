@@ -373,7 +373,7 @@ def getRemainingTime(rootpath):
     if os.path.exists(progress_path):
         with open(progress_path, 'r') as load_f:
             load_data = json.load(load_f)
-        time = load_data['unDownloadSize'] / downloadSpeed + load_data['unDownloadSize'] / encryptSpeed + 2
+        time = load_data['unDownloadSize'] / downloadSpeed + load_data['unEncryptSize'] / encryptSpeed + 2
     return round(time, 2)
 
 
