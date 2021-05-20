@@ -1462,13 +1462,29 @@ class ProjDiDiRecordView(viewsets.ModelViewSet):
     search_fields = ('projName', 'orderPerm', 'city', 'orderNumber')
     serializer_class = DiDiRecordSerializer
 
+    def get_queryset(self):
+        assert self.queryset is not None, (
+            "'%s' should either include a `queryset` attribute, "
+            "or override the `get_queryset()` method."
+            % self.__class__.__name__
+        )
+        queryset = self.queryset
+        if isinstance(queryset, QuerySet):
+            if self.request.user.is_authenticated:
+                queryset = queryset.filter(datasource=self.request.user.datasource)
+            else:
+                queryset = queryset.all()
+        else:
+            raise InvestError(code=8890)
+        return queryset
+
     @loginTokenIsAvailable(['usersys.as_trader', 'usersys.as_admin'])
     def list(self, request, *args, **kwargs):
         try:
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
-            queryset = self.filter_queryset(self.queryset.filter(datasource_id=request.user.datasource_id))
+            queryset = self.filter_queryset(self.get_queryset())
             sortfield = request.GET.get('sort', 'lastmodifytime')
             desc = request.GET.get('desc', 0)
             queryset = mySortQuery(queryset, sortfield, desc)
@@ -1561,6 +1577,8 @@ def importDidiRecord(data_list):
             newInstance = TaxiRecordCreateSerializer(data=data)
             if newInstance.is_valid():
                 newInstance.save()
+            else:
+                logexcption(msg='存储滴滴记录失败--%s' % newInstance.errors)
         except Exception as e:
             logexcption()
 
