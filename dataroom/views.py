@@ -265,7 +265,7 @@ class DataroomView(viewsets.ModelViewSet):
             if os.path.exists(zipfilepath):
                 response = JSONResponse(SuccessResponse({'code': 8005, 'msg': '压缩文件已备好', 'seconds': 0}))
             else:
-                checkDirectoryLatestdate(direcpath, file_qs)
+                # checkDirectoryLatestdate(direcpath, file_qs)
                 if os.path.exists(direcpath):
                     seconds = getRemainingTime(direcpath)
                     response = JSONResponse(SuccessResponse({'code': 8004, 'msg': '压缩中', 'seconds': seconds}))
