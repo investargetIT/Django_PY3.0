@@ -4,6 +4,7 @@ import json
 import os
 import traceback
 
+import chardet
 import pdfkit
 from django.core.paginator import Paginator, EmptyPage
 from django.db import models,transaction
@@ -1553,7 +1554,9 @@ def readDidiRecord(csvFilePath):
                      '用车权限': 'orderPerm', '用车城市': 'city', '实际出发地': 'startPlace', '实际目的地': 'endPlace', '企业实付金额': 'money'}
     values = ['成本中心名称', '成本中心id', '专快订单号', '支付时间', '用车权限', '用车城市', '实际出发地', '实际目的地', '企业实付金额']
     valuesdic, data_list = {}, []
-    with open(csvFilePath, 'r', encoding='utf-8')as f:
+    with open(csvFilePath, 'rb') as file:
+        encod = chardet.detect(file.readline())['encoding']
+    with open(csvFilePath, 'r', encoding=encod)as f:
         f_csv = csv.reader(f)
         line_count = 0
         for row in f_csv:
