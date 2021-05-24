@@ -98,7 +98,7 @@ class project(MyModel):
         if not self.datasource or not self.createuser or self.datasource != self.createuser.datasource:
             raise InvestError(code=8888,msg='项目datasource不合法')
         if self.lastProject and (self.lastProject == self.pk or self.lastProject.is_deleted):
-            raise InvestError(2007, msg='关联项目不能为自身或者已删除项目')
+            raise InvestError(20071, msg='关联项目不能为自身或者已删除项目')
         if self.pk:
             if self.is_deleted:
                 rem_perm('proj.user_getproj',self.createuser,self)
@@ -111,7 +111,7 @@ class project(MyModel):
         if self.code is None:
             self.code = 'P' + datetime.datetime.now().strftime('%Y%m%d%H%M%S')
         if not self.is_deleted and self.isHidden and self.isSendEmail:
-            raise InvestError(2007, msg='该项目为隐藏项目， 无法发送群发邮件')
+            raise InvestError(20071, msg='该项目为隐藏项目， 无法发送群发邮件')
         super(project,self).save(*args, **kwargs)
 
     def checkProjInfo(self):
@@ -139,7 +139,7 @@ class projTraders(MyModel):
         if not self.is_deleted:
             traders = projTraders.objects.exclude(pk=self.pk).filter(is_deleted=False, proj=self.proj, user=self.user, type=self.type)
             if traders.exists():
-                raise InvestError(2007, msg='该交易师已存在一条相同记录了')
+                raise InvestError(20071, msg='该交易师已存在一条相同记录了')
         super(projTraders, self).save(*args, **kwargs)
 
 class projServices(MyModel):
@@ -261,7 +261,7 @@ class projectDiDiRecord(MyModel):
             if projectDiDiRecord.objects.exclude(pk=self.pk).filter(orderNumber=self.orderNumber, is_deleted=False).exists():
                 raise InvestError(4010, msg='订单号已存在')
             if not self.money or (self.money and self.money <= 0):
-               raise InvestError(2007, msg='实际付款不符合条件')
+               raise InvestError(20071, msg='实际付款不符合条件')
         return super(projectDiDiRecord, self).save(*args, **kwargs)
 
 

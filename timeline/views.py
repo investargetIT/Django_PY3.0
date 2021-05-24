@@ -168,7 +168,7 @@ class TimelineView(viewsets.ModelViewSet):
                         if timelinestatu.is_valid():
                            timelinestatu.save()
                         else:
-                            raise InvestError(code=20071,msg=timelinestatu.errors)
+                            raise InvestError(20071,msg='%s' % timelinestatu.error_messages)
                     else:
                         statudata = {
                             'createuser' : request.user.id,
@@ -182,9 +182,9 @@ class TimelineView(viewsets.ModelViewSet):
                         if timelinestatu.is_valid():
                             timelinestatu.save()
                         else:
-                            raise InvestError(code=20071, msg=timelinestatu.errors)
+                            raise InvestError(20071, msg='%s' % timelinestatu.errors)
                 else:
-                    raise InvestError(code=20071,msg=timelineserializer.errors)
+                    raise InvestError(20071,msg='%s' % timelineserializer.errors)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(TimeLineSerializer(newtimeline).data, lang)))
         except InvestError as err:
                 return JSONResponse(InvestErrorResponse(err))
@@ -246,7 +246,7 @@ class TimelineView(viewsets.ModelViewSet):
                         if timelinestatu.is_valid():
                             newactivetimelinestatu = timelinestatu.save()
                         else:
-                            raise InvestError(code=20071, msg=timelinestatu.errors)
+                            raise InvestError(20071, msg=timelinestatu.errors)
                 if timelinedata:
                     timelinedata['lastmodifyuser'] = request.user.id
                     timelinedata['lastmodifytime'] = datetime.datetime.now()
@@ -263,7 +263,7 @@ class TimelineView(viewsets.ModelViewSet):
                     if timelineseria.is_valid():
                         timeline = timelineseria.save()
                     else:
-                        raise InvestError(code=20071, msg=timelineseria.errors)
+                        raise InvestError(20071, msg=timelineseria.errors)
                 cache_delete_key(self.redis_key + '_%s' % timeline.id)
                 # if sendmessage:
                 #     sendmessage_timelineauditstatuchange(newactivetimelinestatu, timeline.proj.takeUser, ['app', 'email', 'webmsg'], sender=request.user)
@@ -282,7 +282,7 @@ class TimelineView(viewsets.ModelViewSet):
             timelinelist = []
             lang = request.GET.get('lang')
             if not timelineidlist or not  isinstance(timelineidlist,list):
-                raise InvestError(code=20071, msg='except a not null list')
+                raise InvestError(20071, msg='except a non-empty array')
             with transaction.atomic():
                 for timelineid in timelineidlist:
                     instance = self.get_object(timelineid)
@@ -452,9 +452,7 @@ class TimeLineRemarkView(viewsets.ModelViewSet):
                 if timeLineremarkserializer.is_valid():
                     timeLineremark = timeLineremarkserializer.save()
                 else:
-                    raise InvestError(code=20071,
-                                      msg='data有误_%s\n%s' % (
-                                          timeLineremarkserializer.error_messages, timeLineremarkserializer.errors))
+                    raise InvestError(20071, msg='%s' % timeLineremarkserializer.error_messages)
                 if timeLineremark.createuser:
                     add_perm('timeline.user_getlineremark', timeLineremark.createuser, timeLineremark)
                     add_perm('timeline.user_changelineremark', timeLineremark.createuser, timeLineremark)
@@ -504,8 +502,7 @@ class TimeLineRemarkView(viewsets.ModelViewSet):
                 if serializer.is_valid():
                     newremark = serializer.save()
                 else:
-                    raise InvestError(code=20071,
-                                      msg='data有误_%s\n%s' % (serializer.error_messages, serializer.errors))
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(TimeLineRemarkSerializer(newremark).data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))

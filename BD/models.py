@@ -59,9 +59,9 @@ class ProjectBD(MyModel):
 
     def save(self, *args, **kwargs):
         if self.manager is None:
-            raise InvestError(2007,msg='manager can`t be null')
+            raise InvestError(20071,msg='manager can`t be null')
         if not self.datasource:
-            raise InvestError(2007, msg='datasource can`t be null')
+            raise InvestError(20071, msg='datasource can`t be null')
         if not self.is_deleted:
             if ProjectBD.objects.exclude(pk=self.pk).filter(is_deleted=False, com_name=self.com_name).exists():
                 raise InvestError(50061, msg='同名项目bd已存在')
@@ -89,12 +89,12 @@ class ProjectBDManagers(MyModel):
 
     def save(self, *args, **kwargs):
         if self.projectBD is None:
-            raise InvestError(2007,msg='projectBD can`t be null')
+            raise InvestError(20071,msg='projectBD can`t be null')
         if not self.is_deleted:
             if self.projectBD.manager == self.manager:
-                raise InvestError(2007, msg='主负责人已存在')
+                raise InvestError(20071, msg='主负责人已存在')
             if ProjectBDManagers.objects.exclude(pk=self.pk).filter(is_deleted=False, manager=self.manager, projectBD=self.projectBD).exists():
-                raise InvestError(2007, msg='负责人已存在')
+                raise InvestError(20071, msg='负责人已存在')
         self.datasource = self.projectBD.datasource
         return super(ProjectBDManagers, self).save(*args, **kwargs)
 
@@ -109,7 +109,7 @@ class ProjectBDComments(MyModel):
 
     def save(self, *args, **kwargs):
         if self.projectBD is None:
-            raise InvestError(2007,msg='projectBD can`t be null')
+            raise InvestError(20071,msg='projectBD can`t be null')
         self.datasource = self.projectBD.datasource
         if self.event_date is None:
             self.event_date = datetime.datetime.now()
@@ -144,7 +144,7 @@ class OrgBD(MyModel):
 
     def save(self, *args, **kwargs):
         if self.manager is None:
-            raise InvestError(2007,msg='manager can`t be null')
+            raise InvestError(20071,msg='manager can`t be null')
         if self.bduser:
             self.username = self.bduser.usernameC
             self.usermobile = self.bduser.mobile
@@ -217,10 +217,10 @@ class OrgBDBlack(MyModel):
 
     def save(self, *args, **kwargs):
         if self.org is None or self.proj is None:
-            raise InvestError(20071, msg='org/proj can`t be null')
+            raise InvestError(20072, msg='org/proj can`t be null')
         self.datasource = self.createuser.datasource
         if not self.reason:
-            raise InvestError(20071, msg='加入原因 不能为空')
+            raise InvestError(20072, msg='加入原因 不能为空')
         if not self.is_deleted:
             if OrgBDBlack.objects.exclude(pk=self.pk).filter(is_deleted=False, org=self.org, proj=self.proj).exists():
                 raise InvestError(20071, msg='该机构已经在黑名单中了')
@@ -259,7 +259,7 @@ class MeetingBD(MyModel):
 
     def save(self, *args, **kwargs):
         if self.manager is None:
-            raise InvestError(2007, msg='manager can`t be null')
+            raise InvestError(20071, msg='manager can`t be null')
         if not self.manager.onjob and not self.is_deleted:
             raise InvestError(2024)
         if self.bduser:
@@ -335,7 +335,7 @@ class WorkReportMarketMsg(MyModel):
     def save(self, *args, **kwargs):
         if not self.is_deleted:
             if not self.report or not self.marketMsg:
-                raise InvestError(20071, msg='参数不能为空')
+                raise InvestError(20072, msg='参数不能为空')
         return super(WorkReportMarketMsg, self).save(*args, **kwargs)
 
 
@@ -360,7 +360,7 @@ class WorkReportProjInfo(MyModel):
     def save(self, *args, **kwargs):
         if not self.is_deleted:
             if not self.proj and not self.projTitle:
-                raise InvestError(20071, msg='项目不能为空')
+                raise InvestError(20072, msg='项目不能为空')
             if self.proj:
                 self.projTitle = None
                 filters = Q(proj=self.proj)
@@ -392,16 +392,16 @@ class OKR(MyModel):
             else:
                 filtertype = True
                 if not self.quarter:
-                    raise InvestError(2007, msg='季度日期不能为空')
+                    raise InvestError(20072, msg='季度日期不能为空')
                 else:
                     if self.quarter > 4:
-                        raise InvestError(2007, msg='季度日期不合法')
+                        raise InvestError(20071, msg='季度日期不合法')
             if self.year and self.year > 2100:
-                raise InvestError(2007, msg='年度日期不合法')
+                raise InvestError(20071, msg='年度日期不合法')
             if not self.target:
-                raise InvestError(2007, msg='目标不能为空')
+                raise InvestError(20072, msg='目标不能为空')
             if OKR.objects.exclude(pk=self.pk).filter(is_deleted=False, year=self.year, okrType=filtertype, createuser=self.createuser).exists():
-                raise InvestError(2007, msg='该年度已存在季度/年度OKR')
+                raise InvestError(20071, msg='该年度已存在季度/年度OKR')
         if not self.datasource:
             self.datasource = self.createuser.datasource
         return super(OKR, self).save(*args, **kwargs)
@@ -420,7 +420,7 @@ class OKRResult(MyModel):
     def save(self, *args, **kwargs):
         if not self.is_deleted:
             if not self.okr or self.okr.is_deleted:
-                raise InvestError(2007, msg='okr字段 不能为空')
+                raise InvestError(20072, msg='okr字段 不能为空')
             if OKRResult.objects.exclude(pk=self.pk).filter(is_deleted=False, okr=self.okr, krs=self.krs).exists():
                 raise InvestError(20071, msg='该OKR已存在相同的关键结果')
         self.datasource = self.createuser.datasource

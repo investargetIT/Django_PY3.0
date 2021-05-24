@@ -699,7 +699,7 @@ class OrgBDView(viewsets.ModelViewSet):
                 else:
                     raise InvestError(2009)
             if self.checkOrgIsInBlackList(data['org'], data['proj']):
-                raise InvestError(2007, msg='该机构在黑名单中，无法新增机构BD')
+                raise InvestError(20071, msg='该机构在黑名单中，无法新增机构BD')
             with transaction.atomic():
                 orgBD = OrgBDCreateSerializer(data=data)
                 if orgBD.is_valid():
@@ -733,7 +733,7 @@ class OrgBDView(viewsets.ModelViewSet):
             else:
                 return False
         else:
-            raise InvestError(2007, msg='org/proj 不能是空' )
+            raise InvestError(20071, msg='org/proj 不能是空' )
 
     @loginTokenIsAvailable()
     def retrieve(self, request, *args, **kwargs):
@@ -935,7 +935,7 @@ class OrgBDBlackView(viewsets.ModelViewSet):
                 else:
                     raise InvestError(2009)
             else:
-                raise InvestError(2007, msg='项目/机构不能为空')
+                raise InvestError(20072, msg='项目/机构不能为空')
             with transaction.atomic():
                 instanceSerializer = OrgBDBlackCreateSerializer(data=data)
                 if instanceSerializer.is_valid():
@@ -1374,7 +1374,7 @@ class MeetingBDView(viewsets.ModelViewSet):
             data = request.data
             meetinglist = data.get('meetings', None)
             if not isinstance(meetinglist, (list, tuple)):
-                raise InvestError(2007, msg='except string list')
+                raise InvestError(20071, msg='except string list')
             meetings = ','.join(map(str, meetinglist))
             with transaction.atomic():
                 sharetokenset = MeetBDShareToken.objects.filter(user=request.user, meetings=meetings)
@@ -1544,7 +1544,7 @@ class WorkReportView(viewsets.ModelViewSet):
             data = request.data
             lang = request.GET.get('lang')
             if not data.get('user'):
-                raise InvestError(2007, msg='user 不能为空')
+                raise InvestError(20072, msg='用户不能为空')
             if data['user'] != request.user.id and not request.user.is_superuser:
                 raise InvestError(2009, msg='没有权限给别人建立工作报表')
             data['createuser'] = request.user.id

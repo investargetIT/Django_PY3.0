@@ -41,7 +41,7 @@ class timeline(MyModel):
     def save(self, force_insert=False, force_update=False, using=None,
              update_fields=None):
         if not self.datasource:
-            raise InvestError(20071,msg='datasource/proj/investor/trader cannot be null')
+            raise InvestError(20072, msg='datasource/proj/investor/trader cannot be null')
         if self.proj.projstatus.id < 4:
             raise InvestError(5003,msg='项目尚未终审发布')
         if self.trader.userstatus.id != 2:

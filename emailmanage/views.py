@@ -215,7 +215,7 @@ class EmailgroupsendlistView(viewsets.ModelViewSet):
                     newemailgroupsend.readtime = datetime.datetime.now()
                     newemailgroupsend.save()
                 else:
-                    raise InvestError(code=20071,msg='data有误_%s' % emailserializer.errors)
+                    raise InvestError(20071, msg='%s' % emailserializer.error_messages)
                 return JSONResponse(SuccessResponse(None))
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))

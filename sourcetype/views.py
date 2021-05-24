@@ -55,7 +55,7 @@ class TagView(viewsets.ModelViewSet):
     #             if serializer.is_valid():
     #                  serializer.save()
     #             else:
-    #                 raise InvestError(code=20071,msg='data有误_%s' % serializer.error_messages)
+    #                 raise InvestError(code=msg='%s' % serializer.error_messages)
     #             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data, lang)))
     #     except InvestError as err:
     #         return JSONResponse(InvestErrorResponse(err))
@@ -537,7 +537,7 @@ class AndroidAppVersionView(viewsets.ModelViewSet):
                 if serializer.is_valid():
                     serializer.save()
                 else:
-                    raise InvestError(code=20071, msg='data有误_%s' % serializer.error_messages)
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
                 return JSONResponse(SuccessResponse(serializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -557,7 +557,7 @@ class AndroidAppVersionView(viewsets.ModelViewSet):
                 if serializer.is_valid():
                     serializer.save()
                 else:
-                    raise InvestError(code=20071, msg='data有误_%s' % serializer.error_messages)
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
                 return JSONResponse(SuccessResponse(serializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))

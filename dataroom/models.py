@@ -97,7 +97,7 @@ class dataroomdirectoryorfile(MyModel):
             if self.parent.isFile:
                 raise InvestError(7007,msg='非目录结构不能存储文件')
         if self.filename is None:
-            raise InvestError(2007,msg='名称不能为空')
+            raise InvestError(20072,msg='名称不能为空')
         if not self.is_deleted and self.isFile and not self.pk:
             dataroomPath = os.path.join(APILOG_PATH['es_dataroomPDFPath'], 'dataroom_{}'.format(self.dataroom.id))
             if not os.path.exists(dataroomPath):
@@ -130,7 +130,7 @@ class dataroom_User_file(MyModel):
 
     def save(self, force_insert=False, force_update=False, using=None,update_fields=None):
         if not self.user:
-            raise InvestError(2007, '投资人不能为空')
+            raise InvestError(20072, '投资人不能为空')
         if self.pk is None:
             if self.dataroom.isClose or self.dataroom.is_deleted:
                 raise InvestError(7012,msg='dataroom已关闭/删除，无法添加用户')
@@ -186,7 +186,7 @@ class dataroom_User_template(MyModel):
 
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
         if not self.user:
-            raise InvestError(code=2004, msg='user 不能为空')
+            raise InvestError(code=2004, msg='用户不能为空')
         try:
             dataroom_User_template.objects.exclude(pk=self.pk).get(is_deleted=False, user=self.user,
                                                                    dataroom=self.dataroom)
@@ -224,9 +224,9 @@ class dataroom_user_discuss(MyModel):
             if not self.datasource:
                 raise InvestError(code=8888, msg='datasource有误')
             if not self.user:
-                raise InvestError(code=2004, msg='user 不能为空')
+                raise InvestError(code=2004, msg='用户不能为空')
             if not self.file.isFile:
-                raise InvestError(code=2004, msg='file 必须是文件类型')
+                raise InvestError(code=2004, msg='必须是文件类型')
         return super(dataroom_user_discuss, self).save(*args, **kwargs)
 
 
@@ -252,9 +252,9 @@ class dataroom_user_readFileRecord(MyModel):
             if not self.endTime or self.endTime < self.startTime:
                 self.endTime = self.startTime
             if not self.user:
-                raise InvestError(code=20071, msg='user 不能为空')
+                raise InvestError(20072, msg='用户不能为空')
             if not self.file.isFile:
-                raise InvestError(code=20071, msg='file 必须是文件类型')
+                raise InvestError(20071, msg='必须是文件类型')
         return super(dataroom_user_readFileRecord, self).save(*args, **kwargs)
 
 

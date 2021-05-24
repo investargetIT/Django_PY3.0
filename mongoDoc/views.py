@@ -166,7 +166,7 @@ class MergeFinanceDataView(viewsets.ModelViewSet):
             if serializer.is_valid():
                 serializer.save()
             else:
-                raise InvestError(2007, msg='参数错误-%s'%serializer.error_messages)
+                raise InvestError(20071, msg='%s'%serializer.error_messages)
             return JSONResponse(SuccessResponse(True))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -357,7 +357,7 @@ class ProjectDataView(viewsets.ModelViewSet):
             data = request.data
             idlist = data.get('com_ids')
             if idlist in (None, '', u'', []) or not isinstance(idlist, list):
-                raise InvestError(2007, msg='参数错误')
+                raise InvestError(20071, msg='except a non-empty array')
             queryset = self.queryset.filter(com_id__in=idlist)
             projserializer = self.serializer_class(queryset,many=True)
             eventserializer = MergeFinanceDataSerializer(MergeFinanceData.objects.all().filter(com_id__in=idlist), many=True)
@@ -427,7 +427,7 @@ class ProjectIndustryInfoView(viewsets.ModelViewSet):
         try:
             com_id = request.GET.get('com_id', None)
             if not com_id:
-                raise InvestError(2007, msg='com_id 不能为空')
+                raise InvestError(20072, msg='公司 不能为空')
             com_qs = self.queryset.filter(com_id=com_id)
             if com_qs.count() > 0:
                 instance = com_qs.first()

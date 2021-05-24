@@ -35,9 +35,9 @@ def getcurrencyreat(request):
             if success in ['1',True]:
                 result = response.get('result',{})
             else:
-                raise InvestError(code=2007,msg=response.get('msg',None))
+                raise InvestError(20071,msg=response.get('msg',None))
         else:
-            raise InvestError(code=2007,msg=response)
+            raise InvestError(20071,msg=response)
         return JSONResponse(SuccessResponse(result))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
@@ -53,7 +53,7 @@ def getMobilePhoneAddress(request):
         checkrequesttoken(tokenkey)
         mobile = request.GET.get('mobile', None)
         if not mobile:
-            raise InvestError(20072, msg='mobile 不能为空')
+            raise InvestError(20072, msg='手机号码不能为空')
         response = requests.get('https://api.nowapi.com/?app=phone.get&phone=%s&appkey=18220&sign=9b97118c7cf61df11c736c79ce94dcf9&format=json' % mobile).content
         response = json.loads(response.decode())
         if isinstance(response,dict):
@@ -61,9 +61,9 @@ def getMobilePhoneAddress(request):
             if success in ['1',True]:
                 result = response.get('result',{})
             else:
-                raise InvestError(code=2007,msg=response.get('msg',None))
+                raise InvestError(20071,msg=response.get('msg',None))
         else:
-            raise InvestError(code=2007,msg=response)
+            raise InvestError(20071,msg=response)
         return JSONResponse(SuccessResponse(result))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))

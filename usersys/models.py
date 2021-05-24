@@ -369,9 +369,9 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
             if not self.email or not self.mobile:
                 raise InvestError(code=2007)
             if not self.mobile.isdigit():
-                raise InvestError(2007, msg='mobile 必须是纯数字')
+                raise InvestError(20071, msg='mobile 必须是纯数字')
             if not self.mobileAreaCode.isdigit():
-                raise InvestError(2007, msg='mobileAreaCode 必须是纯数字')
+                raise InvestError(20071, msg='mobileAreaCode 必须是纯数字')
             if self.email:
                 filters = Q(email=self.email)
                 if self.mobile:

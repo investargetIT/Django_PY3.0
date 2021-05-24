@@ -113,7 +113,7 @@ class ProjectView(viewsets.ModelViewSet):
             try:
                 obj = self.Model.objects.get(id=self.kwargs[lookup_url_kwarg], is_deleted=False)
             except self.Model.DoesNotExist:
-                raise InvestError(code=4002,msg='proj with this "%s" is not exist' % self.kwargs[lookup_url_kwarg])
+                raise InvestError(code=4002)
             else:
                 write_to_cache(self.redis_key + '_%s' % self.kwargs[lookup_url_kwarg], obj)
         if obj.datasource != self.request.user.datasource:
@@ -221,49 +221,49 @@ class ProjectView(viewsets.ModelViewSet):
                     pro = proj.save()
                     if takeUserData:
                         takeUserList = []
-                        if not isinstance(takeUserList,list):
-                            raise InvestError(2007, msg='takeUser must be a list')
+                        if not isinstance(takeUserData,list):
+                            raise InvestError(20071, msg='takeUser must be a list')
                         for takeUser_id in takeUserData:
                             takeUserList.append(projTraders(proj=pro, user_id=takeUser_id, createuser=request.user, type=0, createdtime=datetime.datetime.now()))
                         pro.project_tags.bulk_create(takeUserList)
                     if makeUserData:
                         makeUserList = []
-                        if not isinstance(makeUserList,list):
-                            raise InvestError(2007, msg='makeUser must be a list')
+                        if not isinstance(makeUserData,list):
+                            raise InvestError(20071, msg='makeUser must be a list')
                         for makeUser_id in makeUserData:
                             makeUserList.append(projTraders(proj=pro, user_id=makeUser_id, createuser=request.user, type=1, createdtime=datetime.datetime.now()))
                         pro.project_tags.bulk_create(makeUserList)
                     if tagsdata:
                         tagslist = []
-                        if not isinstance(tagslist,list):
-                            raise InvestError(2007,msg='tags must be a list')
+                        if not isinstance(tagsdata,list):
+                            raise InvestError(20071,msg='tags must be a list')
                         for tagid in tagsdata:
                             tagslist.append(projectTags(proj=pro, tag_id=tagid,createuser=request.user))
                         pro.project_tags.bulk_create(tagslist)
                     if servicedata:
                         servicelist = []
                         if not isinstance(servicedata,list):
-                            raise InvestError(2007,msg='service must be an ID list')
+                            raise InvestError(20071,msg='service must be a list')
                         for serviceid in servicedata:
                             servicelist.append(projServices(proj=pro, service_id=serviceid,createuser=request.user))
                         pro.proj_services.bulk_create(servicelist)
                     if industrydata:
                         industrylist = []
                         if not isinstance(industrydata,list):
-                            raise InvestError(2007,msg='industries must be a  list')
+                            raise InvestError(20071,msg='industries must be a list')
                         for oneindustrydata in industrydata:
                             industrylist.append(projectIndustries(proj=pro, industry_id=oneindustrydata.get('industry',None),createuser=request.user,bucket=oneindustrydata.get('bucket',None),key=oneindustrydata.get('key',None)))
                         pro.project_industries.bulk_create(industrylist)
                     if transactiontypedata:
                         transactiontypelist = []
                         if not isinstance(transactiontypedata,list):
-                            raise InvestError(2007,msg='transactionType must be a list')
+                            raise InvestError(20071,msg='transactionType must be a list')
                         for transactionPhaseid in transactiontypedata:
                             transactiontypelist.append(projectTransactionType(proj=pro, transactionType_id=transactionPhaseid,createuser=request.user))
                         pro.project_TransactionTypes.bulk_create(transactiontypelist)
                     if projAttachmentdata:
                         if not isinstance(projAttachmentdata, list):
-                            raise InvestError(2007, msg='transactionType must be a list')
+                            raise InvestError(20071, msg='transactionType must be a list')
                         for oneprojAttachmentdata in projAttachmentdata:
                             oneprojAttachmentdata['proj'] = pro.id
                             oneprojAttachmentdata['createuser'] = request.user.id
@@ -272,7 +272,7 @@ class ProjectView(viewsets.ModelViewSet):
                                 projAttachmentSerializer.save()
                     if financedata:
                         if not isinstance(financedata, list):
-                            raise InvestError(2007, msg='transactionType must be a list')
+                            raise InvestError(20071, msg='transactionType must be a list')
                         for onefinancedata in financedata:
                             onefinancedata['proj'] = pro.id
                             onefinancedata['datasource'] = request.user.datasource_id
@@ -282,7 +282,7 @@ class ProjectView(viewsets.ModelViewSet):
                                 financeSerializer.save()
                 else:
                     raise InvestError(code=4001,
-                                          msg='data有误_%s' % proj.errors)
+                                          msg='%s' % proj.errors)
                 setUserObjectPermission(request.user, pro,
                                         ['proj.user_getproj', 'proj.user_changeproj', 'proj.user_deleteproj'])
                 setUserObjectPermission(pro.supportUser, pro,
@@ -401,7 +401,7 @@ class ProjectView(viewsets.ModelViewSet):
                     pro = proj.save()
                     if takeUserData is not None:
                         if not isinstance(takeUserData,list):
-                            raise InvestError(2007, msg='takeUser must be a list')
+                            raise InvestError(20071, msg='takeUser must be a list')
                         if len(takeUserData) == 0:
                             pro.proj_traders.filter(type=0, is_deleted=False).update(is_deleted=True, deletedtime=datetime.datetime.now(), deleteduser=request.user)
                         else:
@@ -417,7 +417,7 @@ class ProjectView(viewsets.ModelViewSet):
                             pro.proj_traders.bulk_create(takeUserList)
                     if makeUserData is not None:
                         if not isinstance(makeUserData,list):
-                            raise InvestError(2007, msg='makeUser must be a list')
+                            raise InvestError(20071, msg='makeUser must be a list')
                         if len(makeUserData) == 0:
                             pro.proj_traders.filter(type=1, is_deleted=False).update(is_deleted=True, deletedtime=datetime.datetime.now(), deleteduser=request.user)
                         else:
@@ -444,7 +444,7 @@ class ProjectView(viewsets.ModelViewSet):
                         pro.project_tags.bulk_create(usertaglist)
                     if servicedata:
                         if not isinstance(servicedata, list) or len(servicedata) == 0:
-                            raise InvestError(2007, msg='service must be a not null list')
+                            raise InvestError(20071, msg='service must be a list')
                         servicelist = Service.objects.in_bulk(servicedata)
                         addlist = [item for item in servicelist if item not in pro.service.all()]
                         removelist = [item for item in pro.service.all() if item not in servicelist]
@@ -458,7 +458,7 @@ class ProjectView(viewsets.ModelViewSet):
 
                     if industrydata:
                         if not isinstance(industrydata, list) or len(industrydata) == 0:
-                            raise InvestError(2007, msg='industrydata must be a not null list')
+                            raise InvestError(20071, msg='industrydata must be a list')
                         pro.project_industries.filter(is_deleted=False).update(is_deleted=True, deletedtime=datetime.datetime.now(), deleteduser=request.user)
                         for oneindustrydata in industrydata:
                             oneindustrydata['proj'] = pro.id
@@ -480,7 +480,7 @@ class ProjectView(viewsets.ModelViewSet):
 
                     if projAttachmentdata:
                         if not isinstance(projAttachmentdata, list) or len(projAttachmentdata) == 0:
-                            raise InvestError(2007, msg='transactionType must be a not null list')
+                            raise InvestError(20071, msg='transactionType must be a list')
                         pro.proj_attachment.filter(is_deleted=False).update(is_deleted=True, deletedtime=datetime.datetime.now(), deleteduser=request.user)
                         for oneprojAttachmentdata in projAttachmentdata:
                             oneprojAttachmentdata['proj'] = pro.id
@@ -490,7 +490,7 @@ class ProjectView(viewsets.ModelViewSet):
 
                     if financedata:
                         if not isinstance(financedata, list):
-                            raise InvestError(2007, msg='transactionType must be a not null list')
+                            raise InvestError(20071, msg='transactionType must be a list')
                         pro.proj_finances.filter(is_deleted=False).update(is_deleted=True, deletedtime=datetime.datetime.now(), deleteduser=request.user)
                         for onefinancedata in financedata:
                             onefinancedata['proj'] = pro.id
@@ -499,7 +499,7 @@ class ProjectView(viewsets.ModelViewSet):
                                 financeSerializer.save()
                     cache_delete_key(self.redis_key + '_%s' % pro.id)
                 else:
-                    raise InvestError(code=4001,msg='data有误_%s' %  proj.errors)
+                    raise InvestError(code=4001,msg='%s' %  proj.errors)
                 if sendmsg:
                     sendmessage_projectpublish(pro, pro.supportUser,['email', 'webmsg'],sender=request.user)
                     for proj_trader in pro.proj_traders.filter(type=0, is_deleted=False):
@@ -527,7 +527,7 @@ class ProjectView(viewsets.ModelViewSet):
                 if not os.path.exists(propath):
                     self.makePdf(pro)
             else:
-                raise InvestError(2007,msg='不满足发送条件')
+                raise InvestError(20071,msg='不满足发送条件')
             return JSONResponse(SuccessResponse({"status":'发送中，请稍后'}))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -660,7 +660,7 @@ class ProjectView(viewsets.ModelViewSet):
                 response["content-disposition"] = 'attachment;filename=%s.pdf'% (proj.projtitleC.encode('utf-8') if lang == 'cn' else proj.projtitleE)
                 os.remove(out_path)
             else:
-                raise InvestError(50010,msg='pdf生成失败')
+                raise InvestError(4008, msg='pdf生成失败')
             return response
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -685,7 +685,7 @@ class ProjectView(viewsets.ModelViewSet):
             aaa = pdfkit.from_url(PROJECTPDF_URLPATH + str(proj.id) + '&lang=cn', pdfpath, configuration=config,
                                   options=options)
             if not aaa:
-                raise InvestError(2007,msg='生成项目pdf失败')
+                raise InvestError(4008, msg='生成项目pdf失败')
             if proj.country_id == 42 and proj.currency_id == 1:
                 amount_field, currency, currencytype = 'financeAmount', '￥', 'CNY'
             else:
@@ -785,7 +785,7 @@ class ProjTradersView(viewsets.ModelViewSet):
                 if instanceSerializer.is_valid():
                     instance = instanceSerializer.save()
                 else:
-                    raise InvestError(20071, msg='新增项目承揽承做失败--%s' % instanceSerializer.error_messages)
+                    raise InvestError(40011, msg='%s' % instanceSerializer.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(self.serializer_class(instance).data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -808,7 +808,7 @@ class ProjTradersView(viewsets.ModelViewSet):
                 if newinstanceSeria.is_valid():
                     newinstance = newinstanceSeria.save()
                 else:
-                    raise InvestError(2009, msg='项目承揽承做修改失败——%s' % newinstanceSeria.errors)
+                    raise InvestError(40011, msg='项目承揽承做修改失败——%s' % newinstanceSeria.errors)
                 return JSONResponse(
                     SuccessResponse(returnDictChangeToLanguage(self.serializer_class(newinstance).data, lang)))
         except InvestError as err:
@@ -914,7 +914,7 @@ class ProjAttachmentView(viewsets.ModelViewSet):
             if projid:
                 proj = self.get_proj(projid)
             else:
-                raise InvestError(2007,msg='proj 不能为空')
+                raise InvestError(20072,msg='项目不能为空')
             queryset = self.filter_queryset(self.get_queryset())
             if not request.user.has_perm('proj.admin_getproj'):
                 queryset = queryset
@@ -925,7 +925,7 @@ class ProjAttachmentView(viewsets.ModelViewSet):
                 queryset = Paginator(queryset, page_size)
                 queryset = queryset.page(page_index)
             except EmptyPage:
-                return JSONResponse(SuccessResponse([],msg='没有符合的结果'))
+                return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
             serializer = ProjAttachmentSerializer(queryset, many=True)
             return JSONResponse(SuccessResponse({'count':count,'data':returnListChangeToLanguage(serializer.data,lang)}))
         except InvestError as err:
@@ -956,7 +956,7 @@ class ProjAttachmentView(viewsets.ModelViewSet):
                 if attachments.is_valid():
                     attachments.save()
                 else:
-                    raise InvestError(code=4001,msg='附件信息有误_%s\n%s' % (attachments.error_messages, attachments.errors))
+                    raise InvestError(code=40012,msg='%s' % attachments.error_messages)
                 return JSONResponse(SuccessResponse(returnListChangeToLanguage(attachments.data,lang)))
         except InvestError as err:
                 return JSONResponse(InvestErrorResponse(err))
@@ -976,7 +976,7 @@ class ProjAttachmentView(viewsets.ModelViewSet):
                     for f in attachmentdata:
                         fid = f['id']
                         if not isinstance(fid,(int,str)) or not fid:
-                            raise InvestError(2007,msg='attachment[\'id\'] must be a int/str type')
+                            raise InvestError(20071,msg='attachment[\'id\'] must be a int/str type')
                         projAttachment = self.get_object(fid)
                         if request.user.has_perm('proj.admin_changeproj'):
                             pass
@@ -994,11 +994,10 @@ class ProjAttachmentView(viewsets.ModelViewSet):
                         if attachmentSer.is_valid():
                             attachmentSer.save()
                         else:
-                            raise InvestError(code=4001,
-                                          msg='财务信息有误_%s\n%s' % (attachmentSer.error_messages, attachmentSer.errors))
+                            raise InvestError(code=40012, msg='%s' % attachmentSer.error_messages)
                         newfinances.append(attachmentSer.data)
                 else:
-                    raise InvestError(code=20071, msg='finances field cannot be null')
+                    raise InvestError(code=20072, msg='attachment field cannot be null')
                 return JSONResponse(SuccessResponse(returnListChangeToLanguage(newfinances, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1012,7 +1011,7 @@ class ProjAttachmentView(viewsets.ModelViewSet):
             with transaction.atomic():
                 attachmentidlist = request.data.get('attachment',None)
                 if not isinstance(attachmentidlist,list) or not attachmentidlist:
-                    raise InvestError(code=20071,msg='\'attachment\' expect an not null list')
+                    raise InvestError(code=20072,msg='\'attachment\' expect a non-empty array')
                 lang = request.GET.get('lang')
                 returnlist = []
                 for projattachmentid in attachmentidlist:
@@ -1120,7 +1119,7 @@ class ProjFinanceView(viewsets.ModelViewSet):
             if projid and isinstance(projid,(str,int)):
                 proj = self.get_proj(projid)
             else:
-                raise InvestError(2007, msg='proj 不能为空')
+                raise InvestError(20072, msg='项目不能为空')
             queryset = self.filter_queryset(self.get_queryset())
             if not proj.financeIsPublic:
                 if request.user in [proj.supportUser, proj.createuser] or request.user.is_superuser:
@@ -1169,7 +1168,7 @@ class ProjFinanceView(viewsets.ModelViewSet):
                 if finances.is_valid():
                     finances.save()
                 else:
-                    raise InvestError(code=4001,msg='财务信息有误_%s\n%s' % (finances.error_messages, finances.errors))
+                    raise InvestError(code=40013,msg='财务信息有误_%s\n%s' % (finances.error_messages, finances.errors))
                 return JSONResponse(SuccessResponse(returnListChangeToLanguage(finances.data,lang)))
         except InvestError as err:
                 return JSONResponse(InvestErrorResponse(err))
@@ -1190,7 +1189,7 @@ class ProjFinanceView(viewsets.ModelViewSet):
                         fid = f['id']
                         f.pop('proj')
                         if not isinstance(fid,(int,str)) or not fid:
-                            raise InvestError(2007,msg='finances[\'id\'] must be a int/str type')
+                            raise InvestError(20072,msg='finances[\'id\'] must be a int/str type')
                         projfinance = self.get_object(fid)
                         if request.user.has_perm('proj.admin_changeproj'):
                             pass
@@ -1208,11 +1207,10 @@ class ProjFinanceView(viewsets.ModelViewSet):
                         if finance.is_valid():
                             finance.save()
                         else:
-                            raise InvestError(code=4001,
-                                          msg='财务信息有误_%s\n%s' % (finance.error_messages, finance.errors))
+                            raise InvestError(code=40013, msg='%s' % finance.error_messages)
                         newfinances.append(finance.data)
                 else:
-                    raise InvestError(code=20071, msg='finances field cannot be null')
+                    raise InvestError(code=20072, msg='finances field cannot be null')
                 return JSONResponse(SuccessResponse(returnListChangeToLanguage(newfinances, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1226,7 +1224,7 @@ class ProjFinanceView(viewsets.ModelViewSet):
             with transaction.atomic():
                 financeidlist = request.data.get('finances',None)
                 if not isinstance(financeidlist,list) or not financeidlist:
-                    raise InvestError(code=20071,msg='\'finances\' expect an not null list')
+                    raise InvestError(code=20072,msg='\'finances\' expect an not null list')
                 lang = request.GET.get('lang')
                 returnlist = []
                 for projfinanceid in financeidlist:
@@ -1374,7 +1372,7 @@ class ProjectFavoriteView(viewsets.ModelViewSet):
             userid = data.get('user',None)
             ftype = data.get('favoritetype',None)
             if not userid or not ftype:
-                raise InvestError(20071,msg='user/favoritetype cannot be null')
+                raise InvestError(20072,msg='user/favoritetype cannot be null')
             data['createuser'] = request.user.id
             data['datasource'] = request.user.datasource.id
             projidlist = data.pop('projs',None)
@@ -1384,7 +1382,7 @@ class ProjectFavoriteView(viewsets.ModelViewSet):
             elif ftype == 5:
                 traderid = data.get('trader', None)
                 if not traderid:
-                    raise InvestError(4005,msg='trader cannot be null')
+                    raise InvestError(20072,msg='trader cannot be null')
                 traderuser = self.get_user(traderid)
                 if not user.has_perm('usersys.user_interestproj', traderuser):
                     raise InvestError(code=4005)
@@ -1432,7 +1430,7 @@ class ProjectFavoriteView(viewsets.ModelViewSet):
             favorlist = []
             lang = request.GET.get('lang')
             if not isinstance(favoridlist,list) or not favoridlist:
-                raise InvestError(code=20071, msg='accept a not null list')
+                raise InvestError(code=20072, msg='accept a not null list')
             with transaction.atomic():
                 for favorid in favoridlist:
                     instance = self.get_object(favorid)
@@ -1526,7 +1524,7 @@ def isProjectTrader(proj_id, user_id):
     try:
         projectInstance = project.objects.get(id=proj_id, is_deleted=False)
     except Exception:
-        raise InvestError(2007, msg='项目不存在')
+        raise InvestError(20071, msg='项目不存在')
     else:
         if projectInstance.proj_traders.all().filter(user=user_id, is_deleted=False).exists():
             return True

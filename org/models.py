@@ -83,7 +83,7 @@ class organization(MyModel):
 
     def save(self, *args, **kwargs):
         if not self.orgnameC and not self.orgnameE:
-            raise InvestError(2007,msg='机构名称不能为空')
+            raise InvestError(20072,msg='机构名称不能为空')
         if self.orgnameC and not self.orgnameE:
             self.orgnameE = self.orgnameC
         if self.orgnameE and not self.orgnameC:
@@ -92,10 +92,10 @@ class organization(MyModel):
             self.orgfullname = self.orgnameC
         if self.mobileCode:
             if not self.mobileCode.isdigit():
-                raise InvestError(2007, msg='区号 必须是纯数字')
+                raise InvestError(20071, msg='区号 必须是纯数字')
         if self.mobileAreaCode:
             if not self.mobileAreaCode.isdigit():
-                raise InvestError(2007, msg='国家号 必须是纯数字')
+                raise InvestError(20071, msg='国家号 必须是纯数字')
         if self.pk:
             oldorg = organization.objects.get(pk=self.pk)
             if self.orgfullname:
@@ -151,7 +151,7 @@ class orgContact(MyModel):
 
     def save(self,  *args, **kwargs):
         if not self.org:
-            raise InvestError(code=2007,msg='机构不能为空')
+            raise InvestError(20072,msg='机构不能为空')
         super(orgContact,self).save(*args, **kwargs)
 
 
@@ -170,7 +170,7 @@ class orgManageFund(MyModel):
 
     def save(self,  *args, **kwargs):
         if not self.org or not self.fund:
-            raise InvestError(code=2007,msg='机构/基金不能为空')
+            raise InvestError(20072,msg='机构/基金不能为空')
         super(orgManageFund,self).save(*args, **kwargs)
 
 
@@ -192,7 +192,7 @@ class orgInvestEvent(MyModel):
 
     def save(self,  *args, **kwargs):
         if not self.org or not self.comshortname:
-            raise InvestError(code=2007,msg='机构/企业不能为空')
+            raise InvestError(20072,msg='机构/企业不能为空')
         if self.pk:
             if orgInvestEvent.objects.exclude(pk=self.pk).filter(is_deleted=False,comshortname=self.comshortname,investDate=self.investDate, org=self.org).exists():
                 raise InvestError(code=5007,msg='相同投资事件已存在，无法修改')
@@ -215,7 +215,7 @@ class orgCooperativeRelationship(MyModel):
 
     def save(self,  *args, **kwargs):
         if not self.org or not self.cooperativeOrg or not self.comshortname:
-            raise InvestError(code=2007, msg='机构/合作机构/企业不能为空')
+            raise InvestError(20072, msg='机构/合作机构/企业不能为空')
         super(orgCooperativeRelationship,self).save(*args, **kwargs)
 
 
@@ -232,7 +232,7 @@ class orgBuyout(MyModel):
         db_table = "org_buyout"
     def save(self, *args, **kwargs):
         if not self.org:
-            raise InvestError(code=2007, msg='机构不能为空')
+            raise InvestError(20072, msg='机构不能为空')
         super(orgBuyout,self).save(*args, **kwargs)
 
 class orgRemarks(MyModel):
@@ -279,9 +279,9 @@ class orgExportExcelTask(MyModel):
 
     def save(self,  *args, **kwargs):
         if not self.orglist or not self.filename:
-            raise InvestError(code=2007, msg='orglist, filename 不能为空')
+            raise InvestError(20072, msg='机构列表, 文件名称 不能为空')
         if '/' in self.filename or u'/' in self.filename:
-            raise InvestError(code=2007, msg='filename 不能包含\'/\'')
+            raise InvestError(20071, msg='filename 不能包含\'/\'')
         super(orgExportExcelTask, self).save(*args, **kwargs)
 
 

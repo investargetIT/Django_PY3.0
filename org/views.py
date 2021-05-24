@@ -182,7 +182,7 @@ class OrganizationView(viewsets.ModelViewSet):
                             orgtaglist.append(orgTags(org=org, tag_id=tag, createdtime=datetime.datetime.now()))
                         org.org_orgtags.bulk_create(orgtaglist)
                 else:
-                    raise InvestError(code=20071, msg='data有误_%s' % orgserializer.errors)
+                    raise InvestError(20071, msg='%s' % orgserializer.errors)
                 if org.createuser:
                     add_perm('org.user_getorg', org.createuser, org)
                     add_perm('org.user_changeorg', org.createuser, org)
@@ -258,8 +258,8 @@ class OrganizationView(viewsets.ModelViewSet):
                             orgtaglist.append(orgTags(org=org, tag_id=tag, createdtime=datetime.datetime.now()))
                         org.org_orgtags.bulk_create(orgtaglist)
                 else:
-                    raise InvestError(code=20071,
-                                      msg='data有误_%s\n%s' % (orgupdateserializer.error_messages, orgupdateserializer.errors))
+                    raise InvestError(20071,
+                                      msg='%s\n%s' % (orgupdateserializer.error_messages, orgupdateserializer.errors))
                 cache_delete_key(self.redis_key + '_%s' % org.id)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(OrgDetailSerializer(org).data,lang)))
         except InvestError as err:
@@ -422,8 +422,7 @@ class OrgRemarkView(viewsets.ModelViewSet):
                 if orgremarkserializer.is_valid():
                     orgremark = orgremarkserializer.save()
                 else:
-                    raise InvestError(code=20071,
-                                      msg='data有误_%s' %  orgremarkserializer.errors)
+                    raise InvestError(20071, msg='%s' % orgremarkserializer.errors)
                 if orgremark.createuser:
                     add_perm('org.user_getorgremark', orgremark.createuser, orgremark)
                     add_perm('org.user_changeorgremark', orgremark.createuser, orgremark)
@@ -472,8 +471,7 @@ class OrgRemarkView(viewsets.ModelViewSet):
                 if orgserializer.is_valid():
                     org = orgserializer.save()
                 else:
-                    raise InvestError(code=20071,
-                                      msg='data有误_%s' % orgserializer.errors)
+                    raise InvestError(20071, msg='%s' % orgserializer.errors)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(OrgRemarkDetailSerializer(org).data,lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -492,7 +490,7 @@ class OrgRemarkView(viewsets.ModelViewSet):
             elif request.user.has_perm('org.user_deleteorgremark', instance):
                 pass
             else:
-                raise InvestError(code=2009, msg='没有权限')
+                raise InvestError(code=2009)
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
@@ -551,7 +549,7 @@ class OrgContactView(viewsets.ModelViewSet):
             lang = request.GET.get('lang', 'cn')
             orgid = request.GET.get('org', None)
             if not orgid:
-                raise InvestError(2007, msg='机构不能为空')
+                raise InvestError(20072, msg='机构不能为空')
             else:
                 orginstace = self.get_org(orgid)
             queryset = self.filter_queryset(self.get_queryset())
@@ -590,7 +588,7 @@ class OrgContactView(viewsets.ModelViewSet):
                 if instanceserializer.is_valid():
                     instance = instanceserializer.save()
                 else:
-                    raise InvestError(code=20071,msg='data有误_%s' % instanceserializer.error_messages)
+                    raise InvestError(20071,msg='%s' % instanceserializer.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(self.serializer_class(instance).data,lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -629,7 +627,7 @@ class OrgContactView(viewsets.ModelViewSet):
                 if instanceserializer.is_valid():
                     newinstance = instanceserializer.save()
                 else:
-                    raise InvestError(code=20071,  msg='data有误_%s' % instanceserializer.errors)
+                    raise InvestError(20071,  msg='%s' % instanceserializer.errors)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(self.serializer_class(newinstance).data,lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -716,7 +714,7 @@ class OrgManageFundView(viewsets.ModelViewSet):
             lang = request.GET.get('lang', 'cn')
             orgid = request.GET.get('org', None)
             if not orgid:
-                raise InvestError(2007, msg='机构不能为空')
+                raise InvestError(20072, msg='机构不能为空')
             else:
                 orginstace = self.get_org(orgid)
             queryset = self.filter_queryset(self.get_queryset()).order_by('-fundraisedate')
@@ -755,7 +753,7 @@ class OrgManageFundView(viewsets.ModelViewSet):
                 if instanceserializer.is_valid():
                     instance = instanceserializer.save()
                 else:
-                    raise InvestError(code=20071,msg='data有误_%s' % instanceserializer.error_messages)
+                    raise InvestError(20071,msg='%s' % instanceserializer.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(self.serializer_class(instance).data,lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -794,7 +792,7 @@ class OrgManageFundView(viewsets.ModelViewSet):
                 if instanceserializer.is_valid():
                     newinstance = instanceserializer.save()
                 else:
-                    raise InvestError(code=20071,  msg='data有误_%s' % instanceserializer.errors)
+                    raise InvestError(20071,  msg='%s' % instanceserializer.errors)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(self.serializer_class(newinstance).data,lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -871,7 +869,7 @@ class OrgInvestEventView(viewsets.ModelViewSet):
             lang = request.GET.get('lang', 'cn')
             orgid = request.GET.get('org', None)
             if not orgid:
-                raise InvestError(2007, msg='机构不能为空')
+                raise InvestError(20072, msg='机构不能为空')
             else:
                 orginstace = self.get_org(orgid)
             queryset = self.filter_queryset(self.get_queryset()).order_by('-investDate')
@@ -923,7 +921,7 @@ class OrgInvestEventView(viewsets.ModelViewSet):
                                 if not orgTags.objects.filter(org_id=orgid, tag_id=tag_id[0]).exists():
                                     orgTags(org_id=orgid, tag_id=tag_id[0]).save()
                 else:
-                    raise InvestError(code=20071,msg='data有误_%s' % instanceserializer.error_messages)
+                    raise InvestError(20071,msg='%s' % instanceserializer.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(self.serializer_class(instance).data,lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -975,7 +973,7 @@ class OrgInvestEventView(viewsets.ModelViewSet):
                                 if not orgTags.objects.filter(org_id=newinstance.org_id, tag_id=tag_id[0]).exists():
                                     orgTags(org_id=newinstance.org_id, tag_id=tag_id[0]).save()
                 else:
-                    raise InvestError(code=20071,  msg='data有误_%s' % instanceserializer.errors)
+                    raise InvestError(20071,  msg='%s' % instanceserializer.errors)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(self.serializer_class(newinstance).data,lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1052,7 +1050,7 @@ class OrgCooperativeRelationshipView(viewsets.ModelViewSet):
             lang = request.GET.get('lang', 'cn')
             orgid = request.GET.get('org', None)
             if not orgid:
-                raise InvestError(2007, msg='机构不能为空')
+                raise InvestError(20072, msg='机构不能为空')
             else:
                 orginstace = self.get_org(orgid)
             queryset = self.filter_queryset(self.get_queryset()).filter(Q(org=orginstace)).order_by('-investDate')
@@ -1092,7 +1090,7 @@ class OrgCooperativeRelationshipView(viewsets.ModelViewSet):
                 if instanceserializer.is_valid():
                     instance = instanceserializer.save()
                 else:
-                    raise InvestError(code=20071,msg='data有误_%s' % instanceserializer.error_messages)
+                    raise InvestError(20071,msg='%s' % instanceserializer.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(self.serializer_class(instance).data,lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1131,7 +1129,7 @@ class OrgCooperativeRelationshipView(viewsets.ModelViewSet):
                 if instanceserializer.is_valid():
                     newinstance = instanceserializer.save()
                 else:
-                    raise InvestError(code=20071,  msg='data有误_%s' % instanceserializer.errors)
+                    raise InvestError(20071,  msg='%s' % instanceserializer.errors)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(self.serializer_class(newinstance).data,lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1207,7 +1205,7 @@ class OrgBuyoutView(viewsets.ModelViewSet):
             lang = request.GET.get('lang', 'cn')
             orgid = request.GET.get('org', None)
             if not orgid:
-                raise InvestError(2007, msg='机构不能为空')
+                raise InvestError(20072, msg='机构不能为空')
             else:
                 orginstace = self.get_org(orgid)
             queryset = self.filter_queryset(self.get_queryset()).order_by('-buyoutDate')
@@ -1246,7 +1244,7 @@ class OrgBuyoutView(viewsets.ModelViewSet):
                 if instanceserializer.is_valid():
                     instance = instanceserializer.save()
                 else:
-                    raise InvestError(code=20071,msg='data有误_%s' % instanceserializer.error_messages)
+                    raise InvestError(20071,msg='%s' % instanceserializer.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(self.serializer_class(instance).data,lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1285,7 +1283,7 @@ class OrgBuyoutView(viewsets.ModelViewSet):
                 if instanceserializer.is_valid():
                     newinstance = instanceserializer.save()
                 else:
-                    raise InvestError(code=20071,  msg='data有误_%s' % instanceserializer.errors)
+                    raise InvestError(20071,  msg='%s' % instanceserializer.errors)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(self.serializer_class(newinstance).data,lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1375,13 +1373,13 @@ class OrgExportExcelTaskView(viewsets.ModelViewSet):
                         'createuser': request.user.id,
                     }
                 else:
-                    raise InvestError(2007, msg='机构为空')
+                    raise InvestError(20071, msg='机构为空')
                 instanceserializer = OrgExportExcelTaskSerializer(data=data)
                 if instanceserializer.is_valid():
                     instance = instanceserializer.save()
                     makeExportOrgExcel()
                 else:
-                    raise InvestError(code=20071,msg='data有误_%s' % instanceserializer.error_messages)
+                    raise InvestError(20071,msg='%s' % instanceserializer.error_messages)
                 return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1487,7 +1485,7 @@ class OrgAttachmentView(viewsets.ModelViewSet):
                 if attachmentserializer.is_valid():
                     instance = attachmentserializer.save()
                 else:
-                    raise InvestError(code=20071, msg='data有误_%s\n%s' %  attachmentserializer.errors)
+                    raise InvestError(20071, msg='%s\n%s' %  attachmentserializer.errors)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(attachmentserializer.data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1508,8 +1506,8 @@ class OrgAttachmentView(viewsets.ModelViewSet):
                 if serializer.is_valid():
                     newinstance = serializer.save()
                 else:
-                    raise InvestError(code=20071,
-                                      msg='data有误_%s\n%s' % (serializer.error_messages, serializer.errors))
+                    raise InvestError(20071,
+                                      msg='%s\n%s' % (serializer.error_messages, serializer.errors))
                 return JSONResponse(
                     SuccessResponse(returnDictChangeToLanguage(self.serializer_class(newinstance).data, lang)))
         except InvestError as err:
@@ -1779,7 +1777,7 @@ def fulltextsearch(request):
     try:
         searchText = request.GET.get('text')
         if not searchText:
-            raise InvestError(2007, msg='搜索参数不能为空')
+            raise InvestError(20072, msg='搜索参数不能为空')
         page_index = int(request.GET.get('page_index', 1))
         page_size = int(request.GET.get('page_size', 10))
         lang = request.GET.get('lang', 'cn')

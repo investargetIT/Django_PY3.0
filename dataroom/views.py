@@ -134,7 +134,7 @@ class DataroomView(viewsets.ModelViewSet):
             lang = request.GET.get('lang')
             projid = data.get('proj',None)
             if not projid:
-                raise InvestError(20072,msg='proj 不能为空 int类型')
+                raise InvestError(20072,msg='项目不能为空' )
             try:
                 proj = project.objects.get(id=projid,datasource=request.user.datasource,is_deleted=False)
             except project.DoesNotExist:
@@ -159,7 +159,7 @@ class DataroomView(viewsets.ModelViewSet):
                         creatpublicdataroomdirectorywithtemplate(request.user, publicdataroomid=publicdataroom.id)
                         responsedataroom = publicdataroomserializer.data
                     else:
-                        raise InvestError(code=20071, msg=publicdataroomserializer.errors)
+                        raise InvestError(20071, msg=publicdataroomserializer.errors)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(responsedataroom, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -640,7 +640,7 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
                 if directoryorfileserializer.is_valid():
                     directoryorfile = directoryorfileserializer.save()
                 else:
-                    raise InvestError(code=20071, msg='data有误_%s' % directoryorfileserializer.errors)
+                    raise InvestError(20071, msg='%s' % directoryorfileserializer.errors)
                 if directoryorfile.parent is not None:
                     destquery = directoryorfile.parent.asparent_directories.exclude(pk=directoryorfile.pk).filter(is_deleted=False,orderNO__gte=directoryorfile.orderNO)
                     if destquery.exists():
@@ -659,7 +659,7 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
             lang = request.GET.get('lang')
             fileid = data.pop('id',None)
             if fileid is None:
-                raise InvestError(2007,msg='fileid cannot be null')
+                raise InvestError(20072,msg='fileid cannot be null')
             file = self.get_object(fileid)
             if file.dataroom.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
                 pass
@@ -683,7 +683,7 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
                 if directoryorfileserializer.is_valid():
                     directoryorfile = directoryorfileserializer.save()
                 else:
-                    raise InvestError(code=20071, msg='data有误_%s'% directoryorfileserializer.errors)
+                    raise InvestError(20071, msg='%s'% directoryorfileserializer.errors)
                 if directoryorfile.parent is not None and data.get('orderNo', None):
                     destquery = directoryorfile.parent.asparent_directories.exclude(pk=directoryorfile.pk).filter(is_deleted=False,orderNO__gte=directoryorfile.orderNO)
                     if destquery.exist():
@@ -702,7 +702,7 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
         try:
             filelist = request.data.get('filelist',None)
             if not isinstance(filelist,list) or not filelist:
-                raise InvestError(code=20071,msg='need an id list')
+                raise InvestError(20071,msg='except a non-empty array')
             with transaction.atomic():
                 for fileid in filelist:
                     instance = self.get_object(fileid)
@@ -815,13 +815,13 @@ class User_DataroomfileView(viewsets.ModelViewSet):
             lang = request.GET.get('lang')
             dataroom_id = request.GET.get('dataroom')
             if not dataroom_id:
-                raise InvestError(code=2007, msg='dataroom不能为空')
+                raise InvestError(20072, msg='dataroom不能为空')
             user_id = request.GET.get('user', request.user.id)
             qs = self.get_queryset().filter(dataroom_id=dataroom_id,user_id=user_id)
             if qs.exists():
                 instance = qs.first()
             else:
-                raise InvestError(code=2007, msg='dataroom用户不存在')
+                raise InvestError(20071, msg='dataroom用户不存在')
             if instance.lastgettime:
                 files_queryset = dataroomUserSeeFiles.objects.filter(is_deleted=False, dataroomUserfile=instance, createdtime__gte=instance.lastgettime)
             else:
@@ -862,7 +862,7 @@ class User_DataroomfileView(viewsets.ModelViewSet):
                 if user_dataroomserializer.is_valid():
                     user_dataroomserializer.save()
                 else:
-                    raise InvestError(code=20071, msg='data有误_%s' % user_dataroomserializer.errors)
+                    raise InvestError(20071, msg='%s' % user_dataroomserializer.error_messages)
                 return JSONResponse(SuccessResponse(user_dataroomserializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -924,7 +924,7 @@ class User_DataroomfileView(viewsets.ModelViewSet):
                 if user_dataroomserializer.is_valid():
                     user_dataroomserializer.save()
                 else:
-                    raise InvestError(code=20071, msg='data有误_%s' % user_dataroomserializer.errors)
+                    raise InvestError(20071, msg='%s' % user_dataroomserializer.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(user_dataroomserializer.data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -997,7 +997,7 @@ class User_DataroomSeefilesView(viewsets.ModelViewSet):
             lang = request.GET.get('lang', 'cn')
             dataroomid = request.GET.get('dataroom')
             if not dataroomid:
-                raise InvestError(2007, msg='dataroom 参数不能为空')
+                raise InvestError(20072, msg='dataroom不能为空')
             dataroominstance = dataroom.objects.get(is_deleted=False, id=dataroomid, datasource=request.user.datasource)
             if request.user.has_perm('dataroom.admin_getdataroom') or dataroominstance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
                 queryset = self.filter_queryset(self.get_queryset())
@@ -1030,7 +1030,7 @@ class User_DataroomSeefilesView(viewsets.ModelViewSet):
                 if user_dataroomserializer.is_valid():
                     user_dataroomserializer.save()
                 else:
-                    raise InvestError(code=20071, msg='data有误_%s' % user_dataroomserializer.errors)
+                    raise InvestError(20071, msg='%s' % user_dataroomserializer.error_messages)
                 return JSONResponse(SuccessResponse(user_dataroomserializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1214,7 +1214,7 @@ class User_Dataroom_TemplateView(viewsets.ModelViewSet):
                     if 'password' in data:
                         dataroom_User_template.objects.filter(is_deleted=False, dataroom=instance.dataroom).update(password=instance.password)
                 else:
-                    raise InvestError(code=20071, msg='data有误_%s' % user_dataroomserializer.errors)
+                    raise InvestError(20071, msg='%s' % user_dataroomserializer.error_messages)
                 return JSONResponse(SuccessResponse(user_dataroomserializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1278,7 +1278,7 @@ class User_Dataroom_TemplateView(viewsets.ModelViewSet):
                     if 'password' in data:
                         dataroom_User_template.objects.filter(is_deleted=False, dataroom=instance.dataroom).update(password=instance.password)
                 else:
-                    raise InvestError(code=20071, msg='data有误_%s' % user_dataroomtempserializer.errors)
+                    raise InvestError(20071, msg='%s' % user_dataroomtempserializer.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(user_dataroomtempserializer.data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1410,7 +1410,7 @@ class DataroomUserDiscussView(viewsets.ModelViewSet):
         try:
             data = request.data
             if not data.get('file'):
-                raise InvestError(2007, msg='file不能为空')
+                raise InvestError(20072, msg='文件不能为空')
             if not dataroomUserSeeFiles.objects.filter(is_deleted=False, file_id=data['file'], dataroomUserfile__user=request.user).exists():
                 raise InvestError(2009, msg='只有文件可见投资人可以添加标注')
             with transaction.atomic():
@@ -1421,7 +1421,7 @@ class DataroomUserDiscussView(viewsets.ModelViewSet):
                 if user_dataroomserializer.is_valid():
                     user_dataroomserializer.save()
                 else:
-                    raise InvestError(code=20071, msg='data有误_%s' % user_dataroomserializer.errors)
+                    raise InvestError(20071, msg='%s' % user_dataroomserializer.errors)
                 return JSONResponse(SuccessResponse(user_dataroomserializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1448,7 +1448,7 @@ class DataroomUserDiscussView(viewsets.ModelViewSet):
                 if user_dataroomserializer.is_valid():
                     user_dataroomserializer.save()
                 else:
-                    raise InvestError(code=20071, msg='data有误_%s' % user_dataroomserializer.errors)
+                    raise InvestError(20071, msg='%s' % user_dataroomserializer.error_messages)
                 return JSONResponse(SuccessResponse(user_dataroomserializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1555,7 +1555,7 @@ class DataroomUserReadFileRecordView(viewsets.ModelViewSet):
                     if serializer.is_valid():
                         serializer.save()
                     else:
-                        raise InvestError(code=20071, msg='data有误_%s' % serializer.errors)
+                        raise InvestError(20071, msg='%s' % serializer.errors)
                 return JSONResponse(SuccessResponse({timeField: requestTime}))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))

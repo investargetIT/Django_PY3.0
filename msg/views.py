@@ -105,7 +105,7 @@ class WebMessageView(viewsets.ModelViewSet):
                 if msgserializer.is_valid():
                     msgserializer.save()
                 else:
-                    raise InvestError(code=20071,msg='data有误_%s' % msgserializer.errors)
+                    raise InvestError(20071,msg='%s' % msgserializer.errors)
                 return JSONResponse(SuccessResponse(msgserializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -225,7 +225,7 @@ class WebEXMeetingView(viewsets.ModelViewSet):
                 if instanceSerializer.is_valid():
                     instance = instanceSerializer.save()
                 else:
-                    raise InvestError(code=20071, msg='参数错误：%s' % instanceSerializer.errors)
+                    raise InvestError(20071, msg='参数错误：%s' % instanceSerializer.errors)
                 data['startDate'] = instance.startDate.strftime('%m/%d/%Y %H:%M:%S')
                 XML_body = getCreateXMLBody(data)
                 s = requests.post(url=self.webex_url, data=XML_body.encode("utf-8"))
@@ -285,7 +285,7 @@ class WebEXMeetingView(viewsets.ModelViewSet):
                 if instanceSerializer.is_valid():
                     instanceSerializer.save()
                 else:
-                    raise InvestError(code=20071, msg='参数错误：%s' % instanceSerializer.errors)
+                    raise InvestError(20071, msg='参数错误：%s' % instanceSerializer.errors)
             data['startDate'] = instance.startDate.strftime('%m/%d/%Y %H:%M:%S')
             XML_body = getUpdateXMLBody(instance.meetingKey, data)
             s = requests.post(url=self.webex_url, data=XML_body.encode("utf-8"))
@@ -306,7 +306,7 @@ class WebEXMeetingView(viewsets.ModelViewSet):
                         if instanceSerializer.is_valid():
                             newInstance = instanceSerializer.save()
                         else:
-                            raise InvestError(code=20071, msg='参数错误：%s' % instanceSerializer.errors)
+                            raise InvestError(20071, msg='参数错误：%s' % instanceSerializer.errors)
                         if startDate != newInstance.startDate or duration != newInstance.duration or title != newInstance.title:
                             webexSch_qs = instance.meeting_schedule.all().filter(is_deleted=False)
                             webexSch_qs.update(scheduledtime=newInstance.startDate, comments=newInstance.title)
@@ -573,7 +573,7 @@ def createWebEXMeeting(data):
         if instanceSerializer.is_valid():
             instance = instanceSerializer.save()
         else:
-            raise InvestError(code=20071, msg='创建会议参数错误：%s' % instanceSerializer.errors)
+            raise InvestError(20071, msg='创建会议参数错误：%s' % instanceSerializer.errors)
         data['startDate'] = instance.startDate.strftime('%m/%d/%Y %H:%M:%S')
         XML_body = getCreateXMLBody(data)
         s = requests.post(url=webex_url, data=XML_body.encode("utf-8"))
@@ -595,7 +595,7 @@ def createWebEXMeeting(data):
                 if newInstanceSerializer.is_valid():
                     newInstance = newInstanceSerializer.save()
                 else:
-                    raise InvestError(code=20071, msg='会议信息错误：%s' % instanceSerializer.errors)
+                    raise InvestError(20071, msg='会议信息错误：%s' % instanceSerializer.errors)
         else:
             raise InvestError(8006, msg=s.text)
         return newInstance
@@ -675,7 +675,7 @@ class ScheduleView(viewsets.ModelViewSet):
                 if scheduleserializer.is_valid():
                     instances = scheduleserializer.save()
                 else:
-                    raise InvestError(code=20071, msg='参数错误：%s' % scheduleserializer.errors)
+                    raise InvestError(20071, msg='参数错误：%s' % scheduleserializer.errors)
                 return JSONResponse(SuccessResponse(ScheduleMeetingSerializer(instances, many=True).data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -719,7 +719,7 @@ class ScheduleView(viewsets.ModelViewSet):
                 if scheduleserializer.is_valid():
                     newinstance = scheduleserializer.save()
                 else:
-                    raise InvestError(code=20071, msg='参数错误：%s' % scheduleserializer.errors)
+                    raise InvestError(20071, msg='参数错误：%s' % scheduleserializer.errors)
                 return JSONResponse(SuccessResponse(ScheduleSerializer(newinstance).data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -803,7 +803,7 @@ class WebEXUserView(viewsets.ModelViewSet):
                 if instanceSerializer.is_valid():
                     instances = instanceSerializer.save()
                 else:
-                    raise InvestError(code=20071, msg=instanceSerializer.errors)
+                    raise InvestError(20071, msg=instanceSerializer.errors)
                 utils.sendMessage.sendmessage_WebEXMeetingMessage(instances)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(instanceSerializer.data)))
         except InvestError as err:
@@ -868,7 +868,7 @@ def getICSFile(data):
     startDate = datetime.datetime.strptime(data.get('startDate'), "%Y-%m-%dT%H:%M:%S")
     endDate = datetime.datetime.strptime(data.get('endDate'), "%Y-%m-%dT%H:%M:%S")
     if startDate >= endDate:
-        raise InvestError(2007, msg='开始时间不能早于结束时间')
+        raise InvestError(20071, msg='开始时间不能早于结束时间')
     summary = data.get('summary', '事件标题')
     description = data.get('description', '事件描述')
     location = data.get('location', '未知')
@@ -939,7 +939,7 @@ class InternOnlineTestView(viewsets.ModelViewSet):
                 if instanceSerializer.is_valid():
                     instanceSerializer.save()
                 else:
-                    raise InvestError(code=20071, msg=instanceSerializer.errors)
+                    raise InvestError(20071, msg=instanceSerializer.errors)
             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(instanceSerializer.data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -953,7 +953,7 @@ class InternOnlineTestView(viewsets.ModelViewSet):
             lang = request.GET.get('lang')
             instance = self.get_object()
             if instance.user != request.user.id:
-                raise InvestError(2007, msg='非本人不能查看')
+                raise InvestError(20071, msg='非本人不能查看')
             serializer = self.serializer_class(instance)
             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data, lang)))
         except InvestError as err:
@@ -969,13 +969,13 @@ class InternOnlineTestView(viewsets.ModelViewSet):
             instance = self.get_object()
             data = request.data
             if instance.user.id != request.user.id:
-                raise InvestError(2007, msg='非本人不能提交')
+                raise InvestError(20071, msg='非本人不能提交')
             if data.get('user') and data.get('user') != instance.user.id:
-                raise InvestError(2007, msg='答题人不能被修改')
+                raise InvestError(20071, msg='答题人不能被修改')
             if not data.get('key'):
-                raise InvestError(2007, msg='答题结束附件不能为空')
+                raise InvestError(20072, msg='答题结束附件不能为空')
             if instance.key:
-                raise InvestError(2007, msg='只能提交一次')
+                raise InvestError(20071, msg='只能提交一次')
             data['endTime'] = datetime.datetime.now()
             with transaction.atomic():
                 instanceSerializer = InternOnlineTestCreateSerializer(instance, data=data)

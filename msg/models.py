@@ -71,7 +71,7 @@ class webexMeeting(MyModel):
         self.endDate = self.startDate + datetime.timedelta(minutes=self.duration)
         if not self.is_deleted:
             if self.createuser is None:
-                raise InvestError(2007, msg='createuser can`t be null')
+                raise InvestError(20071, msg='createuser can`t be null')
             if self.pk:
                 QS = webexMeeting.objects.exclude(pk=self.pk).filter(is_deleted=False)
             else:
@@ -114,9 +114,9 @@ class schedule(MyModel):
     def save(self, *args, **kwargs):
         if not self.is_deleted:
             if self.createuser is None:
-                raise InvestError(2007,msg='createuser can`t be null')
+                raise InvestError(20071,msg='createuser can`t be null')
             if self.scheduledtime.strftime("%Y-%m-%d") < datetime.datetime.now().strftime("%Y-%m-%d"):
-                raise InvestError(2007,msg='日程时间不能是今天以前的时间')
+                raise InvestError(20071,msg='日程时间不能是今天以前的时间')
             if self.proj:
                 self.projtitle = self.proj.projtitleC
         if not self.is_deleted and self.meeting and self.manager:
@@ -146,7 +146,7 @@ class webexUser(MyModel):
             self.email = self.user.email
         self.datasource = self.createuser.datasource
         if self.meetingRole and not self.is_deleted and webexUser.objects.exclude(pk=self.pk).filter(is_deleted=False, meeting=self.meeting, meetingRole=True).exists():
-            raise InvestError(2007, msg='只能有一个主持人')
+            raise InvestError(20071, msg='只能有一个主持人')
         return super(webexUser, self).save(*args, **kwargs)
 
 
@@ -170,9 +170,9 @@ class InternOnlineTest(MyModel):
     def save(self, *args, **kwargs):
         if not self.is_deleted:
             if InternOnlineTest.objects.exclude(pk=self.pk).filter(is_deleted=False, user=self.user).exists():
-                raise InvestError(2007, msg='该用户已存在答题记录了')
+                raise InvestError(20071, msg='该用户已存在答题记录了')
             if not self.user:
-                raise InvestError(2007, msg='用户不能为空')
+                raise InvestError(20072, msg='用户不能为空')
             if not self.datasource:
                 self.datasource = self.user.datasource
         super(InternOnlineTest,self).save(*args, **kwargs)
