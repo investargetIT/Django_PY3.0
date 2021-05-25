@@ -1581,7 +1581,7 @@ def importDidiRecord(data_list):
             else:
                 logexcption(msg='存储滴滴记录失败--%s' % newInstance.errors)
         except Exception as e:
-            logexcption()
+            logexcption(msg='didi save error')
 
 def importDidiRecordCsvFile():
     csvFilePath = APILOG_PATH['didiRecordCsvFilePath']

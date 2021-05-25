@@ -260,7 +260,7 @@ class projectDiDiRecord(MyModel):
         if not self.is_deleted:
             if projectDiDiRecord.objects.exclude(pk=self.pk).filter(orderNumber=self.orderNumber, is_deleted=False).exists():
                 raise InvestError(4010, msg='订单号已存在')
-            if not self.money or (self.money and self.money <= 0):
+            if not self.money or self.money < 0:
                raise InvestError(20071, msg='实际付款不符合条件')
         return super(projectDiDiRecord, self).save(*args, **kwargs)
 
