@@ -267,8 +267,8 @@ class DataroomView(viewsets.ModelViewSet):
             else:
                 # checkDirectoryLatestdate(direcpath, file_qs)
                 if os.path.exists(direcpath):
-                    seconds = getRemainingTime(direcpath)
-                    response = JSONResponse(SuccessResponse({'code': 8004, 'msg': '压缩中', 'seconds': seconds}))
+                    seconds, all = getRemainingTime(direcpath)
+                    response = JSONResponse(SuccessResponse({'code': 8004, 'msg': '压缩中', 'seconds': seconds, 'all': all}))
                 else:
                     watermarkcontent = None if nowater else str(request.GET.get('water', '').replace('@', '[at]')).split(',')
                     directory_qs = dataroominstance.dataroom_directories.all().filter(is_deleted=False, isFile=False)
@@ -370,11 +370,13 @@ def getRemainingTime(rootpath):
     downloadSpeed, encryptSpeed = 2 * 1024 * 1024, 2 * 1024 * 1024  # bytes/s
     progress_path = os.path.join(rootpath, 'zipProgress')
     time = 999
+    all = 999
     if os.path.exists(progress_path):
         with open(progress_path, encoding='utf-8', mode='r') as load_f:
             load_data = json.load(load_f)
         time = load_data['unDownloadSize'] / downloadSpeed + load_data['unEncryptSize'] / encryptSpeed + 2
-    return round(time, 2)
+        all = load_data['allDownloadSize'] / downloadSpeed + load_data['allEncryptSize'] / encryptSpeed + 2
+    return round(time, 2), round(all, 2)
 
 
 def checkDirectoryLatestdate(direcory_path, file_qs):
