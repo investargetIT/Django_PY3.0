@@ -616,7 +616,7 @@ class OrgBDView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
-    @loginTokenIsAvailable(['BD.manageOrgBD', 'BD.user_getOrgBD'])
+    @loginTokenIsAvailable()
     def list(self, request, *args, **kwargs):
         try:
             queryset = self.filter_queryset(self.get_queryset())
