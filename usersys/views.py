@@ -8,11 +8,8 @@ from django.core.exceptions import FieldDoesNotExist
 from django.core.paginator import Paginator, EmptyPage
 from django.db import transaction, models, connection
 from django.db.models import Q, Count, QuerySet
-from django.views import View
 from rest_framework import filters, viewsets
-
 from rest_framework.decorators import api_view, detail_route, list_route
-
 from APIlog.views import logininlog, apilog
 from dataroom.models import dataroom
 from org.models import organization
@@ -102,7 +99,7 @@ class UserView(viewsets.ModelViewSet):
                 try:
                     obj = self.queryset.get(id=pk)
                 except self.Model.DoesNotExist:
-                    raise InvestError(code=2002)
+                    raise InvestError(code=2002, msg='用户不存在')
                 else:
                     write_to_cache(self.redis_key + '_%s' % pk, obj)
         else:
@@ -112,11 +109,11 @@ class UserView(viewsets.ModelViewSet):
                 try:
                     obj = self.queryset.get(id=self.kwargs[lookup_url_kwarg])
                 except self.Model.DoesNotExist:
-                    raise InvestError(code=2002)
+                    raise InvestError(code=2002, msg='用户不存在')
                 else:
                     write_to_cache(self.redis_key+'_%s'%self.kwargs[lookup_url_kwarg],obj)
         if obj.datasource != self.request.user.datasource:
-            raise InvestError(code=8888)
+            raise InvestError(code=8888, msg='查询用户失败')
         return obj
 
     @loginTokenIsAvailable()
@@ -220,25 +217,25 @@ class UserView(viewsets.ModelViewSet):
                     if datasource.exists():
                         userdatasource = datasource.first()
                     else:
-                        raise  InvestError(code=8888)
+                        raise InvestError(code=8888, msg='新用户创建失败', detail='source 不存在')
                 else:
-                    raise InvestError(code=8888,msg='unavailable source')
+                    raise InvestError(code=8888, msg='新用户创建失败', detail='source 不能为空')
                 if not mobile or not email:
-                    raise InvestError(code=2006)
+                    raise InvestError(code=2006, msg='新用户创建失败', detail='mobile、email不能为空')
 
                 if not mobilecodetoken or not mobilecode:
-                    raise InvestError(code=20072,msg='验证码缺失')
+                    raise InvestError(code=20072, msg='新用户创建失败', detail='验证码缺失')
                 try:
                     mobileauthcode = MobileAuthCode.objects.get(mobile=mobile, code=mobilecode, token=mobilecodetoken)
                 except MobileAuthCode.DoesNotExist:
-                    raise InvestError(code=2005)
+                    raise InvestError(code=2005, msg='新用户创建失败', detail='验证码有误')
                 else:
                     if mobileauthcode.isexpired():
-                        raise InvestError(code=20051)
+                        raise InvestError(code=20051, msg='新用户创建失败', detail='验证码过期')
                 if self.queryset.filter(mobile=mobile,datasource=userdatasource).exists():
-                    raise InvestError(code=20041)
+                    raise InvestError(code=20041, msg='新用户创建失败', detail='手机已存在')
                 if self.queryset.filter(email=email,datasource=userdatasource).exists():
-                    raise InvestError(code=20042)
+                    raise InvestError(code=20042, msg='新用户创建失败', detail='邮箱已存在')
                 try:
                     groupname = None
                     type = data.get('type', None)
@@ -251,7 +248,7 @@ class UserView(viewsets.ModelViewSet):
                     else:
                         group = Group.objects.get(id=type, datasource=userdatasource)
                 except Exception:
-                    raise InvestError(20071,msg='(%s)用户类型不可用' % type)
+                    raise InvestError(20071, msg='新用户创建失败', detail='用户类型不可用')
                 data['groups'] = [group.id]
                 orgname = data.get('orgname', None)
                 if orgname:
@@ -281,7 +278,7 @@ class UserView(viewsets.ModelViewSet):
                             usertaglist.append(userTags(user=user, tag_id=tag, createdtime=datetime.datetime.now()))
                         user.user_usertags.bulk_create(usertaglist)
                 else:
-                    raise InvestError(20071,msg='%s' % userserializer.error_messages)
+                    raise InvestError(20071, msg='新用户创建失败', detail='%s' % userserializer.error_messages)
                 returndic = CreatUserSerializer(user).data
                 sendmessage_userregister(user,user,['email','webmsg','app'])
                 apilog(request, 'MyUser', None, None, datasource=source)
@@ -303,9 +300,9 @@ class UserView(viewsets.ModelViewSet):
                 mobile = data.get('mobile')
                 data['is_active'] = False
                 if not email or not mobile:
-                    raise InvestError(code=2006)
+                    raise InvestError(code=2006, msg='新用户创建失败', detail='mobile、email不能为空')
                 if self.get_queryset().filter(Q(mobile=mobile) | Q(email=email)).exists():
-                    raise InvestError(code=2004)
+                    raise InvestError(code=2004, msg='新用户创建失败', detail='用户已存在')
                 user = MyUser(email=email, mobile=mobile, datasource_id=request.user.datasource.id)
                 data.pop('password', None)
                 user.set_password('Aa123456')
@@ -321,17 +318,17 @@ class UserView(viewsets.ModelViewSet):
                             group = Group.objects.get(id=groupid[0])
                         except Exception:
                             catchexcption(request)
-                            raise InvestError(20071, msg='(groups)用户类型不可用')
+                            raise InvestError(20071, msg='新用户创建失败', detail='用户类型不可用')
                         if not group.permissions.filter(codename='as_investor').exists():
-                            raise InvestError(2009,msg='新增用户非投资人类型')
+                            raise InvestError(2009, msg='新用户创建失败', detail='新增用户非投资人类型')
                         data['groups'] = [group.id]
                     else:
-                        raise InvestError(20072, msg='新增用户没有分配可用组别')
+                        raise InvestError(20072, msg='新用户创建失败', detail='新增用户没有分配可用组别')
                 else:
-                    raise InvestError(2009, msg='没有新增权限')
+                    raise InvestError(2009, msg='新用户创建失败', detail='没有新增权限')
                 cannoteditlist = [key for key in keylist if key in canNotChangeField]
                 if cannoteditlist:
-                    raise InvestError(code=2009, msg='没有权限修改%s' % cannoteditlist)
+                    raise InvestError(code=2009, msg='新用户创建失败', detail='没有权限修改%s' % cannoteditlist)
                 data['createuser'] = request.user.id
                 data['createdtime'] = datetime.datetime.now()
                 data['datasource'] = request.user.datasource.id
@@ -345,7 +342,7 @@ class UserView(viewsets.ModelViewSet):
                             usertaglist.append(userTags(user=user, tag_id=tag, ))
                         user.user_usertags.bulk_create(usertaglist)
                 else:
-                    raise InvestError(20071,msg='%s' % userserializer.error_messages)
+                    raise InvestError(20071, msg='新用户创建失败', detail='参数有误%s' % userserializer.error_messages)
                 if user.createuser:
                     add_perm('usersys.user_getuser', user.createuser, user)
                     add_perm('usersys.user_changeuser', user.createuser, user)
@@ -424,7 +421,7 @@ class UserView(viewsets.ModelViewSet):
             userlist = []
             messagelist = []
             if not useridlist or not isinstance(useridlist, list):
-                raise InvestError(20071,msg='expect a not null id list')
+                raise InvestError(20071, msg='用户信息修改失败', detail='except a non-empty array')
             with transaction.atomic():
                 for userid in useridlist:
                     data = request.data.get('userdata')
@@ -439,16 +436,16 @@ class UserView(viewsets.ModelViewSet):
                                 try:
                                     groupinstance = Group.objects.get(id=groupid[0])
                                 except Exception:
-                                    raise InvestError(20071, msg='用户类型不可用')
+                                    raise InvestError(20071, msg='用户信息修改失败', detail='用户类型不可用')
                                 if groupinstance not in user.groups.all():
                                     if user.has_perm('usersys.as_trader'):
                                         if Permission.objects.get(codename='as_trader', content_type__app_label='usersys') not in groupinstance.permissions.all():
                                             if user.trader_relations.all().filter(is_deleted=False).exists():
-                                                raise InvestError(2010, msg='该用户有对接投资人，请先处理')
+                                                raise InvestError(2010, msg='用户信息修改失败', detail='该用户有对接投资人，请先处理')
                                     if user.has_perm('usersys.as_investor'):
                                         if Permission.objects.get(codename='as_investor', content_type__app_label='usersys') not in groupinstance.permissions.all():
                                             if user.investor_relations.all().filter(is_deleted=False).exists():
-                                                raise InvestError(2010, msg='该用户有对接交易师，请先处理')
+                                                raise InvestError(2010, msg='用户信息修改失败', detail='该用户有对接交易师，请先处理')
                                     data['groups'] = [groupinstance.id]
                         else:
                             if request.user == user:
@@ -456,11 +453,11 @@ class UserView(viewsets.ModelViewSet):
                             elif request.user.has_perm('usersys.user_changeuser', user):
                                 canNotChangeField = perimissionfields.userpermfield['usersys.trader_changeuser']
                             else:
-                                raise InvestError(code=2009)
+                                raise InvestError(code=2009, msg='用户信息修改失败')
                         keylist = data.keys()
                         cannoteditlist = [key for key in keylist if key in canNotChangeField]
                         if cannoteditlist:
-                            raise InvestError(code=2009,msg='没有权限修改_%s' % cannoteditlist)
+                            raise InvestError(code=2009, msg='用户信息修改失败', detail='没有权限修改_%s' % cannoteditlist)
                         data['lastmodifyuser'] = request.user.id
                         data['lastmodifytime'] = datetime.datetime.now()
                         tags = data.pop('tags', None)
@@ -480,7 +477,7 @@ class UserView(viewsets.ModelViewSet):
                                     usertaglist.append(userTags(user=user, tag_id=tag, createuser=request.user,createdtime=datetime.datetime.now()))
                                 user.user_usertags.bulk_create(usertaglist)
                         else:
-                            raise InvestError(20071,msg='%s' % userserializer.error_messages)
+                            raise InvestError(20071, msg='用户信息修改失败', detail='%s' % userserializer.error_messages)
                         newuserdata = UserSerializer(user)
                         apilog(request, 'MyUser', olduserdata.data, newuserdata.data, modelID=userid, datasource=request.user.datasource_id)
                         userlist.append(newuserdata.data)
@@ -505,16 +502,16 @@ class UserView(viewsets.ModelViewSet):
             userlist = []
             lang = request.GET.get('lang')
             if not useridlist or not isinstance(useridlist,list):
-                raise InvestError(20071,msg='except a non-empty array')
+                raise InvestError(20071, msg='用户信息删除失败', detail='except a non-empty array')
             with transaction.atomic():
                 for userid in useridlist:
                     if userid == request.user.id:
-                        raise InvestError(20071, msg='不能删除自己')
+                        raise InvestError(20071, msg='用户信息删除失败', detail='不能删除自己')
                     instance = self.get_object(userid)
                     if request.user.has_perm('usersys.admin_deleteuser') or request.user.has_perm('usersys.user_deleteuser',instance):
                         pass
                     else:
-                        raise InvestError(code=2009)
+                        raise InvestError(code=2009, msg='用户信息删除失败')
                     for link in ['investor_relations', 'trader_relations', 'investor_timelines',
                                      'trader_timelines', 'usersupport_projs', 'usercreate_OKR', 'usercreate_OKRResult',
                                      'manager_beschedule', 'user_webexUser', 'user_dataroomTemp',
@@ -531,15 +528,15 @@ class UserView(viewsets.ModelViewSet):
                             # one to one
                             if isinstance(manager, models.Model):
                                 if hasattr(manager, 'is_deleted') and not manager.is_deleted:
-                                    raise InvestError(code=2010,msg=u'{} 上有关联数据'.format(link))
+                                    raise InvestError(code=2010, msg='用户信息删除失败', detail=u'{} 上有关联数据'.format(link))
                             else:
                                 try:
                                     manager.model._meta.get_field('is_deleted')
                                     if manager.all().filter(is_deleted=False).count():
-                                        raise InvestError(code=2010,msg=u'{} 上有关联数据'.format(link))
+                                        raise InvestError(code=2010, msg='用户信息删除失败', detail=u'{} 上有关联数据'.format(link))
                                 except FieldDoesNotExist:
                                     if manager.all().count():
-                                        raise InvestError(code=2010,msg=u'{} 上有关联数据'.format(link))
+                                        raise InvestError(code=2010, msg='用户信息删除失败', detail=u'{} 上有关联数据'.format(link))
                         else:
                             manager = getattr(instance, link, None)
                             if not manager:
@@ -583,20 +580,20 @@ class UserView(viewsets.ModelViewSet):
                 if datasource.exists():
                     userdatasource = datasource.first()
                 else:
-                    raise InvestError(code=8888)
+                    raise InvestError(code=8888, msg='重置密码失败')
             else:
-                raise InvestError(code=8888, msg='unavailable source')
+                raise InvestError(code=8888, msg='重置密码失败')
             try:
                 user = self.get_queryset().get(mobile=mobile, datasource=userdatasource)
             except MyUser.DoesNotExist:
-                raise InvestError(code=2002)
+                raise InvestError(code=2002, msg='重置密码失败', detail='用户不存在')
             try:
                 mobileauthcode = MobileAuthCode.objects.get(mobile=mobile, code=mobilecode, token=mobilecodetoken)
             except MobileAuthCode.DoesNotExist:
-                raise InvestError(code=2005,msg='验证码错误')
+                raise InvestError(code=2005, msg='重置密码失败', detail='验证码错误')
             else:
                 if mobileauthcode.isexpired():
-                    raise InvestError(code=20051,msg='验证码已过期')
+                    raise InvestError(code=20051, msg='重置密码失败', detail='验证码已过期')
             with transaction.atomic():
                 user.set_password(password)
                 user.save(update_fields=['password'])
@@ -621,15 +618,15 @@ class UserView(viewsets.ModelViewSet):
             user = self.get_object()
             if user == request.user:
                 if not user.check_password(oldpassword):
-                    raise InvestError(code=2001, msg='密码错误')
+                    raise InvestError(code=2001, msg='修改密码失败', detail='旧密码错误')
                 if not password or not isinstance(password, str):
-                    raise InvestError(code=2001, msg='新密码输入有误')
+                    raise InvestError(code=2001, msg='修改密码失败', detail='新密码输入有误')
                 if password == oldpassword:
-                    raise InvestError(code=2001, msg='新旧密码不能相同')
+                    raise InvestError(code=2001, msg='修改密码失败', detail='新旧密码不能相同')
                 if len(password) < 6:
-                    raise InvestError(code=2001, msg='密码长度至少6位')
+                    raise InvestError(code=2001, msg='修改密码失败', detail='密码长度至少6位')
             else:
-                raise InvestError(code=2009)
+                raise InvestError(code=2009, msg='修改密码失败')
             with transaction.atomic():
                 user.set_password(password)
                 user.save(update_fields=['password'])
@@ -678,7 +675,7 @@ class UserView(viewsets.ModelViewSet):
                     result = False
                     user = None
             else:
-                raise InvestError(20072)
+                raise InvestError(20072, msg='查询信息有误', detail='account 不能为空')
             return JSONResponse(SuccessResponse({'result':result,'user':returnDictChangeToLanguage(user,lang)}))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -797,7 +794,7 @@ class UnReachUserView(viewsets.ModelViewSet):
                 if newinstance.is_valid():
                     newinstance.save()
                 else:
-                    raise InvestError(20071, msg='%s' % newinstance.error_messages)
+                    raise InvestError(20071, msg='新增UnReachUser失败', detail='%s' % newinstance.error_messages)
                 return JSONResponse(SuccessResponse(newinstance.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -828,7 +825,7 @@ class UnReachUserView(viewsets.ModelViewSet):
                 if newinstance.is_valid():
                     newinstance.save()
                 else:
-                    raise InvestError(20071, msg='%s' % newinstance.error_messages)
+                    raise InvestError(20071, msg='修改UnReachUser失败', detail='%s' % newinstance.error_messages)
                 return JSONResponse(SuccessResponse(newinstance.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -907,7 +904,7 @@ class UserAttachmentView(viewsets.ModelViewSet):
                 if attachmentserializer.is_valid():
                     attachmentserializer.save()
                 else:
-                    raise InvestError(20071, msg='%s' %  attachmentserializer.error_messages)
+                    raise InvestError(20071, msg='新增用户附件失败', detail='%s' %  attachmentserializer.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(attachmentserializer.data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -927,7 +924,7 @@ class UserAttachmentView(viewsets.ModelViewSet):
                 if serializer.is_valid():
                     newinstance = serializer.save()
                 else:
-                    raise InvestError(20071, msg='%s' % serializer.error_messages)
+                    raise InvestError(20071, msg='修改用户附件失败', detail='%s' % serializer.error_messages)
                 return JSONResponse(
                     SuccessResponse(returnDictChangeToLanguage(UserAttachmentSerializer(newinstance).data, lang)))
         except InvestError as err:
@@ -1014,7 +1011,7 @@ class UserEventView(viewsets.ModelViewSet):
                                                                is_deleted=False).exists():
                                     userTags(user_id=user_id, tag_id=tag_id[0]).save()
                 else:
-                    raise InvestError(20071, msg='%s' % insserializer.error_messages)
+                    raise InvestError(20071, msg='新增用户投资经历失败', detail='%s' % insserializer.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(insserializer.data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1048,7 +1045,7 @@ class UserEventView(viewsets.ModelViewSet):
                                                                is_deleted=False).exists():
                                     userTags(user_id=user_id, tag_id=tag_id[0]).save()
                 else:
-                    raise InvestError(20071, msg='%s' % serializer.error_messages)
+                    raise InvestError(20071, msg='修改用户投资经历失败', detail='%s' % serializer.error_messages)
                 return JSONResponse(
                     SuccessResponse(returnDictChangeToLanguage(UserEventSerializer(newinstance).data, lang)))
         except InvestError as err:
@@ -1148,7 +1145,7 @@ class UserRemarkView(viewsets.ModelViewSet):
                 if remarkserializer.is_valid():
                     remarkserializer.save()
                 else:
-                    raise InvestError(20071, msg='%s' %  remarkserializer.error_messages)
+                    raise InvestError(20071, msg='新增用户备注失败', detail='%s' %  remarkserializer.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(remarkserializer.data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1166,7 +1163,7 @@ class UserRemarkView(viewsets.ModelViewSet):
             elif remark.createuser == request.user:
                 remarkserializer = UserRemarkSerializer
             else:
-                raise InvestError(code=2009)
+                raise InvestError(code=2009, msg='查看该用户备注失败')
             serializer = remarkserializer(remark)
             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data, lang)))
         except InvestError as err:
@@ -1185,7 +1182,7 @@ class UserRemarkView(viewsets.ModelViewSet):
             elif remark.createuser == request.user:
                 pass
             else:
-                raise InvestError(code=2009)
+                raise InvestError(code=2009, msg='修改用户备注失败')
             data = request.data
             data['lastmodifyuser'] = request.user.id
             with transaction.atomic():
@@ -1193,7 +1190,7 @@ class UserRemarkView(viewsets.ModelViewSet):
                 if serializer.is_valid():
                     newremark = serializer.save()
                 else:
-                    raise InvestError(20071, msg='%s' % serializer.error_messages)
+                    raise InvestError(20071, msg='修改用户备注失败', detail='%s' % serializer.error_messages)
                 return JSONResponse(
                     SuccessResponse(returnDictChangeToLanguage(UserRemarkSerializer(newremark).data, lang)))
         except InvestError as err:
@@ -1212,7 +1209,7 @@ class UserRemarkView(viewsets.ModelViewSet):
             elif instance.createuser == request.user:
                 pass
             else:
-                raise InvestError(code=2009)
+                raise InvestError(code=2009, msg='删除用户备注失败')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
@@ -1288,7 +1285,7 @@ class UserRelationView(viewsets.ModelViewSet):
                 if request.user.has_perm('usersys.admin_getuserrelation') or dataroominstance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
                     queryset = queryset.filter(traderuser__in=dataroominstance.proj.proj_traders.all().filter(is_deleted=False).values_list('user_id'))
                 else:
-                    raise InvestError(2009, msg='没有权限查看该dataroom承揽承做对接投资人')
+                    raise InvestError(2009, msg='查询失败', detail='没有权限查看该dataroom承揽承做对接投资人')
             else:
                 if request.user.has_perm('usersys.admin_getuserrelation'):
                     pass
@@ -1325,11 +1322,11 @@ class UserRelationView(viewsets.ModelViewSet):
             try:
                 traderuser = MyUser.objects.get(id=data.get('traderuser', None))
             except MyUser.DoesNotExist:
-                raise InvestError(20071, msg='交易师不存在')
+                raise InvestError(20071, msg='创建用户交易师关系失败', detail='交易师不存在')
             try:
                 investoruser = MyUser.objects.get(id=data.get('investoruser', None))
             except MyUser.DoesNotExist:
-                raise InvestError(20071, msg='投资人不存在')
+                raise InvestError(20071, msg='创建用户交易师关系失败', detail='投资人不存在')
             if request.user.has_perm('usersys.admin_adduserrelation'):
                 pass
             else:
@@ -1339,9 +1336,9 @@ class UserRelationView(viewsets.ModelViewSet):
                         if traderuser.user_projects.all().filter(proj_id=projid).exists():
                             pass
                         else:
-                            raise InvestError(2009)
+                            raise InvestError(2009, msg='创建用户交易师关系失败')
                     else:
-                        raise InvestError(2009)
+                        raise InvestError(2009, msg='创建用户交易师关系失败')
             with transaction.atomic():
                 newrelation = UserRelationCreateSerializer(data=data)
                 if newrelation.is_valid():
@@ -1352,7 +1349,7 @@ class UserRelationView(viewsets.ModelViewSet):
                     sendmessage_traderadd(relation, relation.investoruser, ['app', 'sms', 'webmsg'],
                                              sender=request.user)
                 else:
-                    raise InvestError(20071, msg='%s' % newrelation.error_messages)
+                    raise InvestError(20071, msg='创建用户交易师关系失败', detail='%s' % newrelation.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(UserRelationSerializer(relation).data,lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1365,7 +1362,7 @@ class UserRelationView(viewsets.ModelViewSet):
             try:
                 obj = UserRelation.objects.get(id=pk, is_deleted=False)
             except UserRelation.DoesNotExist:
-                raise InvestError(code=2011)
+                raise InvestError(code=2011, msg='用户交易师关系不存在', detail='用户交易师关系不存在')
         else:
             lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
             assert lookup_url_kwarg in self.kwargs, (
@@ -1377,9 +1374,9 @@ class UserRelationView(viewsets.ModelViewSet):
             try:
                 obj = UserRelation.objects.get(id=self.kwargs[lookup_url_kwarg],is_deleted=False)
             except UserRelation.DoesNotExist:
-                raise InvestError(code=2011)
+                raise InvestError(code=2011, msg='用户交易师关系不存在', detail='用户交易师关系不存在')
         if obj.datasource != self.request.user.datasource:
-            raise InvestError(code=8888)
+            raise InvestError(code=8888, msg='查询用户交易师关系失败')
         return obj
 
     @loginTokenIsAvailable()
@@ -1392,7 +1389,7 @@ class UserRelationView(viewsets.ModelViewSet):
             elif request.user in [userrelation.traderuser, userrelation.investoruser]:
                 pass
             else:
-                raise InvestError(code=2009)
+                raise InvestError(code=2009, msg='查询用户交易师关系失败')
             serializer = UserRelationSerializer(userrelation)
             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data,lang)))
         except InvestError as err:
@@ -1408,7 +1405,7 @@ class UserRelationView(viewsets.ModelViewSet):
                 lang = request.GET.get('lang')
                 relationdatalist = request.data
                 if not isinstance(relationdatalist,list) or not relationdatalist:
-                    raise InvestError(20071,msg='expect a non-empty array')
+                    raise InvestError(20071, msg='修改用户交易师关系失败', detail='expect a non-empty array')
                 newlist = []
                 for relationdata in relationdatalist:
                     relation = self.get_object(relationdata['id'])
@@ -1417,14 +1414,14 @@ class UserRelationView(viewsets.ModelViewSet):
                     elif request.user in [relation.traderuser]:
                         relationdata.pop('relationtype', None)
                     else:
-                        raise InvestError(code=2009,msg='没有权限')
+                        raise InvestError(code=2009, msg='修改用户交易师关系失败', detail='没有权限')
                     relationdata['lastmodifyuser'] = request.user.id
                     relationdata['lastmodifytime'] = datetime.datetime.now()
                     newrelationseria = UserRelationCreateSerializer(relation,data=relationdata)
                     if newrelationseria.is_valid():
                         newrelation = newrelationseria.save()
                     else:
-                        raise InvestError(20071,msg='%s' % newrelationseria.error_messages)
+                        raise InvestError(20071, msg='修改用户交易师关系失败', detail='%s' % newrelationseria.error_messages)
                     newlist.append(UserRelationSerializer(newrelation).data)
                 return JSONResponse(SuccessResponse(returnListChangeToLanguage(newlist,lang)))
         except InvestError as err:
@@ -1439,7 +1436,7 @@ class UserRelationView(viewsets.ModelViewSet):
             with transaction.atomic():
                 relationidlist = request.data.get('relationlist',None)
                 if not isinstance(relationidlist,list) or not relationidlist:
-                    raise InvestError(20071,msg='expect a not null relation id list')
+                    raise InvestError(20071, msg='删除用户交易师关系失败', detail='expect a not null relation id list')
                 relationlist = self.get_queryset().filter(id__in=relationidlist)
                 returnlist = []
                 for userrelation in relationlist:
@@ -1448,7 +1445,7 @@ class UserRelationView(viewsets.ModelViewSet):
                     elif request.user.has_perm('usersys.admin_deleteuserrelation'):
                         pass
                     else:
-                        raise InvestError(code=2009,msg='没有权限')
+                        raise InvestError(code=2009, msg='删除用户交易师关系失败', detail='没有权限')
                     userrelation.is_deleted = True
                     userrelation.deleteduser = request.user
                     userrelation.deletedtime = datetime.datetime.now()
@@ -1467,7 +1464,7 @@ class UserRelationView(viewsets.ModelViewSet):
             trader = request.data.get('trader', None)
             investor = request.data.get('investor', None)
             if not trader or not investor:
-                raise InvestError(20071, msg='trader/investor 不能空')
+                raise InvestError(20071, msg='查询用户交易师关系失败', detail='trader/investor 不能为空')
             qs = self.get_queryset().filter(Q(traderuser_id=trader,investoruser_id=investor,is_deleted=False) | Q(traderuser_id=investor,investoruser_id=trader,is_deleted=False))
             if qs.exists():
                 res = True
@@ -1513,14 +1510,14 @@ class UserFriendshipView(viewsets.ModelViewSet):
             try:
                 obj = self.queryset.get(id=pk)
             except UserFriendship.DoesNotExist:
-                raise InvestError(code=2002)
+                raise InvestError(code=2002, msg='好友不存在', detail='好友关系不存在')
         else:
             try:
                 obj = self.queryset.get(id=self.kwargs['pk'])
             except UserFriendship.DoesNotExist:
-                raise InvestError(code=2002)
+                raise InvestError(code=2002, msg='好友不存在', detail='好友关系不存在')
         if obj.datasource != self.request.user.datasource:
-            raise InvestError(code=8888)
+            raise InvestError(code=8888, msg='查询好友失败')
         return obj
 
     @loginTokenIsAvailable()
@@ -1556,7 +1553,7 @@ class UserFriendshipView(viewsets.ModelViewSet):
             data['datasource'] = request.user.datasource.id
             friendlist = data.pop('friend',None)
             if not friendlist or not isinstance(friendlist,list):
-                raise InvestError(20071, msg='except a non-empty array')
+                raise InvestError(20071, msg='添加好友失败', detail='‘friend’ except a non-empty array')
             lang = request.GET.get('lang')
             if request.user.has_perm('usersys.admin_addfriend'):
                 if data.get('user',None) is None:
@@ -1566,7 +1563,7 @@ class UserFriendshipView(viewsets.ModelViewSet):
                 data['isaccept'] = False
                 data['accepttime'] = None
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='添加好友失败')
             with transaction.atomic():
                 newfriendlist = []
                 sendmessagelist = []
@@ -1576,7 +1573,7 @@ class UserFriendshipView(viewsets.ModelViewSet):
                     if newfriendship.is_valid():
                         newfriend = newfriendship.save()
                     else:
-                        raise InvestError(20071,msg='%s'%newfriendship.error_messages)
+                        raise InvestError(20071, msg='添加好友失败', detail='%s'%newfriendship.error_messages)
                     newfriendlist.append(newfriendship.data)
                     sendmessagelist.append(newfriend)
                 for friendship in sendmessagelist:
@@ -1601,11 +1598,11 @@ class UserFriendshipView(viewsets.ModelViewSet):
             elif request.user == instance.friend:
                 canChangeField = ['friendallowgetfavoriteproj','isaccept']
             else:
-                raise InvestError(code=2009)
+                raise InvestError(code=2009, msg='修改好友失败')
             keylist = data.keys()
             cannoteditlist = [key for key in keylist if key not in canChangeField]
             if cannoteditlist:
-                raise InvestError(code=2009, msg='没有权限修改_%s' % cannoteditlist)
+                raise InvestError(code=2009, msg='修改好友失败', detail='没有权限修改_%s' % cannoteditlist)
             with transaction.atomic():
                 sendmessage = False
                 if instance.isaccept == False and bool(data.get('isaccept', None)):
@@ -1614,7 +1611,7 @@ class UserFriendshipView(viewsets.ModelViewSet):
                 if newfriendship.is_valid():
                     friendship = newfriendship.save()
                 else:
-                    raise InvestError(20071, msg='%s' % newfriendship.error_messages)
+                    raise InvestError(20071, msg='修改好友失败', detail='%s' % newfriendship.error_messages)
                 if friendship.isaccept and friendship.is_deleted == False:
                     if not friendship.user.hasIM:
                         registHuanXinIMWithUser(friendship.user)
@@ -1639,7 +1636,7 @@ class UserFriendshipView(viewsets.ModelViewSet):
             elif request.user == instance.user or request.user == instance.friend:
                 pass
             else:
-                raise InvestError(code=2009)
+                raise InvestError(code=2009, msg='删除好友失败')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
@@ -1657,7 +1654,7 @@ class UserFriendshipView(viewsets.ModelViewSet):
         try:
             userid = request.data.get('user', None)
             if not userid:
-                raise InvestError(20071, msg='user 不能空')
+                raise InvestError(20071, msg='查询好关系失败', detail='user 不能空')
             qs = self.get_queryset().filter(
                 Q(user_id=userid, friend_id=request.user.id, is_deleted=False) | Q(friend_id=userid, user_id=request.user.id, is_deleted=False))
             if qs.exists():
@@ -1704,12 +1701,12 @@ class GroupPermissionView(viewsets.ModelViewSet):
         try:
             obj = self.get_queryset().get(id=self.kwargs[lookup_url_kwarg],is_deleted=False)
         except Group.DoesNotExist:
-            raise InvestError(code=5002)
+            raise InvestError(code=8892, msg='查询用户组失败', detail='用户组不存在')
         assert self.request.user.is_authenticated, (
             "user must be is_authenticated"
         )
         if obj.datasource != self.request.user.datasource:
-            raise InvestError(code=8888)
+            raise InvestError(code=8888, msg='查询用户组失败')
         return obj
 
     @loginTokenIsAvailable()
@@ -1747,20 +1744,20 @@ class GroupPermissionView(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         try:
             if not request.user.is_superuser:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='新增用户组失败')
             data = request.data
             with transaction.atomic():
                 data['datasource'] = request.user.datasource.id
                 permissionsIdList = data.get('permissions',None)
                 if not isinstance(permissionsIdList, list):
-                    raise InvestError(20071,msg='permissions must be a non-empty array')
+                    raise InvestError(20071, msg='新增用户组失败', detail='permissions must be a non-empty array')
                 groupserializer = GroupCreateSerializer(data=data)
                 if groupserializer.is_valid():
                     newgroup = groupserializer.save()
                     permissions = Permission.objects.filter(id__in=permissionsIdList)
                     newgroup.permissions = permissions
                 else:
-                    raise InvestError(20071, msg='%s' % groupserializer.error_messages)
+                    raise InvestError(20071, msg='新增用户组失败', detail='%s' % groupserializer.error_messages)
                 return JSONResponse(SuccessResponse(groupserializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1772,7 +1769,7 @@ class GroupPermissionView(viewsets.ModelViewSet):
     def retrieve(self, request, *args, **kwargs):
         try:
             if not request.user.is_superuser:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='查询用户组失败')
             group = self.get_object()
             serializer = GroupDetailSerializer(group)
             return JSONResponse(SuccessResponse(serializer.data))
@@ -1786,7 +1783,7 @@ class GroupPermissionView(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         try:
             if not request.user.is_superuser:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='修改用户组失败')
             with transaction.atomic():
                 group = self.get_object()
                 data = request.data
@@ -1794,7 +1791,7 @@ class GroupPermissionView(viewsets.ModelViewSet):
                 if serializer.is_valid():
                     serializer.save()
                 else:
-                    raise InvestError(20071,msg='%s'%serializer.error_messages)
+                    raise InvestError(20071, msg='修改用户组失败', detail='%s'%serializer.error_messages)
                 return JSONResponse(SuccessResponse(serializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1806,12 +1803,12 @@ class GroupPermissionView(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         try:
             if not request.user.is_superuser:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='删除用户组失败')
             with transaction.atomic():
                 group = self.get_object()
                 groupuserset = MyUser.objects.filter(is_deleted=False,groups__in=[group])
                 if groupuserset.exists():
-                    raise InvestError(2008)
+                    raise InvestError(2008, msg='删除用户组失败', detail='该组别下有用户存在，不能直接删除')
                 else:
                     group.is_deleted = True
                     group.save()
@@ -1833,7 +1830,7 @@ class PermissionView(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         try:
             if not request.user.is_superuser:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='获取权限列表失败')
             queryset = self.queryset
             serializer = self.serializer_class(queryset, many=True)
             return JSONResponse(SuccessResponse(serializer.data))
@@ -1882,7 +1879,7 @@ def checkRequestSessionToken(request):
         if session_data.get('stoken', None):
             session.delete()
         else:
-            raise InvestError(3008)
+            raise InvestError(3008, msg='session验证失败')
         return JSONResponse(SuccessResponse({}))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
@@ -1907,16 +1904,16 @@ def login(request):
             if datasource.exists():
                 userdatasource = datasource.first()
             else:
-                raise InvestError(code=8888)
+                raise InvestError(code=8888, msg='登录失败')
         else:
-            raise InvestError(code=8888, msg='unavailable source')
+            raise InvestError(code=8888, msg='登录失败')
         if username and password:
             user = auth.authenticate(username=username, password=password, datasource=userdatasource)
             if not user or not clienttype:
                 if not clienttype:
-                    raise InvestError(code=2003,msg='登录类型不可用')
+                    raise InvestError(code=2003, msg='登录失败', detail='登录类型不可用')
                 else:
-                    raise InvestError(code=2001,msg='密码错误')
+                    raise InvestError(code=2001, msg='登录失败', detail='密码错误')
             if wxcode:
                 openid = get_openid(wxcode)
                 if openid:
@@ -1926,7 +1923,7 @@ def login(request):
                         UserContrastThirdAccount(wexinsmallapp=openid, user=user).save()
                     else:
                         if thirdaccount.user.id != user.id:
-                            raise InvestError(2048, msg='该微信号已绑定过其他账号')
+                            raise InvestError(2048, msg='登录失败', detail='该微信号已绑定过其他账号')
         else:
             user = None
             if wxcode:
@@ -1935,13 +1932,13 @@ def login(request):
                     try:
                         thirdaccount = UserContrastThirdAccount.objects.get(wexinsmallapp=openid)
                     except UserContrastThirdAccount.DoesNotExist:
-                        raise InvestError(2009, msg='用户未绑定账号')
+                        raise InvestError(2009, msg='登录失败', detail='用户未绑定账号')
                     else:
                         user = thirdaccount.user
             if not user:
-                raise InvestError(2009, msg='登录无效')
+                raise InvestError(2009, msg='登录失败', detail='小程序快捷登录无效')
         if user.userstatus_id == 3:
-            raise InvestError(2022, msg='用户审核未通过，如有疑问请咨询工作人员。')
+            raise InvestError(2022, msg='登录失败', detail='用户审核未通过，如有疑问请咨询工作人员。')
         user.last_login = datetime.datetime.now()
         if not user.is_active:
             user.is_active = True

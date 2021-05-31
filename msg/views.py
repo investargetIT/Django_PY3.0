@@ -47,7 +47,7 @@ def saveMessage(content,type,title,receiver,sender=None,modeltype=None,sourceid=
         if msg.is_valid():
             msg.save()
         else:
-            raise InvestError(code=20019)
+            raise InvestError(code=20019, msg='站内信保存失败', detail='%s' % msg.error_messages)
         return msg.data
     except InvestError as err:
         logexcption()
@@ -95,7 +95,7 @@ class WebMessageView(viewsets.ModelViewSet):
         try:
             msg = self.get_object()
             if msg.receiver.id != request.user.id:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='发送站内信已读回执失败')
             with transaction.atomic():
                 data = {
                     'isRead':True,
@@ -105,7 +105,7 @@ class WebMessageView(viewsets.ModelViewSet):
                 if msgserializer.is_valid():
                     msgserializer.save()
                 else:
-                    raise InvestError(20071,msg='%s' % msgserializer.errors)
+                    raise InvestError(20071, msg='发送站内信已读回执失败', detail='%s' % msgserializer.error_messages)
                 return JSONResponse(SuccessResponse(msgserializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -120,7 +120,7 @@ class WebMessageView(viewsets.ModelViewSet):
             if instance.receiver.id == request.user.id or request.user.is_superuser:
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='查看站内信详情失败')
             with transaction.atomic():
                 msgserializer = MsgSerializer(instance)
                 return JSONResponse(SuccessResponse(msgserializer.data))
@@ -138,7 +138,7 @@ class WebMessageView(viewsets.ModelViewSet):
             if instance.receiver.id == request.user.id or request.user.is_superuser:
                 pass
             else:
-                raise InvestError(2009, msg='没有删除权限')
+                raise InvestError(2009, msg='删除站内信失败')
             instance.is_deleted = True
             instance.deletedtime = datetime.datetime.now()
             instance.save()
@@ -225,7 +225,7 @@ class WebEXMeetingView(viewsets.ModelViewSet):
                 if instanceSerializer.is_valid():
                     instance = instanceSerializer.save()
                 else:
-                    raise InvestError(20071, msg='参数错误：%s' % instanceSerializer.errors)
+                    raise InvestError(20071, msg='创建视频会议失败', detail='参数错误：%s' % instanceSerializer.error_messages)
                 data['startDate'] = instance.startDate.strftime('%m/%d/%Y %H:%M:%S')
                 XML_body = getCreateXMLBody(data)
                 s = requests.post(url=self.webex_url, data=XML_body.encode("utf-8"))
@@ -234,7 +234,7 @@ class WebEXMeetingView(viewsets.ModelViewSet):
                     result = next(res.iter('{http://www.webex.com/schemas/2002/06/service}result')).text
                     if result == 'FAILURE':
                         reason = next(res.iter('{http://www.webex.com/schemas/2002/06/service}reason')).text
-                        raise InvestError(8006, msg=reason)
+                        raise InvestError(8006, msg='创建视频会议失败', detail=reason)
                     else:
                         meetingkey = next(res.iter('{http://www.webex.com/schemas/2002/06/service/meeting}meetingkey')).text
                         serv_host = next(res.iter('{http://www.webex.com/schemas/2002/06/service}host')).text
@@ -246,7 +246,7 @@ class WebEXMeetingView(viewsets.ModelViewSet):
                         if newInstanceSerializer.is_valid():
                             newInstanceSerializer.save()
                 else:
-                    raise InvestError(8006, msg=s.text)
+                    raise InvestError(8006, msg='创建视频会议失败', detail=s.text)
             return JSONResponse(SuccessResponse(instanceSerializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -277,7 +277,7 @@ class WebEXMeetingView(viewsets.ModelViewSet):
             elif request.user == instance.createuser or webexUser.objects.filter(meeting=instance.id, user=request.user, meetingRole=True).exists():
                 pass
             else:
-                raise InvestError(2009, msg='没有修改权限')
+                raise InvestError(2009, msg='修改视频会议失败', detail='没有修改权限')
             data = request.data
             startDate, duration, title = instance.startDate, instance.duration, instance.title
             with transaction.atomic():
@@ -285,18 +285,18 @@ class WebEXMeetingView(viewsets.ModelViewSet):
                 if instanceSerializer.is_valid():
                     instanceSerializer.save()
                 else:
-                    raise InvestError(20071, msg='参数错误：%s' % instanceSerializer.errors)
+                    raise InvestError(20071, msg='修改视频会议失败', detail='参数错误：%s' % instanceSerializer.error_messages)
             data['startDate'] = instance.startDate.strftime('%m/%d/%Y %H:%M:%S')
             XML_body = getUpdateXMLBody(instance.meetingKey, data)
             s = requests.post(url=self.webex_url, data=XML_body.encode("utf-8"))
             if s.status_code != 200:
-                raise InvestError(8006, msg=s.text)
+                raise InvestError(8006, msg='修改视频会议失败', detail=s.text)
             else:
                 res = ET.fromstring(s.text)
                 result = next(res.iter('{http://www.webex.com/schemas/2002/06/service}result')).text
                 if result == 'FAILURE':
                     reason = next(res.iter('{http://www.webex.com/schemas/2002/06/service}reason')).text
-                    raise InvestError(8006, msg=reason)
+                    raise InvestError(8006, msg='修改视频会议失败', detail=reason)
                 else:
                     serv_host = next(res.iter('{http://www.webex.com/schemas/2002/06/service}host')).text
                     serv_attendee = next(res.iter('{http://www.webex.com/schemas/2002/06/service}attendee')).text
@@ -306,7 +306,7 @@ class WebEXMeetingView(viewsets.ModelViewSet):
                         if instanceSerializer.is_valid():
                             newInstance = instanceSerializer.save()
                         else:
-                            raise InvestError(20071, msg='参数错误：%s' % instanceSerializer.errors)
+                            raise InvestError(20071, msg='修改视频会议失败', detail='参数错误：%s' % instanceSerializer.error_messages)
                         if startDate != newInstance.startDate or duration != newInstance.duration or title != newInstance.title:
                             webexSch_qs = instance.meeting_schedule.all().filter(is_deleted=False)
                             webexSch_qs.update(scheduledtime=newInstance.startDate, comments=newInstance.title)
@@ -328,17 +328,17 @@ class WebEXMeetingView(viewsets.ModelViewSet):
             elif request.user == instance.createuser or webexUser.objects.filter(meeting=instance.id, user=request.user, meetingRole=True).exists():
                 pass
             else:
-                raise InvestError(2009, msg='没有删除权限')
+                raise InvestError(2009, msg='删除视频会议失败', detail='没有删除权限')
             XML_body = getDeleteXMLBody(instance.meetingKey)
             s = requests.post(url=self.webex_url, data=XML_body.encode("utf-8"))
             if s.status_code != 200:
-                raise InvestError(8006, msg=s.text)
+                raise InvestError(8006, msg='删除视频会议失败', detail=s.text)
             else:
                 res = ET.fromstring(s.text)
                 result = next(res.iter('{http://www.webex.com/schemas/2002/06/service}result')).text
                 if result == 'FAILURE':
                     reason = next(res.iter('{http://www.webex.com/schemas/2002/06/service}reason')).text
-                    raise InvestError(8006, msg=reason)
+                    raise InvestError(8006, msg='删除视频会议失败', detail=reason)
                 else:
                     with transaction.atomic():
                         instance.is_deleted = True
@@ -366,7 +366,7 @@ class WebEXMeetingView(viewsets.ModelViewSet):
             XML_body = getListXMLBody(data)
             s = requests.post(url=self.webex_url, data=XML_body.encode("utf-8"), verify=False)
             if s.status_code != 200:
-                raise InvestError(8006, msg=s.text)
+                raise InvestError(8006, msg='查询视频会议失败', detail=s.text)
             else:
                 res = ET.fromstring(s.text)
                 xmlns_serv = "{http://www.webex.com/schemas/2002/06/service}"
@@ -377,7 +377,7 @@ class WebEXMeetingView(viewsets.ModelViewSet):
                     exceptionID = next(res.iter('{}{}'.format(xmlns_serv, 'exceptionID'))).text
                     if exceptionID == "000015":
                         return JSONResponse(SuccessResponse({'meetings': [], 'returned': 0, 'total': 0, 'startFrom': data.get('startFrom', 1)}))
-                    raise InvestError(8006, msg=reason)
+                    raise InvestError(8006, msg='查询视频会议失败', detail=reason)
                 else:
                     meetings = []
                     for elem in res.iter('{}{}'.format(xmlns_meeting, 'meeting')):
@@ -518,7 +518,7 @@ def get_hostKey(meetingKey):
     webex_url = 'https://investarget.webex.com.cn/WBXService/XMLService'
     s = requests.post(url=webex_url, data=XML_body.encode("utf-8"))
     if s.status_code != 200:
-        raise InvestError(8006, msg=s.text)
+        raise InvestError(8006, msg='获取视频会议失败', detail=s.text)
     else:
         res = ET.fromstring(s.text)
         hostKey = next(res.iter('{http://www.webex.com/schemas/2002/06/service/meeting}hostKey')).text
@@ -573,7 +573,7 @@ def createWebEXMeeting(data):
         if instanceSerializer.is_valid():
             instance = instanceSerializer.save()
         else:
-            raise InvestError(20071, msg='创建会议参数错误：%s' % instanceSerializer.errors)
+            raise InvestError(20071, msg='创建视频会议失败', detail='创建会议参数错误：%s' % instanceSerializer.error_messages)
         data['startDate'] = instance.startDate.strftime('%m/%d/%Y %H:%M:%S')
         XML_body = getCreateXMLBody(data)
         s = requests.post(url=webex_url, data=XML_body.encode("utf-8"))
@@ -582,7 +582,7 @@ def createWebEXMeeting(data):
             result = next(res.iter('{http://www.webex.com/schemas/2002/06/service}result')).text
             if result == 'FAILURE':
                 reason = next(res.iter('{http://www.webex.com/schemas/2002/06/service}reason')).text
-                raise InvestError(8006, msg=reason)
+                raise InvestError(8006, msg='创建视频会议失败', detail=reason)
             else:
                 meetingkey = next(res.iter('{http://www.webex.com/schemas/2002/06/service/meeting}meetingkey')).text
                 serv_host = next(res.iter('{http://www.webex.com/schemas/2002/06/service}host')).text
@@ -595,9 +595,9 @@ def createWebEXMeeting(data):
                 if newInstanceSerializer.is_valid():
                     newInstance = newInstanceSerializer.save()
                 else:
-                    raise InvestError(20071, msg='会议信息错误：%s' % instanceSerializer.errors)
+                    raise InvestError(20071, msg='创建视频会议失败', detail='会议信息错误：%s' % instanceSerializer.error_messages)
         else:
-            raise InvestError(8006, msg=s.text)
+            raise InvestError(8006, msg='创建视频会议失败', detail=s.text)
         return newInstance
 
 
@@ -667,7 +667,7 @@ class ScheduleView(viewsets.ModelViewSet):
                         if request.user.has_perm('msg.createMeeting') or request.user.has_perm('msg.manageMeeting'):
                             pass
                         else:
-                            raise InvestError(2009, msg='没有新建视频会议权限')
+                            raise InvestError(2009, msg='创建日程失败')
                         data[i]['startDate'] = data[i]['scheduledtime']
                         meetingInstance = createWebEXMeeting(data[i])
                         data[i]['meeting'] = meetingInstance.id
@@ -675,7 +675,7 @@ class ScheduleView(viewsets.ModelViewSet):
                 if scheduleserializer.is_valid():
                     instances = scheduleserializer.save()
                 else:
-                    raise InvestError(20071, msg='参数错误：%s' % scheduleserializer.errors)
+                    raise InvestError(20071, msg='创建日程失败', detail='参数错误：%s' % scheduleserializer.error_messages)
                 return JSONResponse(SuccessResponse(ScheduleMeetingSerializer(instances, many=True).data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -693,7 +693,7 @@ class ScheduleView(viewsets.ModelViewSet):
             elif request.user in [instance.createuser, instance.manager]:
                 pass
             else:
-                raise InvestError(code=2009)
+                raise InvestError(code=2009, msg='查看日程失败')
             serializer = ScheduleSerializer(instance)
             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data, lang)))
         except InvestError as err:
@@ -711,7 +711,7 @@ class ScheduleView(viewsets.ModelViewSet):
             elif request.user in [instance.createuser, instance.manager]:
                 pass
             else:
-                raise InvestError(code=2009)
+                raise InvestError(code=2009, msg='修改日程信息失败')
             data = request.data
             data['lastmodifyuser'] = request.user.id
             with transaction.atomic():
@@ -719,7 +719,7 @@ class ScheduleView(viewsets.ModelViewSet):
                 if scheduleserializer.is_valid():
                     newinstance = scheduleserializer.save()
                 else:
-                    raise InvestError(20071, msg='参数错误：%s' % scheduleserializer.errors)
+                    raise InvestError(20071, msg='修改日程信息失败', detail='参数错误：%s' % scheduleserializer.error_messages)
                 return JSONResponse(SuccessResponse(ScheduleSerializer(newinstance).data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -736,7 +736,7 @@ class ScheduleView(viewsets.ModelViewSet):
             elif request.user in [instance.createuser, instance.manager]:
                 pass
             else:
-                raise InvestError(code=2009)
+                raise InvestError(code=2009, msg='删除日程失败')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
@@ -803,7 +803,7 @@ class WebEXUserView(viewsets.ModelViewSet):
                 if instanceSerializer.is_valid():
                     instances = instanceSerializer.save()
                 else:
-                    raise InvestError(20071, msg=instanceSerializer.errors)
+                    raise InvestError(20071, msg='添加视频会议参会人员失败', detail=instanceSerializer.error_messages)
                 utils.sendMessage.sendmessage_WebEXMeetingMessage(instances)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(instanceSerializer.data)))
         except InvestError as err:
@@ -868,7 +868,7 @@ def getICSFile(data):
     startDate = datetime.datetime.strptime(data.get('startDate'), "%Y-%m-%dT%H:%M:%S")
     endDate = datetime.datetime.strptime(data.get('endDate'), "%Y-%m-%dT%H:%M:%S")
     if startDate >= endDate:
-        raise InvestError(20071, msg='开始时间不能早于结束时间')
+        raise InvestError(20071, msg='生成日历事件ics文件失败', detail='开始时间不能早于结束时间')
     summary = data.get('summary', '事件标题')
     description = data.get('description', '事件描述')
     location = data.get('location', '未知')
@@ -900,7 +900,7 @@ class InternOnlineTestView(viewsets.ModelViewSet):
             if self.request.user.is_authenticated:
                 queryset = queryset.filter(datasource=self.request.user.datasource)
             else:
-                raise InvestError(code=2009, msg='未知来源')
+                raise InvestError(code=8889, msg='用户未登录', detail='用户未登录')
         else:
             raise InvestError(code=8890)
         return queryset
@@ -939,7 +939,7 @@ class InternOnlineTestView(viewsets.ModelViewSet):
                 if instanceSerializer.is_valid():
                     instanceSerializer.save()
                 else:
-                    raise InvestError(20071, msg=instanceSerializer.errors)
+                    raise InvestError(20071, msg='开始在线测试失败', detail=instanceSerializer.error_messages)
             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(instanceSerializer.data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -953,7 +953,7 @@ class InternOnlineTestView(viewsets.ModelViewSet):
             lang = request.GET.get('lang')
             instance = self.get_object()
             if instance.user != request.user.id:
-                raise InvestError(20071, msg='非本人不能查看')
+                raise InvestError(20071, msg='查看在线测试结果失败', detail='非本人不能查看')
             serializer = self.serializer_class(instance)
             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data, lang)))
         except InvestError as err:
@@ -969,20 +969,20 @@ class InternOnlineTestView(viewsets.ModelViewSet):
             instance = self.get_object()
             data = request.data
             if instance.user.id != request.user.id:
-                raise InvestError(20071, msg='非本人不能提交')
+                raise InvestError(20071, msg='提交在线测试失败', detail='非本人不能提交')
             if data.get('user') and data.get('user') != instance.user.id:
-                raise InvestError(20071, msg='答题人不能被修改')
+                raise InvestError(20071, msg='提交在线测试失败', detail='答题人不能被修改')
             if not data.get('key'):
-                raise InvestError(20072, msg='答题结束附件不能为空')
+                raise InvestError(20071, msg='提交在线测试失败', detail='答题结束附件不能为空')
             if instance.key:
-                raise InvestError(20071, msg='只能提交一次')
+                raise InvestError(20071, msg='提交在线测试失败', detail='只能提交一次')
             data['endTime'] = datetime.datetime.now()
             with transaction.atomic():
                 instanceSerializer = InternOnlineTestCreateSerializer(instance, data=data)
                 if instanceSerializer.is_valid():
                     instanceSerializer.save()
                 else:
-                    raise InvestError(5004, msg='提交测试结果失败--%s' % instanceSerializer.error_messages)
+                    raise InvestError(5004, msg='提交在线测试失败', detail='提交测试结果失败-%s' % instanceSerializer.error_messages)
             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(instanceSerializer.data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -997,7 +997,7 @@ class InternOnlineTestView(viewsets.ModelViewSet):
             if request.user.is_superuser:
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='删除在线测试记录失败')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user

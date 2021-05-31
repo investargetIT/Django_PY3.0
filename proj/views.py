@@ -113,11 +113,11 @@ class ProjectView(viewsets.ModelViewSet):
             try:
                 obj = self.Model.objects.get(id=self.kwargs[lookup_url_kwarg], is_deleted=False)
             except self.Model.DoesNotExist:
-                raise InvestError(code=4002)
+                raise InvestError(code=4002, msg='项目不存在', detail='项目不存在')
             else:
                 write_to_cache(self.redis_key + '_%s' % self.kwargs[lookup_url_kwarg], obj)
         if obj.datasource != self.request.user.datasource:
-            raise InvestError(code=8888)
+            raise InvestError(code=8888, msg='查询项目失败')
         return obj
 
     def list(self, request, *args, **kwargs):
@@ -132,9 +132,9 @@ class ProjectView(viewsets.ModelViewSet):
                     userdatasource = datasource.first()
                     queryset = self.get_queryset().filter(datasource=userdatasource)
                 else:
-                    raise InvestError(code=8888)
+                    raise InvestError(code=8888, msg='获取项目失败')
             else:
-                raise InvestError(code=8888, msg='unavailable source')
+                raise InvestError(code=8888, msg='获取项目失败')
             if not max_size:
                 max_size = 10
             if not skip_count or int(skip_count) < 1:
@@ -212,7 +212,7 @@ class ProjectView(viewsets.ModelViewSet):
             editlist2 = [key for key in keylist if key in ['takeUser', 'makeUser', 'supportUser']]
             if len(editlist2) > 0:
                 if not request.user.has_perm('proj.admin_addproj'):
-                    raise InvestError(2009, msg='没有权限edit%s' % editlist2)
+                    raise InvestError(2009, msg='新增项目失败', detail='没有权限设置%s' % editlist2)
             takeUserData = projdata.pop('takeUser', None)
             makeUserData = projdata.pop('makeUser', None)
             with transaction.atomic():
@@ -222,48 +222,48 @@ class ProjectView(viewsets.ModelViewSet):
                     if takeUserData:
                         takeUserList = []
                         if not isinstance(takeUserData,list):
-                            raise InvestError(20071, msg='takeUser must be a list')
+                            raise InvestError(20071, msg='新增项目失败', detail='takeUser must be a list')
                         for takeUser_id in takeUserData:
                             takeUserList.append(projTraders(proj=pro, user_id=takeUser_id, createuser=request.user, type=0, createdtime=datetime.datetime.now()))
                         pro.project_tags.bulk_create(takeUserList)
                     if makeUserData:
                         makeUserList = []
                         if not isinstance(makeUserData,list):
-                            raise InvestError(20071, msg='makeUser must be a list')
+                            raise InvestError(20071, msg='新增项目失败', detail='makeUser must be a list')
                         for makeUser_id in makeUserData:
                             makeUserList.append(projTraders(proj=pro, user_id=makeUser_id, createuser=request.user, type=1, createdtime=datetime.datetime.now()))
                         pro.project_tags.bulk_create(makeUserList)
                     if tagsdata:
                         tagslist = []
                         if not isinstance(tagsdata,list):
-                            raise InvestError(20071,msg='tags must be a list')
+                            raise InvestError(20071, msg='新增项目失败', detail='tags must be a list')
                         for tagid in tagsdata:
                             tagslist.append(projectTags(proj=pro, tag_id=tagid,createuser=request.user))
                         pro.project_tags.bulk_create(tagslist)
                     if servicedata:
                         servicelist = []
                         if not isinstance(servicedata,list):
-                            raise InvestError(20071,msg='service must be a list')
+                            raise InvestError(20071, msg='新增项目失败', detail='service must be a list')
                         for serviceid in servicedata:
                             servicelist.append(projServices(proj=pro, service_id=serviceid,createuser=request.user))
                         pro.proj_services.bulk_create(servicelist)
                     if industrydata:
                         industrylist = []
                         if not isinstance(industrydata,list):
-                            raise InvestError(20071,msg='industries must be a list')
+                            raise InvestError(20071, msg='新增项目失败', detail='industries must be a list')
                         for oneindustrydata in industrydata:
                             industrylist.append(projectIndustries(proj=pro, industry_id=oneindustrydata.get('industry',None),createuser=request.user,bucket=oneindustrydata.get('bucket',None),key=oneindustrydata.get('key',None)))
                         pro.project_industries.bulk_create(industrylist)
                     if transactiontypedata:
                         transactiontypelist = []
                         if not isinstance(transactiontypedata,list):
-                            raise InvestError(20071,msg='transactionType must be a list')
+                            raise InvestError(20071, msg='新增项目失败', detail='transactionType must be a list')
                         for transactionPhaseid in transactiontypedata:
                             transactiontypelist.append(projectTransactionType(proj=pro, transactionType_id=transactionPhaseid,createuser=request.user))
                         pro.project_TransactionTypes.bulk_create(transactiontypelist)
                     if projAttachmentdata:
                         if not isinstance(projAttachmentdata, list):
-                            raise InvestError(20071, msg='transactionType must be a list')
+                            raise InvestError(20071, msg='新增项目失败', detail='transactionType must be a list')
                         for oneprojAttachmentdata in projAttachmentdata:
                             oneprojAttachmentdata['proj'] = pro.id
                             oneprojAttachmentdata['createuser'] = request.user.id
@@ -272,7 +272,7 @@ class ProjectView(viewsets.ModelViewSet):
                                 projAttachmentSerializer.save()
                     if financedata:
                         if not isinstance(financedata, list):
-                            raise InvestError(20071, msg='transactionType must be a list')
+                            raise InvestError(20071, msg='新增项目失败', detail='transactionType must be a list')
                         for onefinancedata in financedata:
                             onefinancedata['proj'] = pro.id
                             onefinancedata['datasource'] = request.user.datasource_id
@@ -281,8 +281,7 @@ class ProjectView(viewsets.ModelViewSet):
                             if financeSerializer.is_valid():
                                 financeSerializer.save()
                 else:
-                    raise InvestError(code=4001,
-                                          msg='%s' % proj.errors)
+                    raise InvestError(code=4001, msg='新增项目失败', detail='上传项目参数有误%s' % proj.errors)
                 setUserObjectPermission(request.user, pro,
                                         ['proj.user_getproj', 'proj.user_changeproj', 'proj.user_deleteproj'])
                 setUserObjectPermission(pro.supportUser, pro,
@@ -322,7 +321,7 @@ class ProjectView(viewsets.ModelViewSet):
                 elif dataroom_User_file.objects.filter(user=request.user, is_deleted=False).exists():
                     pass
                 else:
-                    raise InvestError(code=4004, msg='没有权限查看隐藏项目')
+                    raise InvestError(code=4004, msg='查看项目失败', detail='该项目为隐藏项目，没有权限查看')
             serializer = serializerclass(instance)
             viewprojlog(userid=request.user.id,projid=instance.id,sourceid=clienttype)
             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data,lang)))
@@ -336,9 +335,9 @@ class ProjectView(viewsets.ModelViewSet):
         try:
             setrequestuser(request)
             if request.user.is_anonymous:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='查看分享项目失败')
             elif request.user.has_perm('usersys.as_investor') and not request.user.is_superuser and request.user.datasource_id == 1:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='查看分享项目失败')
             lang = request.GET.get('lang')
             clienttype = request.META.get('HTTP_CLIENTTYPE')
             tokenkey = request.GET.get('token')
@@ -347,9 +346,9 @@ class ProjectView(viewsets.ModelViewSet):
                 if token.exists():
                     instance = token.first().proj
                 else:
-                    raise InvestError(4004,msg='token无效')
+                    raise InvestError(4004, msg='查看分享项目失败', detail='分享项目token无效')
             else:
-                raise InvestError(code=4004, msg='没有权限查看项目')
+                raise InvestError(code=4004, msg='查看分享项目失败', detail='没有权限查看项目')
             serializer = ProjDetailSerializer_user_withoutsecretinfo(instance)
             viewprojlog(userid=None,projid=instance.id,sourceid=clienttype)
             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data,lang)))
@@ -369,9 +368,9 @@ class ProjectView(viewsets.ModelViewSet):
                 pass
             elif request.user.has_perm('proj.user_changeproj',pro) or request.user == pro.supportUser or pro.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
                 if projdata.get('projstatus', None) and projdata.get('projstatus', None) >= 4:
-                    raise InvestError(2009,msg='只有管理员才能修改到该状态')
+                    raise InvestError(2009, msg='修改项目信息失败', detail='只有管理员才能修改到该状态')
             else:
-                raise InvestError(code=2009,msg='非上传方或管理员无法修改项目')
+                raise InvestError(code=2009, msg='修改项目信息失败', detail='非上传方或管理员无法修改项目')
             projdata['lastmodifyuser'] = request.user.id
             projdata['lastmodifytime'] = datetime.datetime.now()
             projdata['datasource'] = request.user.datasource_id
@@ -390,7 +389,7 @@ class ProjectView(viewsets.ModelViewSet):
             editlist2 = [key for key in keylist if key in ['takeUser', 'makeUser']]
             if len(editlist2) > 0:
                 if not request.user.has_perm('proj.admin_changeproj'):
-                    raise  InvestError(2009,msg='没有权限修改%s'%editlist2)
+                    raise  InvestError(2009, msg='修改项目信息失败', detail='没有权限修改%s'%editlist2)
             takeUserData = projdata.pop('takeUser', None)
             makeUserData = projdata.pop('makeUser', None)
             with transaction.atomic():
@@ -399,7 +398,7 @@ class ProjectView(viewsets.ModelViewSet):
                     pro = proj.save()
                     if takeUserData is not None:
                         if not isinstance(takeUserData,list):
-                            raise InvestError(20071, msg='takeUser must be a list')
+                            raise InvestError(20071, msg='修改项目信息失败', detail='takeUser must be a list')
                         if len(takeUserData) == 0:
                             pro.proj_traders.filter(type=0, is_deleted=False).update(is_deleted=True, deletedtime=datetime.datetime.now(), deleteduser=request.user)
                         else:
@@ -415,7 +414,7 @@ class ProjectView(viewsets.ModelViewSet):
                             pro.proj_traders.bulk_create(takeUserList)
                     if makeUserData is not None:
                         if not isinstance(makeUserData,list):
-                            raise InvestError(20071, msg='makeUser must be a list')
+                            raise InvestError(20071, msg='修改项目信息失败', detail='makeUser must be a list')
                         if len(makeUserData) == 0:
                             pro.proj_traders.filter(type=1, is_deleted=False).update(is_deleted=True, deletedtime=datetime.datetime.now(), deleteduser=request.user)
                         else:
@@ -442,7 +441,7 @@ class ProjectView(viewsets.ModelViewSet):
                         pro.project_tags.bulk_create(usertaglist)
                     if servicedata:
                         if not isinstance(servicedata, list) or len(servicedata) == 0:
-                            raise InvestError(20071, msg='service must be a list')
+                            raise InvestError(20071, msg='修改项目信息失败', detail='service must be a list')
                         servicelist = Service.objects.in_bulk(servicedata)
                         addlist = [item for item in servicelist if item not in pro.service.all()]
                         removelist = [item for item in pro.service.all() if item not in servicelist]
@@ -456,7 +455,7 @@ class ProjectView(viewsets.ModelViewSet):
 
                     if industrydata:
                         if not isinstance(industrydata, list) or len(industrydata) == 0:
-                            raise InvestError(20071, msg='industrydata must be a list')
+                            raise InvestError(20071, msg='修改项目信息失败', detail='industrydata must be a list')
                         pro.project_industries.filter(is_deleted=False).update(is_deleted=True, deletedtime=datetime.datetime.now(), deleteduser=request.user)
                         for oneindustrydata in industrydata:
                             oneindustrydata['proj'] = pro.id
@@ -478,7 +477,7 @@ class ProjectView(viewsets.ModelViewSet):
 
                     if projAttachmentdata:
                         if not isinstance(projAttachmentdata, list) or len(projAttachmentdata) == 0:
-                            raise InvestError(20071, msg='transactionType must be a list')
+                            raise InvestError(20071, msg='修改项目信息失败', detail='transactionType must be a list')
                         pro.proj_attachment.filter(is_deleted=False).update(is_deleted=True, deletedtime=datetime.datetime.now(), deleteduser=request.user)
                         for oneprojAttachmentdata in projAttachmentdata:
                             oneprojAttachmentdata['proj'] = pro.id
@@ -488,7 +487,7 @@ class ProjectView(viewsets.ModelViewSet):
 
                     if financedata:
                         if not isinstance(financedata, list):
-                            raise InvestError(20071, msg='transactionType must be a list')
+                            raise InvestError(20071, msg='修改项目信息失败', detail='transactionType must be a list')
                         pro.proj_finances.filter(is_deleted=False).update(is_deleted=True, deletedtime=datetime.datetime.now(), deleteduser=request.user)
                         for onefinancedata in financedata:
                             onefinancedata['proj'] = pro.id
@@ -497,7 +496,7 @@ class ProjectView(viewsets.ModelViewSet):
                                 financeSerializer.save()
                     cache_delete_key(self.redis_key + '_%s' % pro.id)
                 else:
-                    raise InvestError(code=4001,msg='%s' %  proj.errors)
+                    raise InvestError(code=4001, msg='修改项目信息失败', detail='项目参数有误-%s' % proj.errors)
                 if sendmsg:
                     sendmessage_projectpublish(pro, pro.supportUser,['email', 'webmsg'],sender=request.user)
                     for proj_trader in pro.proj_traders.filter(type=0, is_deleted=False):
@@ -519,13 +518,13 @@ class ProjectView(viewsets.ModelViewSet):
             elif request.user.has_perm('proj.user_changeproj',pro) or request.user == pro.supportUser or pro.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
                 pass
             else:
-                raise InvestError(code=2009,msg='非承揽承做或上传方无法发送项目pdf邮件')
+                raise InvestError(code=2009, msg='微信群发项目pdf失败', detail='非承揽承做或上传方无法发送项目pdf邮件')
             if pro.projstatus_id == 4 and not pro.is_deleted:
                 propath = APILOG_PATH['wxgroupsendpdf'] + pro.projtitleC + '.pdf'
                 if not os.path.exists(propath):
                     self.makePdf(pro)
             else:
-                raise InvestError(20071,msg='不满足发送条件')
+                raise InvestError(20071, msg='微信群发项目pdf失败', detail='项目状态不满足发送条件')
             return JSONResponse(SuccessResponse({"status":'发送中，请稍后'}))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -542,11 +541,11 @@ class ProjectView(viewsets.ModelViewSet):
                 pass
             elif request.user.has_perm('proj.user_deleteproj',instance) or request.user == instance.supportUser or instance.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
                 if instance.projstatus_id >= 4:
-                    raise InvestError(2009, msg='没有权限，请联系管理员删除')
+                    raise InvestError(2009, msg='删除项目失败', detail='没有权限，请联系管理员删除')
             else:
-                raise InvestError(code=2009)
+                raise InvestError(code=2009, msg='删除项目失败', detail='没有权限，请联系管理员删除')
             if instance.proj_datarooms.filter(is_deleted=False,proj=instance).exists():
-                raise InvestError(code=2010, msg=u'{} 上有关联数据'.format('proj_datarooms'))
+                raise InvestError(code=2010, msg='删除项目失败', detail='{} 上有关联数据'.format('proj_datarooms'))
             with transaction.atomic():
                 for link in ['proj_timelines', 'proj_finances', 'proj_attachment', 'project_tags', 'project_industries', 'project_TransactionTypes', 'proj_traders',
                              'proj_favorite', 'proj_sharetoken', 'proj_datarooms', 'proj_services', 'proj_schedule', 'proj_orgBDs','proj_meetBDs','proj_OrgBdBlacks', 'relate_projects']:
@@ -557,15 +556,15 @@ class ProjectView(viewsets.ModelViewSet):
                         # one to one
                         if isinstance(manager, models.Model):
                             if hasattr(manager, 'is_deleted') and not manager.is_deleted:
-                                raise InvestError(code=2010, msg=u'{} 上有关联数据'.format(link))
+                                raise InvestError(code=2010, msg='删除项目失败', detail='{} 上有关联数据'.format(link))
                         else:
                             try:
                                 manager.model._meta.get_field('is_deleted')
                                 if manager.all().filter(is_deleted=False).count():
-                                    raise InvestError(code=2010, msg=u'{} 上有关联数据'.format(link))
+                                    raise InvestError(code=2010, msg='删除项目失败', detail='{} 上有关联数据'.format(link))
                             except FieldDoesNotExist:
                                 if manager.all().count():
-                                    raise InvestError(code=2010, msg=u'{} 上有关联数据'.format(link))
+                                    raise InvestError(code=2010, msg='删除项目失败', detail='{} 上有关联数据'.format(link))
                     else:
                         manager = getattr(instance, link, None)
                         if not manager:
@@ -627,7 +626,7 @@ class ProjectView(viewsets.ModelViewSet):
                 elif proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
                     pass
                 else:
-                    raise InvestError(2009,msg='隐藏项目，只有项目承揽承做及上传方可以获取相关项目信息')
+                    raise InvestError(2009, msg='获取项目pdf失败', detail='隐藏项目，只有项目承揽承做及上传方可以获取相关项目信息')
             options = {
                 'dpi': 1400,
                 'page-size': 'A4',
@@ -658,7 +657,7 @@ class ProjectView(viewsets.ModelViewSet):
                 response["content-disposition"] = 'attachment;filename=%s.pdf'% (proj.projtitleC.encode('utf-8') if lang == 'cn' else proj.projtitleE)
                 os.remove(out_path)
             else:
-                raise InvestError(4008, msg='pdf生成失败')
+                raise InvestError(4008, msg='获取项目pdf失败', detail='项目pdf生成失败')
             return response
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -683,7 +682,7 @@ class ProjectView(viewsets.ModelViewSet):
             aaa = pdfkit.from_url(PROJECTPDF_URLPATH + str(proj.id) + '&lang=cn', pdfpath, configuration=config,
                                   options=options)
             if not aaa:
-                raise InvestError(4008, msg='生成项目pdf失败')
+                raise InvestError(4008, msg='微信群发项目pdf失败', detail='生成项目pdf失败')
             if proj.country_id == 42 and proj.currency_id == 1:
                 amount_field, currency, currencytype = 'financeAmount', '￥', 'CNY'
             else:
@@ -731,11 +730,11 @@ class ProjTradersView(viewsets.ModelViewSet):
         try:
             obj = project.objects.get(id=pk, is_deleted=False)
         except project.DoesNotExist:
-            raise InvestError(code=4002)
+            raise InvestError(code=4002, msg='获取项目失败', detail='项目不存在')
         if obj.datasource != self.request.user.datasource:
-            raise InvestError(code=8888)
+            raise InvestError(code=8888, msg='获取项目失败')
         if obj.is_deleted:
-            raise InvestError(code=4002, msg='项目已删除')
+            raise InvestError(code=4002, msg='获取项目失败', detail='项目已删除')
         return obj
 
     @loginTokenIsAvailable()
@@ -777,13 +776,13 @@ class ProjTradersView(viewsets.ModelViewSet):
             elif request.user == instance.supportUser:
                 pass
             else:
-                raise InvestError(code=2009,msg='没有权限增加承揽承做')
+                raise InvestError(code=2009, msg='添加项目承揽承做失败', detail='没有权限增加承揽承做')
             with transaction.atomic():
                 instanceSerializer = ProjTradersCreateSerializer(data=data)
                 if instanceSerializer.is_valid():
                     instance = instanceSerializer.save()
                 else:
-                    raise InvestError(40011, msg='%s' % instanceSerializer.error_messages)
+                    raise InvestError(40011, msg='添加项目承揽承做失败', detail='%s' % instanceSerializer.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(self.serializer_class(instance).data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -800,13 +799,13 @@ class ProjTradersView(viewsets.ModelViewSet):
             if request.user.has_perm('proj.admin_changeproj') or request.user.has_perm('proj.admin_addproj'):
                 pass
             else:
-                raise InvestError(code=2009,msg='没有权限修改承揽承做')
+                raise InvestError(code=2009, msg='修改项目承揽承做失败', detail='没有权限修改承揽承做')
             with transaction.atomic():
                 newinstanceSeria = ProjTradersCreateSerializer(instance, data=data)
                 if newinstanceSeria.is_valid():
                     newinstance = newinstanceSeria.save()
                 else:
-                    raise InvestError(40011, msg='项目承揽承做修改失败——%s' % newinstanceSeria.errors)
+                    raise InvestError(40011, msg='修改项目承揽承做失败', detail='修改失败—%s' % newinstanceSeria.errors)
                 return JSONResponse(
                     SuccessResponse(returnDictChangeToLanguage(self.serializer_class(newinstance).data, lang)))
         except InvestError as err:
@@ -822,7 +821,7 @@ class ProjTradersView(viewsets.ModelViewSet):
             if request.user.has_perm('proj.admin_changeproj') or request.user.has_perm('proj.admin_addproj'):
                 pass
             else:
-                raise InvestError(code=2009,msg='没有权限删除承揽承做')
+                raise InvestError(code=2009, msg='删除项目承揽承做失败', detail='没有权限删除承揽承做')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
@@ -872,7 +871,7 @@ class ProjAttachmentView(viewsets.ModelViewSet):
             try:
                 obj = self.queryset.get(id=pk)
             except attachment.DoesNotExist:
-                raise InvestError(code=40031)
+                raise InvestError(code=40031, msg='获取项目附件失败', detail='项目附件不存在')
         else:
             lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
             assert lookup_url_kwarg in self.kwargs, (
@@ -884,24 +883,25 @@ class ProjAttachmentView(viewsets.ModelViewSet):
             try:
                 obj = self.queryset.get(id=self.kwargs[lookup_url_kwarg])
             except attachment.DoesNotExist:
-                raise InvestError(code=40031)
+                raise InvestError(code=40031, msg='获取项目附件失败', detail='项目附件不存在')
         if obj.proj.datasource != self.request.user.datasource:
-            raise InvestError(code=8888)
+            raise InvestError(code=8888, msg='获取项目附件失败')
         return obj
-    def get_proj(self,pk):
+    def get_proj(self, pk):
         obj = read_from_cache('project_%s' % pk)
         if not obj:
             try:
                 obj = project.objects.get(id=pk, is_deleted=False)
             except project.DoesNotExist:
-                raise InvestError(code=4002)
+                raise InvestError(code=4002, msg='获取项目失败', detail='项目不存在')
             else:
                 write_to_cache('project_%s' % pk, obj)
         if obj.datasource != self.request.user.datasource:
-            raise InvestError(code=8888)
+            raise InvestError(code=8888, msg='获取项目失败')
         if obj.is_deleted:
-            raise InvestError(code=4002,msg='项目已删除')
+            raise InvestError(code=4002, msg='获取项目失败', detail='项目已删除')
         return obj
+
     @loginTokenIsAvailable()
     def list(self, request, *args, **kwargs):
         try:
@@ -912,7 +912,7 @@ class ProjAttachmentView(viewsets.ModelViewSet):
             if projid:
                 proj = self.get_proj(projid)
             else:
-                raise InvestError(20072,msg='项目不能为空')
+                raise InvestError(20072, msg='获取项目附件失败', detail='项目（proj）不能为空')
             queryset = self.filter_queryset(self.get_queryset())
             if not request.user.has_perm('proj.admin_getproj'):
                 queryset = queryset
@@ -947,14 +947,14 @@ class ProjAttachmentView(viewsets.ModelViewSet):
             elif proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
                 pass
             else:
-                raise InvestError(code=2009,msg='没有增加该项目附件的权限')
+                raise InvestError(code=2009, msg='新增项目附件失败', detail='没有增加该项目附件的权限')
             with transaction.atomic():
                 data['createuser'] = request.user.id
                 attachments = ProjAttachmentCreateSerializer(data=data)
                 if attachments.is_valid():
                     attachments.save()
                 else:
-                    raise InvestError(code=40012,msg='%s' % attachments.error_messages)
+                    raise InvestError(code=40012, msg='新增项目附件失败', detail='%s' % attachments.error_messages)
                 return JSONResponse(SuccessResponse(returnListChangeToLanguage(attachments.data,lang)))
         except InvestError as err:
                 return JSONResponse(InvestErrorResponse(err))
@@ -974,7 +974,7 @@ class ProjAttachmentView(viewsets.ModelViewSet):
                     for f in attachmentdata:
                         fid = f['id']
                         if not isinstance(fid,(int,str)) or not fid:
-                            raise InvestError(20071,msg='attachment[\'id\'] must be a int/str type')
+                            raise InvestError(20071, msg='修改项目附件信息失败', detail='attachment[\'id\'] must be a int/str type')
                         projAttachment = self.get_object(fid)
                         if request.user.has_perm('proj.admin_changeproj'):
                             pass
@@ -985,17 +985,17 @@ class ProjAttachmentView(viewsets.ModelViewSet):
                         elif projAttachment.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
                             pass
                         else:
-                            raise InvestError(code=2009)
+                            raise InvestError(code=2009, msg='修改项目附件信息失败')
                         f['lastmodifyuser'] = request.user.id
                         f['lastmodifytime'] = datetime.datetime.now()
                         attachmentSer = ProjAttachmentCreateSerializer(projAttachment,data=attachmentdata)
                         if attachmentSer.is_valid():
                             attachmentSer.save()
                         else:
-                            raise InvestError(code=40012, msg='%s' % attachmentSer.error_messages)
+                            raise InvestError(code=40012, msg='修改项目附件信息失败', detail='%s' % attachmentSer.error_messages)
                         newfinances.append(attachmentSer.data)
                 else:
-                    raise InvestError(code=20072, msg='attachment field cannot be null')
+                    raise InvestError(code=20072, msg='修改项目附件信息失败', detail='attachment field cannot be null')
                 return JSONResponse(SuccessResponse(returnListChangeToLanguage(newfinances, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1009,7 +1009,7 @@ class ProjAttachmentView(viewsets.ModelViewSet):
             with transaction.atomic():
                 attachmentidlist = request.data.get('attachment',None)
                 if not isinstance(attachmentidlist,list) or not attachmentidlist:
-                    raise InvestError(code=20072,msg='\'attachment\' expect a non-empty array')
+                    raise InvestError(code=20072, msg='删除项目附件失败', detail='\'attachment\' expect a non-empty array')
                 lang = request.GET.get('lang')
                 returnlist = []
                 for projattachmentid in attachmentidlist:
@@ -1023,7 +1023,7 @@ class ProjAttachmentView(viewsets.ModelViewSet):
                     elif request.user.has_perm('proj.admin_changeproj'):
                         pass
                     else:
-                        raise InvestError(code=2009, msg='没有权限')
+                        raise InvestError(code=2009, msg='删除项目附件失败', detail='没有权限')
                     projattachment.is_deleted = True
                     projattachment.deleteduser = request.user
                     projattachment.deletedtime = datetime.datetime.now()
@@ -1076,7 +1076,7 @@ class ProjFinanceView(viewsets.ModelViewSet):
             try:
                 obj = self.queryset.get(id=pk)
             except finance.DoesNotExist:
-                raise InvestError(code=40031)
+                raise InvestError(code=40031, msg='获取项目财务信息失败', detail='财务信息不存在')
         else:
             lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
             assert lookup_url_kwarg in self.kwargs, (
@@ -1088,9 +1088,9 @@ class ProjFinanceView(viewsets.ModelViewSet):
             try:
                 obj = self.queryset.get(id=self.kwargs[lookup_url_kwarg])
             except finance.DoesNotExist:
-                raise InvestError(code=40031)
+                raise InvestError(code=40031, msg='获取项目财务信息失败', detail='财务信息不存在')
         if obj.datasource != self.request.user.datasource:
-            raise InvestError(code=8888)
+            raise InvestError(code=8888, msg='获取项目财务信息失败')
         return obj
     def get_proj(self,pk):
         obj = read_from_cache('project_%s' % pk)
@@ -1098,13 +1098,13 @@ class ProjFinanceView(viewsets.ModelViewSet):
             try:
                 obj = project.objects.get(id=pk, is_deleted=False)
             except project.DoesNotExist:
-                raise InvestError(code=4002)
+                raise InvestError(code=4002, msg='获取项目失败', detail='项目不存在')
             else:
                 write_to_cache('project_%s' % pk, obj)
         if obj.datasource != self.request.user.datasource:
-            raise InvestError(code=8888)
+            raise InvestError(code=8888, msg='获取项目失败')
         if obj.is_deleted:
-            raise InvestError(code=4002,msg='项目已删除')
+            raise InvestError(code=4002, msg='获取项目失败', detail='项目已删除')
         return obj
 
     @loginTokenIsAvailable()
@@ -1117,7 +1117,7 @@ class ProjFinanceView(viewsets.ModelViewSet):
             if projid and isinstance(projid,(str,int)):
                 proj = self.get_proj(projid)
             else:
-                raise InvestError(20072, msg='项目不能为空')
+                raise InvestError(20072, msg='获取项目财务信息失败', detail='项目不能为空')
             queryset = self.filter_queryset(self.get_queryset())
             if not proj.financeIsPublic:
                 if request.user in [proj.supportUser, proj.createuser] or request.user.is_superuser:
@@ -1156,7 +1156,7 @@ class ProjFinanceView(viewsets.ModelViewSet):
             elif proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
                 pass
             else:
-                raise InvestError(code=2009,msg='没有增加该项目财务信息的权限')
+                raise InvestError(code=2009, msg='新增项目财务信息失败', detail='没有增加该项目财务信息的权限')
             lang = request.GET.get('lang')
             with transaction.atomic():
 
@@ -1166,7 +1166,7 @@ class ProjFinanceView(viewsets.ModelViewSet):
                 if finances.is_valid():
                     finances.save()
                 else:
-                    raise InvestError(code=40013,msg='财务信息有误_%s\n%s' % (finances.error_messages, finances.errors))
+                    raise InvestError(code=40013, msg='新增项目财务信息失败', detail='财务信息有误_%s\n%s' % (finances.error_messages, finances.errors))
                 return JSONResponse(SuccessResponse(returnListChangeToLanguage(finances.data,lang)))
         except InvestError as err:
                 return JSONResponse(InvestErrorResponse(err))
@@ -1187,7 +1187,7 @@ class ProjFinanceView(viewsets.ModelViewSet):
                         fid = f['id']
                         f.pop('proj')
                         if not isinstance(fid,(int,str)) or not fid:
-                            raise InvestError(20072,msg='finances[\'id\'] must be a int/str type')
+                            raise InvestError(20072, msg='修改项目财务信息失败', detail='finances[\'id\'] must be a int/str type')
                         projfinance = self.get_object(fid)
                         if request.user.has_perm('proj.admin_changeproj'):
                             pass
@@ -1198,17 +1198,17 @@ class ProjFinanceView(viewsets.ModelViewSet):
                         elif projfinance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
                             pass
                         else:
-                            raise InvestError(code=2009,msg='没有权限修改项目（%s）的相关信息'%projfinance.proj)
+                            raise InvestError(code=2009, msg='修改项目财务信息失败', detail='没有权限修改项目（%s）的相关信息'%projfinance.proj)
                         f['lastmodifyuser'] = request.user.id
                         f['lastmodifytime'] = datetime.datetime.now()
                         finance = FinanceChangeSerializer(projfinance,data=f)
                         if finance.is_valid():
                             finance.save()
                         else:
-                            raise InvestError(code=40013, msg='%s' % finance.error_messages)
+                            raise InvestError(code=40013, msg='修改项目财务信息失败', detail='%s' % finance.error_messages)
                         newfinances.append(finance.data)
                 else:
-                    raise InvestError(code=20072, msg='finances field cannot be null')
+                    raise InvestError(code=20072, msg='修改项目财务信息失败', detail='finances field cannot be null')
                 return JSONResponse(SuccessResponse(returnListChangeToLanguage(newfinances, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1222,7 +1222,7 @@ class ProjFinanceView(viewsets.ModelViewSet):
             with transaction.atomic():
                 financeidlist = request.data.get('finances',None)
                 if not isinstance(financeidlist,list) or not financeidlist:
-                    raise InvestError(code=20072,msg='\'finances\' expect an not null list')
+                    raise InvestError(code=20072, msg='删除项目财务信息失败', detail='\'finances\' expect an not null list')
                 lang = request.GET.get('lang')
                 returnlist = []
                 for projfinanceid in financeidlist:
@@ -1236,7 +1236,7 @@ class ProjFinanceView(viewsets.ModelViewSet):
                     elif request.user.has_perm('proj.admin_changeproj'):
                         pass
                     else:
-                        raise InvestError(code=2009, msg='没有权限')
+                        raise InvestError(code=2009, msg='删除项目财务信息失败', detail='没有权限删除财务信息')
                     projfinance.is_deleted = True
                     projfinance.deleteduser = request.user
                     projfinance.deletedtime = datetime.datetime.now()
@@ -1283,7 +1283,7 @@ class ProjectFavoriteView(viewsets.ModelViewSet):
             try:
                 obj = self.queryset.get(id=pk)
             except finance.DoesNotExist:
-                raise InvestError(code=4006)
+                raise InvestError(code=4006, msg='获取项目收藏/推荐失败', detail='收藏/推荐信息不存在')
         else:
             lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
             assert lookup_url_kwarg in self.kwargs, (
@@ -1295,9 +1295,9 @@ class ProjectFavoriteView(viewsets.ModelViewSet):
             try:
                 obj = self.queryset.get(id=self.kwargs[lookup_url_kwarg])
             except finance.DoesNotExist:
-                raise InvestError(code=4006)
+                raise InvestError(code=4006, msg='获取项目收藏/推荐失败', detail='收藏/推荐信息不存在')
         if obj.datasource != self.request.user.datasource:
-            raise InvestError(code=8888)
+            raise InvestError(code=8888, msg='获取项目收藏/推荐失败')
         return obj
 
     def get_user(self,pk):
@@ -1306,13 +1306,13 @@ class ProjectFavoriteView(viewsets.ModelViewSet):
             try:
                 obj = MyUser.objects.get(id=pk, is_deleted=False)
             except MyUser.DoesNotExist:
-                raise InvestError(code=2002)
+                raise InvestError(code=2002, msg='获取用户失败', detail='用户不存在')
             else:
                 write_to_cache('user_%s' % pk, obj)
         if obj.datasource != self.request.user.datasource:
-            raise InvestError(code=8888)
+            raise InvestError(code=8888, msg='获取用户失败')
         if obj.is_deleted:
-            raise InvestError(code=2002,msg='用户已删除')
+            raise InvestError(code=2002, msg='获取用户失败', detail='用户已删除')
         return obj
 
     #获取收藏列表，GET参数'user'，'trader'，'favoritetype'
@@ -1338,7 +1338,7 @@ class ProjectFavoriteView(viewsets.ModelViewSet):
                 elif userid and not traderid:
                     user = self.get_user(userid)
                     if not request.user.has_perm('usersys.user_getfavorite',user):
-                        raise InvestError(code=2009)
+                        raise InvestError(code=2009, msg='获取项目收藏/推荐失败')
                     else:
                         queryset = queryset.filter(Q(trader=request.user) | Q(trader=None))
                 elif not userid and traderid:
@@ -1347,7 +1347,7 @@ class ProjectFavoriteView(viewsets.ModelViewSet):
                     if userid == request.user.id or traderid == request.user.id:
                         pass
                     else:
-                        raise InvestError(code=2009)
+                        raise InvestError(code=2009, msg='获取项目收藏/推荐失败')
             try:
                 count = queryset.count()
                 queryset = Paginator(queryset, page_size)
@@ -1370,7 +1370,7 @@ class ProjectFavoriteView(viewsets.ModelViewSet):
             userid = data.get('user',None)
             ftype = data.get('favoritetype',None)
             if not userid or not ftype:
-                raise InvestError(20072,msg='user/favoritetype cannot be null')
+                raise InvestError(20072, msg='收藏/推荐项目失败', detail='user/favoritetype cannot be null')
             data['createuser'] = request.user.id
             data['datasource'] = request.user.datasource.id
             projidlist = data.pop('projs',None)
@@ -1380,18 +1380,18 @@ class ProjectFavoriteView(viewsets.ModelViewSet):
             elif ftype == 5:
                 traderid = data.get('trader', None)
                 if not traderid:
-                    raise InvestError(20072,msg='trader cannot be null')
+                    raise InvestError(20072, msg='收藏/推荐项目失败', detail='trader cannot be null')
                 traderuser = self.get_user(traderid)
                 if not user.has_perm('usersys.user_interestproj', traderuser):
-                    raise InvestError(code=4005)
+                    raise InvestError(code=4005, msg='收藏/推荐项目失败', detail='没有权限进行收藏/推荐项目')
             elif ftype in [1,2]:
                 if not request.user.has_perm('proj.admin_addfavorite'):
-                    raise InvestError(code=4005)
+                    raise InvestError(code=4005, msg='收藏/推荐项目失败', detail='没有权限进行收藏/推荐项目')
             elif ftype == 3:
                 if not request.user.has_perm('usersys.user_addfavorite', user):
-                    raise InvestError(code=4005)
+                    raise InvestError(code=4005, msg='收藏/推荐项目失败', detail='没有权限进行收藏/推荐项目')
             else:
-                raise InvestError(code=2009)
+                raise InvestError(code=2009, msg='收藏/推荐项目失败', detail='没有权限')
             with transaction.atomic():
                 favoriteProjectList = []
                 projlist = []
@@ -1402,11 +1402,11 @@ class ProjectFavoriteView(viewsets.ModelViewSet):
                         newfavoriteproj = newfavorite.save()
                         if newfavoriteproj.user.datasource != request.user.datasource or newfavoriteproj.proj.datasource != request.user.datasource or\
                                 (newfavoriteproj.trader and newfavoriteproj.trader.datasource != request.user.datasource):
-                            raise InvestError(code=8888)
+                            raise InvestError(code=8888, msg='收藏/推荐项目失败')
                         favoriteProjectList.append(newfavorite.data)
                         projlist.append(newfavoriteproj)
                     else:
-                        raise InvestError(code=20071,msg='%s'%newfavorite.errors)
+                        raise InvestError(code=20071, msg='收藏/推荐项目失败', detail='%s'%newfavorite.errors)
                 for proj in projlist:
                     if ftype == 5:
                         receiver = proj.trader
@@ -1428,14 +1428,14 @@ class ProjectFavoriteView(viewsets.ModelViewSet):
             favorlist = []
             lang = request.GET.get('lang')
             if not isinstance(favoridlist,list) or not favoridlist:
-                raise InvestError(code=20072, msg='accept a not null list')
+                raise InvestError(code=20072, msg='删除项目收藏/推荐失败', detail='accept a not null list')
             with transaction.atomic():
                 for favorid in favoridlist:
                     instance = self.get_object(favorid)
                     if request.user.has_perm('proj.admin_deletefavorite') or request.user == instance.user:
                         pass
                     else:
-                        raise InvestError(code=2009)
+                        raise InvestError(code=2009, msg='删除项目收藏/推荐失败')
                     instance.is_deleted = True
                     instance.deleteduser = request.user
                     instance.deletedtime = datetime.datetime.now()
@@ -1509,7 +1509,7 @@ class ProjDiDiRecordView(viewsets.ModelViewSet):
                 if newInstance.is_valid():
                     newInstance.save()
                 else:
-                    raise InvestError(code=4011, msg='打车信息存储失败_%s' % newInstance.error_messages)
+                    raise InvestError(code=4011, msg='滴滴打车信息存储失败', detail='_%s' % newInstance.error_messages)
             return JSONResponse(SuccessResponse(newInstance.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1522,7 +1522,7 @@ def isProjectTrader(proj_id, user_id):
     try:
         projectInstance = project.objects.get(id=proj_id, is_deleted=False)
     except Exception:
-        raise InvestError(20071, msg='项目不存在')
+        raise InvestError(4002, msg='项目不存在', detail='项目不存在')
     else:
         if projectInstance.proj_traders.all().filter(user=user_id, is_deleted=False).exists():
             return True

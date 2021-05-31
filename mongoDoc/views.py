@@ -53,7 +53,7 @@ class CompanyCatDataView(viewsets.ModelViewSet):
             if serializer.is_valid():
                 serializer.save()
             else:
-                raise InvestError(2001, msg=serializer.error_messages)
+                raise InvestError(2001, msg='新增行业类别失败', detail=serializer.error_messages)
             return JSONResponse(SuccessResponse(serializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -129,7 +129,7 @@ class MergeFinanceDataView(viewsets.ModelViewSet):
                 else:
                     serializer = self.serializer_class(data=data)
             else:
-                raise InvestError(8001, msg='未知的类型')
+                raise InvestError(8001, msg='新增投融资经历失败', detail='未知的类型')
             if serializer.is_valid():
                 event = serializer.save()
                 proj = ProjectData.objects(com_id=data['com_id'])
@@ -144,7 +144,7 @@ class MergeFinanceDataView(viewsets.ModelViewSet):
                     event.update(com_sub_cat_name=proj.com_sub_cat_name)
                     event.update(com_addr=proj.com_addr)
             else:
-                raise InvestError(2001, msg=serializer.error_messages)
+                raise InvestError(2001, msg='新增投融资经历失败', detail=serializer.error_messages)
             return JSONResponse(SuccessResponse(self.serializer_class(event).data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -166,7 +166,7 @@ class MergeFinanceDataView(viewsets.ModelViewSet):
             if serializer.is_valid():
                 serializer.save()
             else:
-                raise InvestError(20071, msg='%s'%serializer.error_messages)
+                raise InvestError(20071, msg='修改投融资经历失败', detail='%s'%serializer.error_messages)
             return JSONResponse(SuccessResponse(True))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -188,7 +188,7 @@ class MergeFinanceDataView(viewsets.ModelViewSet):
             elif type == 'eveaddr':
                 result = self.eventCountByAddress()
             else:
-                raise InvestError(2007)
+                raise InvestError(20071, msg='获取投融资经历统计数据失败', detail='统计类别有误')
             return JSONResponse(SuccessResponse(result))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -357,7 +357,7 @@ class ProjectDataView(viewsets.ModelViewSet):
             data = request.data
             idlist = data.get('com_ids')
             if idlist in (None, '', u'', []) or not isinstance(idlist, list):
-                raise InvestError(20071, msg='except a non-empty array')
+                raise InvestError(20071, msg='获取全库公司列表数据失败', detail='except a non-empty array')
             queryset = self.queryset.filter(com_id__in=idlist)
             projserializer = self.serializer_class(queryset,many=True)
             eventserializer = MergeFinanceDataSerializer(MergeFinanceData.objects.all().filter(com_id__in=idlist), many=True)
@@ -389,7 +389,7 @@ class ProjectDataView(viewsets.ModelViewSet):
                     event_qs.update(com_sub_cat_name=proj.com_sub_cat_name)
                     event_qs.update(com_addr=proj.com_addr)
             else:
-                raise InvestError(2001, msg=serializer.error_messages)
+                raise InvestError(2001, msg='新增全库项目失败', detail=serializer.error_messages)
             return JSONResponse(SuccessResponse(serializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -427,7 +427,7 @@ class ProjectIndustryInfoView(viewsets.ModelViewSet):
         try:
             com_id = request.GET.get('com_id', None)
             if not com_id:
-                raise InvestError(20072, msg='公司 不能为空')
+                raise InvestError(20072, msg='获取项目公司工商信息失败', detail='公司 不能为空')
             com_qs = self.queryset.filter(com_id=com_id)
             if com_qs.count() > 0:
                 instance = com_qs.first()
@@ -453,7 +453,7 @@ class ProjectIndustryInfoView(viewsets.ModelViewSet):
             if serializer.is_valid():
                 serializer.save()
             else:
-                raise InvestError(2001, msg=serializer.error_messages)
+                raise InvestError(2001, msg='新增项目公司工商信息失败', detail=serializer.error_messages)
             return JSONResponse(SuccessResponse(serializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -512,7 +512,7 @@ class ProjectNewsView(viewsets.ModelViewSet):
             if serializer.is_valid():
                 serializer.save()
             else:
-                raise InvestError(2001, msg=serializer.error_messages)
+                raise InvestError(2001, msg='新增项目公司新闻消息失败', detail=serializer.error_messages)
             return JSONResponse(SuccessResponse(serializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -577,7 +577,7 @@ class ProjectSearchNameView(viewsets.ModelViewSet):
             if serializer.is_valid():
                 serializer.save()
             else:
-                raise InvestError(2001, msg=serializer.error_messages)
+                raise InvestError(2001, msg='新增项目公司搜索记录失败', detail=serializer.error_messages)
             return JSONResponse(SuccessResponse(serializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -641,7 +641,7 @@ class ProjectRemarkView(viewsets.ModelViewSet):
             if serializer.is_valid():
                 serializer.save()
             else:
-                raise InvestError(2001, msg=serializer.error_messages)
+                raise InvestError(2001, msg='新增项目公司备注信息失败', detail=serializer.error_messages)
             return JSONResponse(SuccessResponse(serializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -657,7 +657,7 @@ class ProjectRemarkView(viewsets.ModelViewSet):
             if instance.createuser_id == request.user.id:
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='修改项目公司备注信息失败')
             data = request.data
             data.pop('createuser_id',None)
             data.pop('datasource',None)
@@ -665,7 +665,7 @@ class ProjectRemarkView(viewsets.ModelViewSet):
             if serializer.is_valid():
                 serializer.save()
             else:
-                raise InvestError(2001, msg=serializer.error_messages)
+                raise InvestError(2001, msg='修改项目公司备注信息失败', detail=serializer.error_messages)
             return JSONResponse(SuccessResponse(serializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -683,7 +683,7 @@ class ProjectRemarkView(viewsets.ModelViewSet):
             elif request.user.has_perm('usersys.admin_deletemongoprojremark'):
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='删除项目公司备注信息失败')
             instance.delete()
             return JSONResponse(SuccessResponse({'isDeleted':True}))
         except InvestError as err:
@@ -784,7 +784,7 @@ class WXChatDataView(viewsets.ModelViewSet):
                 if serializer.is_valid():
                     serializer.save()
                 else:
-                    raise InvestError(2001, msg=serializer.error_messages)
+                    raise InvestError(2001, msg='修改市场消息是否展示失败', detail=serializer.error_messages)
                 return JSONResponse(SuccessResponse(serializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -799,7 +799,7 @@ def saveSendEmailDataToMongo(data):
         if serializer.is_valid():
             serializer.save()
         else:
-            raise InvestError(2001,msg=serializer.error_messages)
+            raise InvestError(2001, msg='保存发送项目邮件记录失败', detail=serializer.error_messages)
     except Exception:
         logexcption()
 
@@ -855,7 +855,7 @@ def saveChatMessageDataToMongo(data):
             if serializer.is_valid():
                 serializer.save()
             else:
-                raise InvestError(2001, msg=serializer.error_messages)
+                raise InvestError(2001, msg='保存环信聊天信息失败', detail=serializer.error_messages)
         except Exception:
             logexcption()
 

@@ -22,13 +22,13 @@ hongkong_mobile = r'^(5|6|8|9)([0-9]{7})$'
 hongkong_telephone = r'^^(2[1-9]|3[1,4-7,9])([0-9]{6})$'
 
 def SuccessResponse(data,msg=None):
-    response = {'code':1000,'errormsg':msg,'result':data}
+    response = {'code': 1000, 'errormsg': msg, 'result': data, 'detail': msg}
     return response
 def InvestErrorResponse(err):
-    response = {'code': err.code, 'errormsg': err.msg, 'result': None}
+    response = {'code': err.code, 'errormsg': err.msg, 'result': None, 'detail': err.detail_msg}
     return response
 def ExceptionResponse(msg):
-    response = {'code':9999, 'errormsg': msg, 'result': None}
+    response = {'code': 9999, 'errormsg': '系统错误，请联系工作人员', 'result': None, 'detail': msg}
     return response
 #读
 def read_from_cache(key):
