@@ -125,6 +125,8 @@ class ProjectView(viewsets.ModelViewSet):
             max_size = request.GET.get('max_size')
             skip_count = request.GET.get('skip_count')  # 从第一页开始
             lang = request.GET.get('lang')
+            sortfield = request.GET.get('sort', 'createdtime')
+            desc = request.GET.get('desc', 1)
             source = request.META.get('HTTP_SOURCE')
             if source:
                 datasource = DataSource.objects.filter(id=source, is_deleted=False)
@@ -159,8 +161,9 @@ class ProjectView(viewsets.ModelViewSet):
                     queryset = queryset.filter(Q(isHidden=False,projstatus_id__in=[4,6,7,8]) | Q(isHidden=True, proj_datarooms__is_deleted=False, proj_datarooms__dataroom_users__user=request.user, proj_datarooms__dataroom_users__is_deleted=False))
                     serializerclass = ProjListSerializer_user
             queryset = queryset.distinct()
+            queryset = mySortQuery(queryset, sortfield, desc)
             count = queryset.count()
-            queryset = queryset.order_by('-createdtime')[int(skip_count):int(max_size)+int(skip_count)]
+            queryset = queryset[int(skip_count):int(max_size)+int(skip_count)]
             responselist = []
             for instance in queryset:
                 actionlist = {'get': False, 'change': False, 'delete': False, 'canAddOrgBD':False, 'canAddMeetBD':False, 'canAddDataroom':False}
