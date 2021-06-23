@@ -467,8 +467,10 @@ def startMakeDataroomZipThread(directory_qs, file_qs, path, watermarkcontent=Non
                 for parent, dirnames, filenames in os.walk(self.path):
                     for filename in filenames:
                         pathfile = os.path.join(parent, filename)
-                        arcname = pathfile[pre_len:].strip(os.path.sep)  # 相对路径
-                        zipf.write(pathfile, arcname)
+                        if pathfile != self.progress_path:
+                            arcname = pathfile[pre_len:].strip(os.path.sep)  # 相对路径
+                            zipf.write(pathfile, arcname)
+                zipf.close()
                 zipf.close()
             if os.path.exists(self.path):
                 shutil.rmtree(self.path)
