@@ -370,12 +370,13 @@ def getRemainingTime(rootpath):
     downloadSpeed, encryptSpeed = 2 * 1024 * 1024, 2 * 1024 * 1024  # bytes/s
     progress_path = os.path.join(rootpath, 'zipProgress')
     time = 999
+    all = 999
     if os.path.exists(progress_path):
         with open(progress_path, encoding='utf-8', mode='r') as load_f:
             load_data = json.load(load_f)
         time = load_data['unDownloadSize'] / downloadSpeed + load_data['unEncryptSize'] / encryptSpeed + 2
-    return round(time, 2)
-
+        all = load_data['allDownloadSize'] / downloadSpeed + load_data['allEncryptSize'] / encryptSpeed + 2
+    return round(time, 2), round(all, 2)
 
 def checkDirectoryLatestdate(direcory_path, file_qs):
     if os.path.exists(direcory_path):
@@ -451,7 +452,7 @@ def startMakeDataroomZipThread(directory_qs, file_qs, path, watermarkcontent=Non
                     addWaterMarkToPdfFiles(filepaths, watermarkcontent)
                 if password:
                     print('开始加密')
-                    subprocess.check_output(['python3', APILOG_PATH['encryptShellPath'], self.path, password, APILOG_PATH['excptionlogpath'],
+                    subprocess.check_output([APILOG_PATH['encryptShellPythonVersion'], APILOG_PATH['encryptShellPath'], self.path, password, APILOG_PATH['excptionlogpath'],
                          APILOG_PATH['encryptPdfLogPath']])  # 执行完毕程序才会往下进行
                     print('加密完成')
 
@@ -465,9 +466,11 @@ def startMakeDataroomZipThread(directory_qs, file_qs, path, watermarkcontent=Non
                 for parent, dirnames, filenames in os.walk(self.path):
                     for filename in filenames:
                         pathfile = os.path.join(parent, filename)
-                        arcname = pathfile[pre_len:].strip(os.path.sep)  # 相对路径
-                        zipf.write(pathfile, arcname)
+                        if pathfile != self.progress_path:
+                            arcname = pathfile[pre_len:].strip(os.path.sep)  # 相对路径
+                            zipf.write(pathfile, arcname)
                 zipf.close()
+
             if os.path.exists(self.path):
                 shutil.rmtree(self.path)
 
