@@ -267,8 +267,8 @@ class DataroomView(viewsets.ModelViewSet):
             else:
                 # checkDirectoryLatestdate(direcpath, file_qs)
                 if os.path.exists(direcpath):
-                    seconds = getRemainingTime(direcpath)
-                    response = JSONResponse(SuccessResponse({'code': 8004, 'msg': '压缩中', 'seconds': seconds}))
+                    seconds, all = getRemainingTime(direcpath)
+                    response = JSONResponse(SuccessResponse({'code': 8004, 'msg': '压缩中', 'seconds': seconds, 'all': all}))
                 else:
                     watermarkcontent = None if nowater else str(request.GET.get('water', '').replace('@', '[at]')).split(',')
                     directory_qs = dataroominstance.dataroom_directories.all().filter(is_deleted=False, isFile=False)
