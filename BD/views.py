@@ -29,6 +29,7 @@ from timeline.models import timeline
 from timeline.models import timelineremark
 from usersys.models import MyUser
 from utils.customClass import RelationFilter, InvestError, JSONResponse, MyFilterSet
+from utils.logicJudge import is_projBDManager, is_projTrader
 from utils.sendMessage import sendmessage_orgBDMessage, sendmessage_orgBDExpireMessage, sendmessage_workReportDonotWrite
 from utils.util import loginTokenIsAvailable, SuccessResponse, InvestErrorResponse, ExceptionResponse, \
     returnListChangeToLanguage, catchexcption, returnDictChangeToLanguage, mySortQuery, add_perm, rem_perm, \
@@ -184,8 +185,6 @@ class ProjectBDView(viewsets.ModelViewSet):
                 projectBD = ProjectBDCreateSerializer(data=data)
                 if projectBD.is_valid():
                     newprojectBD = projectBD.save()
-                    if newprojectBD.manager:
-                        add_perm('BD.user_manageProjectBD', newprojectBD.manager, newprojectBD)
                 else:
                     raise InvestError(4009, msg='新增项目BD信息失败', detail='项目BD创建失败——%s'%projectBD.error_messages)
                 if isinstance(relateManagers, list):
@@ -235,9 +234,9 @@ class ProjectBDView(viewsets.ModelViewSet):
             data.pop('datasource', None)
             if request.user.has_perm('BD.manageProjectBD'):
                 pass
-            elif request.user in [instance.manager, instance.contractors, instance.createuser]:
+            elif request.user == instance.createuser:
                 pass
-            elif instance.ProjectBD_managers.filter(manager=request.user, is_deleted=False).exists():
+            elif is_projBDManager(request.user.id, instance):
                 pass
             else:
                 raise InvestError(2009, msg='修改项目BD信息失败')
@@ -262,9 +261,9 @@ class ProjectBDView(viewsets.ModelViewSet):
             instance = self.get_object()
             if request.user.has_perm('BD.manageProjectBD'):
                 pass
-            elif request.user in [instance.manager, instance.contractors, instance.createuser]:
+            elif request.user == instance.createuser:
                 pass
-            elif instance.ProjectBD_managers.filter(manager=request.user, is_deleted=False).exists():
+            elif is_projBDManager(request.user.id, instance):
                 pass
             else:
                 raise InvestError(2009, msg='删除项目BD信息失败')
@@ -423,9 +422,9 @@ class ProjectBDCommentsView(viewsets.ModelViewSet):
             bdinstance = ProjectBD.objects.get(id=int(data['projectBD']))
             if request.user.has_perm('BD.manageProjectBD'):
                 pass
-            elif request.user in [bdinstance.manager, bdinstance.contractors, bdinstance.createuser]:
+            elif request.user == bdinstance.createuser:
                 pass
-            elif bdinstance.ProjectBD_managers.filter(manager=request.user, is_deleted=False).exists():
+            elif is_projBDManager(request.user.id, bdinstance):
                 pass
             else:
                 raise InvestError(2009, msg='新增项目BD备注信息失败')
@@ -451,9 +450,9 @@ class ProjectBDCommentsView(viewsets.ModelViewSet):
             instance = self.get_object()
             if request.user.has_perm('BD.manageProjectBD'):
                 pass
-            elif request.user in [instance.createuser, instance.projectBD.manager, instance.projectBD.contractors]:
+            elif request.user in [instance.createuser, instance.projectBD.createuser]:
                 pass
-            elif instance.projectBD.ProjectBD_managers.filter(manager=request.user, is_deleted=False).exists():
+            elif is_projBDManager(request.user.id, instance.projectBD):
                 pass
             else:
                 raise InvestError(2009, msg='修改项目BD备注信息失败')
@@ -481,9 +480,9 @@ class ProjectBDCommentsView(viewsets.ModelViewSet):
             instance = self.get_object()
             if request.user.has_perm('BD.manageProjectBD'):
                 pass
-            elif request.user in [instance.createuser, instance.projectBD.manager, instance.projectBD.contractors]:
+            elif request.user in [instance.createuser, instance.projectBD.createuser]:
                 pass
-            elif instance.projectBD.ProjectBD_managers.filter(manager=request.user, is_deleted=False).exists():
+            elif is_projBDManager(request.user.id, instance.projectBD):
                 pass
             else:
                 raise InvestError(2009, msg='删除项目BD备注记录失败')
@@ -689,10 +688,9 @@ class OrgBDView(viewsets.ModelViewSet):
             else:
                 proj = data.get('proj', None)
                 if proj:
-                    projinstance = project.objects.get(id=proj, is_deleted=False, datasource=request.user.datasource)
                     if request.user.has_perm('BD.user_addOrgBD'):
                         pass
-                    elif projinstance.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+                    elif is_projTrader(request.user, proj):
                         pass
                     else:
                         raise InvestError(2009, msg='新增机构BD记录失败')
@@ -787,7 +785,7 @@ class OrgBDView(viewsets.ModelViewSet):
             elif request.user in [instance.createuser, instance.manager]:
                 pass
             elif instance.proj:
-                if instance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+                if is_projTrader(request.user, instance.proj.id):
                     pass
             else:
                 raise InvestError(2009, msg='修改机构BD记录失败')
@@ -927,10 +925,9 @@ class OrgBDBlackView(viewsets.ModelViewSet):
             data['datasource'] = request.user.datasource.id
             projid = data.get('proj', None)
             if projid:
-                projinstance = project.objects.get(id=projid, is_deleted=False, datasource=request.user.datasource)
                 if request.user.has_perm('BD.manageOrgBDBlack') or request.user.has_perm('BD.addOrgBDBlack'):
                     pass
-                elif projinstance.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+                elif is_projTrader(request.user, projid):
                     pass
                 else:
                     raise InvestError(2009, msg='增加机构BD黑名单机构失败')
@@ -958,8 +955,9 @@ class OrgBDBlackView(viewsets.ModelViewSet):
             data.pop('proj', None)
             lang = request.GET.get('lang')
             instance = self.get_object()
-            projinstance = instance.proj
-            if request.user.has_perm('BD.manageOrgBDBlack') or projinstance.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            if request.user.has_perm('BD.manageOrgBDBlack'):
+                pass
+            elif is_projTrader(request.user, instance.proj.id):
                 pass
             else:
                 raise InvestError(2009, msg='修改该机构加入机构BD黑名单原因失败')
@@ -981,10 +979,9 @@ class OrgBDBlackView(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
-            projinstance = instance.proj
             if request.user.has_perm('BD.manageOrgBDBlack') or request.user.has_perm('BD.delOrgBDBlack'):
                 pass
-            elif projinstance.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            elif is_projTrader(request.user, instance.proj.id):
                 pass
             else:
                 raise InvestError(2009, msg='删除机构BD黑名单机构失败')
@@ -1077,7 +1074,7 @@ class OrgBDCommentsView(viewsets.ModelViewSet):
             elif request.user in [bdinstance.createuser, bdinstance.manager]:
                 pass
             elif bdinstance.proj:
-                if bdinstance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+                if is_projTrader(request.user, bdinstance.proj.id):
                     pass
             else:
                 raise InvestError(2009, msg='新增该机构BD备注失败')
@@ -1105,7 +1102,7 @@ class OrgBDCommentsView(viewsets.ModelViewSet):
             data = request.data
             if request.user.has_perm('BD.manageOrgBD'):
                 pass
-            elif request.user in [instance.createuser, instance.orgBD.manager]:
+            elif request.user in [instance.createuser, instance.orgBD.manager, instance.orgBD.createuser]:
                 pass
             else:
                 raise InvestError(2009, msg='修改该机构BD备注失败')
@@ -1250,8 +1247,6 @@ class MeetingBDView(viewsets.ModelViewSet):
                 meetBD = MeetingBDCreateSerializer(data=data)
                 if meetBD.is_valid():
                     newMeetBD = meetBD.save()
-                    if newMeetBD.manager:
-                        add_perm('BD.user_manageMeetBD', newMeetBD.manager, newMeetBD)
                 else:
                     raise InvestError(5005, msg='新增会议BD记录失败', detail='会议BD创建失败——%s' % meetBD.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(MeetingBDSerializer(newMeetBD).data,lang)))
@@ -1268,7 +1263,7 @@ class MeetingBDView(viewsets.ModelViewSet):
             instance = self.get_object()
             if request.user.has_perm('BD.manageMeetBD'):
                 pass
-            elif request.user.has_perm('BD.user_manageMeetBD', instance):
+            elif request.user == instance.manager:
                 pass
             elif request.user.has_perm('BD.user_getMeetBD'):
                 if not instance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
@@ -1290,10 +1285,9 @@ class MeetingBDView(viewsets.ModelViewSet):
             data.pop('datasource', None)
             lang = request.GET.get('lang')
             instance = self.get_object()
-            oldmanager = instance.manager
             if request.user.has_perm('BD.manageMeetBD'):
                 pass
-            elif request.user.has_perm('BD.user_manageMeetBD', instance):
+            elif request.user== instance.manager:
                 # data = {'comments': data.get('comments', instance.comments),
                 #         'attachment': data.get('attachment', instance.attachment),
                 #         'attachmentbucket': data.get('attachmentbucket', instance.attachmentbucket),}
@@ -1306,10 +1300,6 @@ class MeetingBDView(viewsets.ModelViewSet):
                 meetBD = MeetingBDCreateSerializer(instance,data=data)
                 if meetBD.is_valid():
                     newMeetBD = meetBD.save()
-                    oldmanager_id = data.get('manager', None)
-                    if oldmanager_id and oldmanager_id != oldmanager.id:
-                        add_perm('BD.user_manageMeetBD', newMeetBD.manager, newMeetBD)
-                        rem_perm('BD.user_manageMeetBD', oldmanager, newMeetBD)
                 else:
                     raise InvestError(5005, msg='修改会议BD记录失败', detail='会议BD修改失败——%s' % meetBD.error_messages)
                 return JSONResponse(
@@ -1327,7 +1317,7 @@ class MeetingBDView(viewsets.ModelViewSet):
             instance = self.get_object()
             if request.user.has_perm('BD.manageMeetBD'):
                 pass
-            elif request.user.has_perm('BD.user_manageMeetBD', instance):
+            elif request.user == instance.manager:
                 pass
             elif instance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
                 pass

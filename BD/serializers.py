@@ -11,6 +11,7 @@ from sourcetype.serializer import titleTypeSerializer
 from third.views.qiniufile import getUrlWithBucketAndKey
 from usersys.serializer import UserCommenSerializer, UserRemarkSimpleSerializer, UserAttachmentSerializer, \
     UserSimpleSerializer
+from utils.logicJudge import is_projBDManager, is_userInvestor
 
 
 class ProjectBDCommentsCreateSerializer(serializers.ModelSerializer):
@@ -64,7 +65,7 @@ class ProjectBDSerializer(serializers.ModelSerializer):
     def get_BDComments(self, obj):
         user_id = self.context.get('user_id')
         manage = self.context.get('manage')
-        if manage or user_id in [obj.manager_id, obj.contractors_id] or user_id in obj.ProjectBD_managers.filter(is_deleted=False).values_list('manager', flat=True):
+        if manage or is_projBDManager(user_id, obj):
             qs = obj.ProjectBD_comments.filter(is_deleted=False).order_by('-createdtime')
             if qs.exists():
                 return ProjectBDCommentsSerializer(qs, many=True).data
@@ -140,9 +141,8 @@ class OrgBDSerializer(serializers.ModelSerializer):
                 info['photourl'] = getUrlWithBucketAndKey('image', obj.bduser.photoKey)
             if obj.bduser.photoKey:
                 info['cardurl'] = getUrlWithBucketAndKey('image', obj.bduser.cardKey)
-            relation_qs = obj.bduser.investor_relations.all().filter(is_deleted=False)
             if user_id:
-                if obj.manager.id == user_id or relation_qs.filter(traderuser_id=user_id).exists():
+                if obj.manager.id == user_id or is_userInvestor(obj.bduser, user_id):
                     info['email'] = obj.bduser.email
                     info['mobile'] = obj.bduser.mobile
                     info['wechat'] = obj.bduser.wechat

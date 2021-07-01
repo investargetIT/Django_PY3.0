@@ -54,7 +54,6 @@ class ProjectBD(MyModel):
             ('manageProjectBD', '管理员管理项目BD'),
             ('user_getProjectBD', u'用户查看个人项目BD'),
             ('user_addProjectBD', u'用户新建个人项目BD'),
-            ('user_manageProjectBD', '用户管理个人项目BD（obj级别）'),
         )
 
     def save(self, *args, **kwargs):
@@ -254,7 +253,6 @@ class MeetingBD(MyModel):
             ('manageMeetBD', '管理会议BD'),
             ('user_getMeetBD', u'用户查看个人会议BD'),
             ('user_addMeetBD', u'用户新建个人会议BD'),
-            ('user_manageMeetBD', '用户管理个人会议BD（obj级别）'),
         )
 
     def save(self, *args, **kwargs):

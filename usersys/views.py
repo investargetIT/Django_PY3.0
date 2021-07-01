@@ -30,6 +30,7 @@ from usersys.serializer import UserSerializer, UserListSerializer, UserRelationS
 from sourcetype.models import Tag, DataSource, TagContrastTable
 from utils import perimissionfields
 from utils.customClass import JSONResponse, InvestError, RelationFilter
+from utils.logicJudge import is_userInvestor, is_userTrader, is_dataroomTrader
 from utils.sendMessage import sendmessage_userauditstatuchange, sendmessage_userregister, sendmessage_traderadd, \
     sendmessage_usermakefriends
 from utils.util import read_from_cache, write_to_cache, loginTokenIsAvailable, \
@@ -391,13 +392,14 @@ class UserView(viewsets.ModelViewSet):
             else:
                 if request.user.has_perm('usersys.admin_getuser'):
                     userserializer = UserSerializer
-                elif request.user.has_perm('usersys.user_getuser', user):
+                elif request.user == user.createuser:
                     userserializer = UserSerializer
-                elif UserRelation.objects.filter(traderuser=request.user, investoruser=user, is_deleted=False).exists():
+                elif is_userInvestor(request.user, user.id):
                     userserializer = UserSerializer
-                elif UserRelation.objects.filter(investoruser=request.user, traderuser=user, is_deleted=False).exists():
+                elif is_userTrader(request.user, user.id):
                     userserializer = UserSerializer
                 elif request.user.has_perm('usersys.as_trader'):
+                    # 投资人有交易师 但交易师已离职
                     if not UserRelation.objects.filter(investoruser=user, traderuser__onjob=True, is_deleted=False).exists() and UserRelation.objects.filter(investoruser=user, is_deleted=False).exists():
                         userserializer = UserSerializer  # 显示
                     else:
@@ -429,7 +431,7 @@ class UserView(viewsets.ModelViewSet):
                         user = self.get_object(userid)
                         olduserdata = UserSerializer(user)
                         sendmsg = False
-                        if request.user.has_perm('usersys.admin_changeuser'):
+                        if request.user.has_perm('usersys.admin_changeuser') or request.user == user.createuser:
                             canNotChangeField = perimissionfields.userpermfield['usersys.admin_changeuser']
                             groupid = data.pop('groups', [])
                             if len(groupid) == 1:
@@ -450,7 +452,7 @@ class UserView(viewsets.ModelViewSet):
                         else:
                             if request.user == user:
                                 canNotChangeField = perimissionfields.userpermfield['changeself']
-                            elif request.user.has_perm('usersys.user_changeuser', user):
+                            elif is_userTrader(request.user, user.id):
                                 canNotChangeField = perimissionfields.userpermfield['usersys.trader_changeuser']
                             else:
                                 raise InvestError(code=2009, msg='用户信息修改失败')
@@ -1282,7 +1284,7 @@ class UserRelationView(viewsets.ModelViewSet):
             queryset = self.filter_queryset(self.get_queryset())
             if dataroom_id:
                 dataroominstance = dataroom.objects.get(id=dataroom_id, is_deleted=False)
-                if request.user.has_perm('usersys.admin_getuserrelation') or dataroominstance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+                if request.user.has_perm('usersys.admin_getuserrelation') or is_dataroomTrader(request.user, dataroominstance):
                     queryset = queryset.filter(traderuser__in=dataroominstance.proj.proj_traders.all().filter(is_deleted=False).values_list('user_id'))
                 else:
                     raise InvestError(2009, msg='查询失败', detail='没有权限查看该dataroom承揽承做对接投资人')
@@ -1440,7 +1442,7 @@ class UserRelationView(viewsets.ModelViewSet):
                 relationlist = self.get_queryset().filter(id__in=relationidlist)
                 returnlist = []
                 for userrelation in relationlist:
-                    if request.user in [userrelation.traderuser]:
+                    if request.user == userrelation.traderuser:
                         pass
                     elif request.user.has_perm('usersys.admin_deleteuserrelation'):
                         pass

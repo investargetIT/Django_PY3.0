@@ -26,6 +26,7 @@ from invest.settings import APILOG_PATH, HAYSTACK_CONNECTIONS
 from proj.models import project
 from third.views.qiniufile import deleteqiniufile, downloadFileToPath
 from utils.customClass import InvestError, JSONResponse, RelationFilter
+from utils.logicJudge import is_dataroomTrader, is_dataroomInvestor, is_projTrader
 from utils.sendMessage import sendmessage_dataroomuseradd, sendmessage_dataroomuserfileupdate
 from utils.somedef import file_iterator, addWaterMarkToPdfFiles, encryptPdfFilesWithPassword
 from utils.util import returnListChangeToLanguage, loginTokenIsAvailable, \
@@ -142,7 +143,7 @@ class DataroomView(viewsets.ModelViewSet):
             if proj.projstatus_id < 4:
                 raise InvestError(5003, msg='创建dataroom失败', detail='项目尚未终审发布')
             with transaction.atomic():
-                if proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+                if is_projTrader(request.user, projid):
                     pass
                 elif request.user.has_perm('dataroom.admin_adddataroom'):
                     pass
@@ -236,16 +237,16 @@ class DataroomView(viewsets.ModelViewSet):
             else:
                 zipfile_prefix = 'virtual_dataroom'
             if userid != request.user.id:
-                if request.user.has_perm('dataroom.admin_getdataroom') or dataroominstance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+                if request.user.has_perm('dataroom.admin_getdataroom') or is_dataroomTrader(request.user, dataroominstance):
                     seefiles = dataroomUserSeeFiles.objects.filter(is_deleted=False, dataroomUserfile__dataroom=dataroominstance, dataroomUserfile__user_id=userid)
                     file_qs = dataroomdirectoryorfile.objects.filter(id__in=seefiles.values_list('file_id'))
                 else:
                     raise InvestError(2009, msg='下载dataroom文件失败', detail='没有相关下载权限')
             else:
-                if request.user.has_perm('dataroom.admin_getdataroom') or dataroominstance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+                if request.user.has_perm('dataroom.admin_getdataroom') or is_dataroomTrader(request.user, dataroominstance):
                     file_qs = dataroominstance.dataroom_directories.all().filter(is_deleted=False, isFile=True)
                 else:
-                    if dataroom_User_file.objects.filter(dataroom=dataroominstance, user_id=userid, is_deleted=False).exists():
+                    if is_dataroomInvestor(request.user, dataroominstance.id):
                         seefiles = dataroomUserSeeFiles.objects.filter(is_deleted=False,
                                                                        dataroomUserfile__dataroom=dataroominstance,
                                                                        dataroomUserfile__user_id=userid)
@@ -332,7 +333,7 @@ class DataroomView(viewsets.ModelViewSet):
             if int(userid) != user.id:
                 if user.has_perm('dataroom.admin_changedataroom') or user.has_perm('dataroom.admin_adddataroom'):
                     pass
-                elif dataroominstance.proj.proj_traders.all().filter(user=user, is_deleted=False).exists():
+                elif is_dataroomTrader(user, dataroominstance):
                     pass
                 else:
                     raise InvestError(2009, msg='下载dataroom文件失败', detail='没有相关下载权限')
@@ -551,7 +552,7 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
             dataroominstance = dataroom.objects.get(id=dataroomid, is_deleted=False)
             if request.user.has_perm('dataroom.admin_getdataroom'):
                 pass
-            elif dataroominstance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            elif is_dataroomTrader(request.user, dataroominstance):
                 pass
             elif dataroominstance.isCompanyFile and request.user.has_perm('dataroom.get_companydataroom'):
                 pass
@@ -575,9 +576,9 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
             if dataroomid is None:
                 raise InvestError(code=20072, msg='获取dataroom文件路径失败', detail='dataroom 不能空')
             dataroominstance = dataroom.objects.get(id=dataroomid, is_deleted=False)
-            if request.user.has_perm('dataroom.admin_getdataroom') or dataroominstance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists() or (dataroominstance.isCompanyFile and request.user.has_perm('dataroom.get_companydataroom')):
+            if request.user.has_perm('dataroom.admin_getdataroom') or is_dataroomTrader(request.user, dataroominstance) or (dataroominstance.isCompanyFile and request.user.has_perm('dataroom.get_companydataroom')):
                 queryset = self.get_queryset()
-            elif dataroom_User_file.objects.filter(user=request.user, dataroom=dataroomid).exists():
+            elif is_dataroomInvestor(request.user, dataroominstance.id):
                 user_dataroomInstance = dataroom_User_file.objects.filter(user=request.user, dataroom__id=dataroomid).first()
                 queryset = user_dataroomInstance.file_userSeeFile.all().filter(is_deleted=False)
             else:
@@ -627,7 +628,7 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
             if request.user.has_perm('dataroom.admin_adddataroom'):
                 pass
             elif request.user.has_perm('dataroom.user_adddataroomfile'):
-                if dataroominstance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+                if is_dataroomTrader(request.user, dataroominstance):
                     pass
                 else:
                     raise InvestError(2009, msg='上传dataroom文件失败', detail='非承揽承做无法上传文件')
@@ -665,7 +666,7 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
             if fileid is None:
                 raise InvestError(20072, msg='修改dataroom文件信息失败', detail='fileid cannot be null')
             file = self.get_object(fileid)
-            if file.dataroom.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            if is_dataroomTrader(request.user, file.dataroom):
                 pass
             elif request.user.has_perm('dataroom.admin_changedataroom'):
                 pass
@@ -713,7 +714,7 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
                     if request.user.has_perm('dataroom.admin_deletedataroom'):
                         pass
                     elif request.user.has_perm('dataroom.user_deletedataroomfile'):
-                        if instance.dataroom.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+                        if is_dataroomTrader(request.user, instance.dataroom):
                             pass
                         else:
                             raise InvestError(2009, msg='删除dataroom文件失败', detail='非承揽承做无法删除文件')
@@ -800,7 +801,7 @@ class User_DataroomfileView(viewsets.ModelViewSet):
                 serializerclass = User_DataroomfileSerializer
             elif request.user == instance.user:
                 serializerclass = User_DataroomfileSerializer
-            elif instance.dataroom.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            elif is_dataroomTrader(request.user, instance.dataroom):
                 serializerclass = User_DataroomfileSerializer
             else:
                 raise InvestError(code=2009, msg='查看dataroom用户信息失败')
@@ -853,7 +854,7 @@ class User_DataroomfileView(viewsets.ModelViewSet):
             data = request.data
             dataroomid = data['dataroom']
             dataroominstance = dataroom.objects.get(is_deleted=False, id=dataroomid, datasource=request.user.datasource)
-            if dataroominstance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            if is_dataroomTrader(request.user, dataroominstance):
                 pass
             elif request.user.has_perm('dataroom.admin_adddataroom'):
                 pass
@@ -880,7 +881,7 @@ class User_DataroomfileView(viewsets.ModelViewSet):
             user_dataroom = self.get_object()
             if request.user.has_perm('dataroom.admin_adddataroom'):
                 pass
-            elif user_dataroom.dataroom.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            elif is_dataroomTrader(request.user, user_dataroom.dataroom):
                 pass
             else:
                 raise InvestError(2009, msg='发送dataroom邮件通知失败')
@@ -898,7 +899,7 @@ class User_DataroomfileView(viewsets.ModelViewSet):
             user_dataroom = self.get_object()
             if request.user.has_perm('dataroom.admin_adddataroom'):
                 pass
-            elif user_dataroom.dataroom.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            elif is_dataroomTrader(request.user, user_dataroom.dataroom):
                 pass
             else:
                 raise InvestError(2009, msg='获取dataroom用户文件更新邮件通知失败')
@@ -919,7 +920,7 @@ class User_DataroomfileView(viewsets.ModelViewSet):
             user_dataroom = self.get_object()
             if request.user.has_perm('dataroom.admin_changedataroom'):
                 pass
-            elif user_dataroom.dataroom.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            elif is_dataroomTrader(request.user, user_dataroom.dataroom):
                 pass
             else:
                 raise InvestError(2009, msg='修改dataroom用户信息失败')
@@ -942,7 +943,7 @@ class User_DataroomfileView(viewsets.ModelViewSet):
             user_dataroom = self.get_object()
             if request.user.has_perm('dataroom.admin_deletedataroom'):
                 pass
-            elif user_dataroom.dataroom.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            elif is_dataroomTrader(request.user, user_dataroom.dataroom):
                 pass
             else:
                 raise InvestError(2009, msg='删除dataroom用户失败')
@@ -1003,7 +1004,7 @@ class User_DataroomSeefilesView(viewsets.ModelViewSet):
             if not dataroomid:
                 raise InvestError(20072, msg='获取dataroom用户文件失败', detail='dataroom不能为空')
             dataroominstance = dataroom.objects.get(is_deleted=False, id=dataroomid, datasource=request.user.datasource)
-            if request.user.has_perm('dataroom.admin_getdataroom') or dataroominstance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            if request.user.has_perm('dataroom.admin_getdataroom') or is_dataroomTrader(request.user, dataroominstance):
                 queryset = self.filter_queryset(self.get_queryset())
             else:
                 queryset = self.filter_queryset(self.get_queryset()).filter(dataroomUserfile__user=request.user, dataroomUserfile__dataroom=dataroominstance)
@@ -1022,7 +1023,7 @@ class User_DataroomSeefilesView(viewsets.ModelViewSet):
             data = request.data
             dataroomid = data['dataroom']
             dataroominstance = dataroom.objects.get(is_deleted=False, id=dataroomid, datasource=request.user.datasource)
-            if dataroominstance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            if is_dataroomTrader(request.user, dataroominstance):
                 pass
             elif request.user.has_perm('dataroom.admin_adddataroom'):
                 pass
@@ -1047,7 +1048,7 @@ class User_DataroomSeefilesView(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         try:
             user_seefile = self.get_object()
-            if user_seefile.dataroomUserfile.dataroom.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            if is_dataroomTrader(request.user, user_seefile.dataroomUserfile.dataroom):
                 pass
             elif request.user.has_perm('dataroom.admin_adddataroom'):
                 pass
@@ -1185,7 +1186,9 @@ class User_Dataroom_TemplateView(viewsets.ModelViewSet):
             instance = self.get_object()
             if request.user.has_perm('dataroom.admin_getdataroom'):
                 pass
-            elif instance.dataroom.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists() or request.user == instance.user:
+            elif is_dataroomTrader(request.user, instance.dataroom):
+                pass
+            elif request.user == instance.user:
                 pass
             else:
                 raise InvestError(code=2009, msg='查看该dataroom用户文件模板失败')
@@ -1203,7 +1206,7 @@ class User_Dataroom_TemplateView(viewsets.ModelViewSet):
             data = request.data
             dataroomid = data['dataroom']
             dataroominstance = dataroom.objects.get(is_deleted=False, id=dataroomid, datasource=request.user.datasource)
-            if dataroominstance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            if is_dataroomTrader(request.user, dataroominstance):
                 pass
             elif request.user.has_perm('dataroom.admin_adddataroom'):
                 pass
@@ -1234,7 +1237,7 @@ class User_Dataroom_TemplateView(viewsets.ModelViewSet):
             user_dataroom_temp = self.get_object()
             if request.user.has_perm('dataroom.admin_changedataroom'):
                 pass
-            elif user_dataroom_temp.dataroom.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            elif is_dataroomTrader(request.user, user_dataroom_temp.dataroom):
                 pass
             else:
                 raise InvestError(code=2009, msg='应用dataroom用户文件模板失败')
@@ -1271,7 +1274,7 @@ class User_Dataroom_TemplateView(viewsets.ModelViewSet):
             user_dataroom_temp = self.get_object()
             if request.user.has_perm('dataroom.admin_changedataroom'):
                 pass
-            elif user_dataroom_temp.dataroom.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            elif is_dataroomTrader(request.user, user_dataroom_temp.dataroom):
                 pass
             else:
                 raise InvestError(2009, msg='修改dataroom用户文件模板失败')
@@ -1297,7 +1300,7 @@ class User_Dataroom_TemplateView(viewsets.ModelViewSet):
             user_dataroom_temp = self.get_object()
             if request.user.has_perm('dataroom.admin_deletedataroom'):
                 pass
-            elif user_dataroom_temp.dataroom.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            elif is_dataroomTrader(request.user, user_dataroom_temp.dataroom):
                 pass
             else:
                 raise InvestError(code=2009, msg='删除dataroom用户文件模板失败')
@@ -1438,7 +1441,7 @@ class DataroomUserDiscussView(viewsets.ModelViewSet):
         try:
             data = request.data
             discussInstance = self.get_object()
-            if discussInstance.dataroom.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            if is_dataroomTrader(request.user, discussInstance.dataroom):
                 pass
             elif request.user.has_perm('dataroom.admin_adddataroom'):
                 pass
@@ -1469,7 +1472,7 @@ class DataroomUserDiscussView(viewsets.ModelViewSet):
                 pass
             elif request.user.has_perm('dataroom.admin_adddataroom'):
                 pass
-            elif instance.dataroom.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            elif is_dataroomTrader(request.user, instance.dataroom):
                 pass
             else:
                 raise InvestError(2009, msg='删除dataroom用户文件标注信息失败')

@@ -34,6 +34,7 @@ from proj.serializer import ProjSerializer, FinanceSerializer, ProjCreatSerializ
 from sourcetype.models import Tag, TransactionType, DataSource, Service
 from third.views.qiniufile import deleteqiniufile
 from usersys.models import MyUser
+from utils.logicJudge import is_projTrader
 from utils.somedef import addWaterMark, file_iterator
 from utils.sendMessage import sendmessage_favoriteproject, sendmessage_projectpublish
 from utils.util import catchexcption, read_from_cache, write_to_cache, loginTokenIsAvailable, \
@@ -302,7 +303,7 @@ class ProjectView(viewsets.ModelViewSet):
             lang = request.GET.get('lang')
             clienttype = request.META.get('HTTP_CLIENTTYPE')
             instance = self.get_object()
-            if request.user == instance.supportUser or request.user.is_superuser or instance.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            if request.user == instance.supportUser or request.user.is_superuser or is_projTrader(request.user, instance.id):
                 serializerclass = ProjDetailSerializer_all
             elif request.user.has_perm('proj.admin_getproj') :
                 if request.user.has_perm('proj.get_secretinfo'):
@@ -369,7 +370,7 @@ class ProjectView(viewsets.ModelViewSet):
             projdata = request.data
             if request.user.has_perm('proj.admin_changeproj'):
                 pass
-            elif request.user.has_perm('proj.user_changeproj',pro) or request.user == pro.supportUser or pro.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            elif request.user.has_perm('proj.user_changeproj',pro) or request.user == pro.supportUser or is_projTrader(request.user, pro.id):
                 if projdata.get('projstatus', None) and projdata.get('projstatus', None) >= 4:
                     raise InvestError(2009, msg='修改项目信息失败', detail='只有管理员才能修改到该状态')
             else:
@@ -518,7 +519,7 @@ class ProjectView(viewsets.ModelViewSet):
             pro = self.get_object()
             if request.user.has_perm('proj.admin_changeproj'):
                 pass
-            elif request.user.has_perm('proj.user_changeproj',pro) or request.user == pro.supportUser or pro.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            elif request.user.has_perm('proj.user_changeproj',pro) or request.user == pro.supportUser or is_projTrader(request.user, pro.id):
                 pass
             else:
                 raise InvestError(code=2009, msg='微信群发项目pdf失败', detail='非承揽承做或上传方无法发送项目pdf邮件')
@@ -542,7 +543,7 @@ class ProjectView(viewsets.ModelViewSet):
             lang = request.GET.get('lang')
             if request.user.has_perm('proj.admin_deleteproj'):
                 pass
-            elif request.user.has_perm('proj.user_deleteproj',instance) or request.user == instance.supportUser or instance.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            elif request.user.has_perm('proj.user_deleteproj',instance) or request.user == instance.supportUser or is_projTrader(request.user, instance.id):
                 if instance.projstatus_id >= 4:
                     raise InvestError(2009, msg='删除项目失败', detail='没有权限，请联系管理员删除')
             else:
@@ -626,7 +627,7 @@ class ProjectView(viewsets.ModelViewSet):
                     pass
                 elif request.user in [proj.createuser, proj.supportUser]:
                     pass
-                elif proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+                elif is_projTrader(request.user, proj.id):
                     pass
                 else:
                     raise InvestError(2009, msg='获取项目pdf失败', detail='隐藏项目，只有项目承揽承做及上传方可以获取相关项目信息')
@@ -947,7 +948,7 @@ class ProjAttachmentView(viewsets.ModelViewSet):
                 pass
             elif request.user in [proj.createuser, proj.supportUser]:
                 pass
-            elif proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            elif is_projTrader(request.user, proj.id):
                 pass
             else:
                 raise InvestError(code=2009, msg='新增项目附件失败', detail='没有增加该项目附件的权限')
@@ -985,7 +986,7 @@ class ProjAttachmentView(viewsets.ModelViewSet):
                             pass
                         elif request.user in [projAttachment.proj.createuser, projAttachment.proj.supportUser]:
                             pass
-                        elif projAttachment.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+                        elif is_projTrader(request.user, projAttachment.proj.id):
                             pass
                         else:
                             raise InvestError(code=2009, msg='修改项目附件信息失败')
@@ -1021,7 +1022,7 @@ class ProjAttachmentView(viewsets.ModelViewSet):
                         pass
                     elif request.user in [projattachment.proj.createuser, projattachment.proj.supportUser]:
                         pass
-                    elif projattachment.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+                    elif is_projTrader(request.user, projattachment.proj.id):
                         pass
                     elif request.user.has_perm('proj.admin_changeproj'):
                         pass
@@ -1127,7 +1128,7 @@ class ProjFinanceView(viewsets.ModelViewSet):
                     pass
                 elif request.user.has_perm('proj.admin_getproj'):
                     pass
-                elif proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+                elif is_projTrader(request.user, projid):
                     pass
                 else:
                     return JSONResponse(SuccessResponse({'count':0,'data':[]}, msg='没有符合的结果'))
@@ -1156,7 +1157,7 @@ class ProjFinanceView(viewsets.ModelViewSet):
                 pass
             elif request.user in [proj.createuser, proj.supportUser]:
                 pass
-            elif proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            elif is_projTrader(request.user, proj.id):
                 pass
             else:
                 raise InvestError(code=2009, msg='新增项目财务信息失败', detail='没有增加该项目财务信息的权限')
@@ -1198,7 +1199,7 @@ class ProjFinanceView(viewsets.ModelViewSet):
                             pass
                         elif request.user in [projfinance.proj.createuser, projfinance.proj.supportUser]:
                             pass
-                        elif projfinance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+                        elif is_projTrader(request.user, projfinance.proj.id):
                             pass
                         else:
                             raise InvestError(code=2009, msg='修改项目财务信息失败', detail='没有权限修改项目（%s）的相关信息'%projfinance.proj)
@@ -1234,7 +1235,7 @@ class ProjFinanceView(viewsets.ModelViewSet):
                         pass
                     elif request.user in [projfinance.proj.createuser, projfinance.proj.supportUser]:
                         pass
-                    elif projfinance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+                    elif is_projTrader(request.user, projfinance.proj.id):
                         pass
                     elif request.user.has_perm('proj.admin_changeproj'):
                         pass
