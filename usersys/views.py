@@ -620,13 +620,13 @@ class UserView(viewsets.ModelViewSet):
             user = self.get_object()
             if user == request.user:
                 if not user.check_password(oldpassword):
-                    raise InvestError(code=2001, msg='修改密码失败', detail='旧密码错误')
+                    raise InvestError(code=2051, msg='修改密码失败', detail='旧密码错误')
                 if not password or not isinstance(password, str):
-                    raise InvestError(code=2001, msg='修改密码失败', detail='新密码输入有误')
+                    raise InvestError(code=2051, msg='修改密码失败', detail='新密码输入有误')
                 if password == oldpassword:
-                    raise InvestError(code=2001, msg='修改密码失败', detail='新旧密码不能相同')
+                    raise InvestError(code=2051, msg='修改密码失败', detail='新旧密码不能相同')
                 if len(password) < 6:
-                    raise InvestError(code=2001, msg='修改密码失败', detail='密码长度至少6位')
+                    raise InvestError(code=2051, msg='修改密码失败', detail='密码长度至少6位')
             else:
                 raise InvestError(code=2009, msg='修改密码失败')
             with transaction.atomic():
