@@ -5,7 +5,7 @@ from sourcetype.models import TransactionType, TransactionPhases, Specialty, Sch
     AuditStatus, ProjectStatus, OrgType, FavoriteType, ClientType, TitleType, Country, \
     DataSource, TransactionStatus, webmenu, CharacterType, orgtitletable, Service, OrgAttribute, BDStatus, \
     AndroidAppVersion, OrgBdResponse, \
-    OrgLevelType, FamiliarLevel, IndustryGroup
+    OrgLevelType, FamiliarLevel, IndustryGroup, DidiOrderType
 from third.views.qiniufile import getUrlWithBucketAndKey
 
 
@@ -24,6 +24,11 @@ class ProjectStatusSerializer(serializers.ModelSerializer):
 class OrgBdResponseSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrgBdResponse
+        exclude = ('is_deleted',)
+
+class DidiOrderTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DidiOrderType
         exclude = ('is_deleted',)
 
 

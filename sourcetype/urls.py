@@ -35,6 +35,11 @@ country = views.CountryView.as_view({
 })
 
 
+didiType = views.DidiOrderTypeView.as_view({
+        'get': 'list',
+})
+
+
 character = views.CharacterTypeView.as_view({
         'get': 'list',
         # 'post':'create',
@@ -155,6 +160,8 @@ urlpatterns = [
     url(r'^orgtype$', orgtype,name='orgtypesource',),
 
     url(r'^bdStatus$', bdStatus,name='bdStatussource',),
+
+    url(r'^didiType$', didiType, name='didiType',),
 
     url(r'^transactionType$', transactionType,name='transactionTypesource',),
 

@@ -11,7 +11,7 @@ from django.db import models
 # Create your models here.
 
 from sourcetype.models import FavoriteType, ProjectStatus, CurrencyType, Tag, Country, TransactionType, Industry, \
-    DataSource, CharacterType, Service,   IndustryGroup
+    DataSource, CharacterType, Service, IndustryGroup, DidiOrderType
 from usersys.models import MyUser
 
 from utils.customClass import InvestError, MyForeignKey, MyModel
@@ -242,6 +242,7 @@ class projectDiDiRecord(MyModel):
     projName = models.TextField(blank=True, null=True, help_text="项目名称")
     orderNumber = models.CharField(max_length=32, blank=True, help_text='专快订单号')
     orderDate = models.DateTimeField(blank=True, null=True, help_text='支付时间')
+    orderType = MyForeignKey(DidiOrderType, blank=True, null=True, help_text='用车类型（对应用车权限）')
     orderPerm = models.CharField(max_length=64, blank=True, null=True, help_text='用车权限')
     city = models.CharField(max_length=64, blank=True, null=True, help_text='用车城市')
     startPlace = models.TextField(blank=True, null=True, help_text='实际出发地')
@@ -257,6 +258,9 @@ class projectDiDiRecord(MyModel):
     def save(self, *args, **kwargs):
         if self.proj:
             self.datasource = self.proj.datasource
+        if not self.orderType and self.orderPerm:
+            if DidiOrderType.objects.filter(nameC=self.orderPerm, is_deleted=False).exists():
+                self.orderType = DidiOrderType.objects.filter(nameC=self.orderPerm, is_deleted=False).first()
         if not self.is_deleted:
             if projectDiDiRecord.objects.exclude(pk=self.pk).filter(orderNumber=self.orderNumber, is_deleted=False).exists():
                 raise InvestError(4010, msg='订单号已存在')

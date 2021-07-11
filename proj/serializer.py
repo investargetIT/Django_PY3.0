@@ -3,7 +3,7 @@ from rest_framework import serializers
 from proj.models import project, finance, favoriteProject, attachment, projServices, projectIndustries, projTraders, \
     projectDiDiRecord
 from sourcetype.serializer import tagSerializer, transactionTypeSerializer, serviceSerializer, countrySerializer, \
-    industryWithPIndustrySerializer, countryWithContinentSerializer
+    industryWithPIndustrySerializer, countryWithContinentSerializer, DidiOrderTypeSerializer
 from third.views.qiniufile import getUrlWithBucketAndKey
 from usersys.serializer import UserCommenSerializer
 
@@ -537,7 +537,7 @@ class ProjDetailSerializer_all(serializers.ModelSerializer):
 
 class DiDiRecordSerializer(serializers.ModelSerializer):
     proj = ProjSimpleSerializer()
-
+    orderType = DidiOrderTypeSerializer()
     class Meta:
         model = projectDiDiRecord
         exclude = ('createuser', 'deleteduser', 'datasource', 'is_deleted', 'deletedtime', 'lastmodifytime')

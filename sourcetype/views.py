@@ -8,7 +8,7 @@ from rest_framework import viewsets
 from sourcetype.models import Tag, TitleType, DataSource, Country, Industry, TransactionType, \
     TransactionPhases, OrgArea, CurrencyType, OrgType, CharacterType, ProjectStatus, TransactionStatus, orgtitletable, \
     webmenu, Service, OrgAttribute, BDStatus, AndroidAppVersion, OrgBdResponse, OrgLevelType, FamiliarLevel, \
-    IndustryGroup
+    IndustryGroup, DidiOrderType
 from sourcetype.serializer import tagSerializer, countrySerializer, industrySerializer, \
     titleTypeSerializer, DataSourceSerializer, orgAreaSerializer, transactionTypeSerializer, \
     transactionPhasesSerializer, \
@@ -407,6 +407,27 @@ class TransactionStatusView(viewsets.ModelViewSet):
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+class DidiOrderTypeView(viewsets.ModelViewSet):
+    """
+        list:获取所有Didi订单类型
+    """
+
+    queryset = DidiOrderType.objects.all().filter(is_deleted=False)
+    serializer_class = OrgBdResponseSerializer
+
+    def list(self, request, *args, **kwargs):
+        try:
+            lang = request.GET.get('lang')
+            queryset = self.filter_queryset(self.get_queryset()).order_by('sort')
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(SuccessResponse(returnListChangeToLanguage(serializer.data,lang)))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
 
 class OrgTypeView(viewsets.ModelViewSet):
     """
