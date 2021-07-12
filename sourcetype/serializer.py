@@ -93,13 +93,17 @@ class countrySerializer(serializers.ModelSerializer):
         return getUrlWithBucketAndKey('image', obj.key)
 
 class countryWithContinentSerializer(serializers.ModelSerializer):
-
+    url = serializers.SerializerMethodField()
     parent = countrySerializer()
 
     class Meta:
         model = Country
         exclude = ('is_deleted','datasource')
 
+    def get_url(self, obj):
+        if not obj.key:
+            return None
+        return getUrlWithBucketAndKey('image', obj.key)
 
 class orgAttributeSerializer(serializers.ModelSerializer):
     class Meta:
