@@ -67,8 +67,10 @@ class OrgBdResponse(models.Model):
     机构Bd反馈类型
     '''
     id = models.AutoField(primary_key=True)
-    nameC = models.CharField(max_length=64,blank=True,null=True)
+    nameC = models.CharField(max_length=64,blank=True,null=True, help_text='FA')
     nameE = models.CharField(max_length=64, blank=True, null=True)
+    material = models.CharField(max_length=64, blank=True, null=True, help_text='材料')
+    conversion = models.CharField(max_length=64, blank=True, null=True, help_text='转化')
     sort = models.IntegerField(blank=True, default=1)
     is_deleted = models.BooleanField(blank=True, default=False)
 
