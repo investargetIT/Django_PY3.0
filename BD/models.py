@@ -124,7 +124,7 @@ class OrgBD(MyModel):
     usermobile = models.CharField(max_length=64,blank=True,null=True,help_text='电话')
     bduser = MyForeignKey(MyUser,blank=True,null=True,help_text='bd对象id')
     manager = MyForeignKey(MyUser,blank=True,null=True,help_text='负责人',related_name='user_orgBDs')
-    isimportant = models.BooleanField(blank=True, default=False, help_text='是否重点BD')
+    isimportant = models.IntegerField(blank=True, default=False, help_text='是否重点BD')
     expirationtime = models.DateTimeField(blank=True,null=True,help_text='BD过期时间')
     response = MyForeignKey(OrgBdResponse, blank=True, null=True, related_name='OrgBD_response')
     isSolved = models.BooleanField(blank=True, default=False, help_text='BD是否已处理')

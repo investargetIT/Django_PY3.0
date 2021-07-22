@@ -508,7 +508,7 @@ class OrgBDFilter(MyFilterSet):
     bduser = RelationFilter(filterstr='bduser', lookup_method='in')
     isSolved = RelationFilter(filterstr='isSolved')
     isRead = RelationFilter(filterstr='isRead')
-    isimportant = RelationFilter(filterstr='isimportant')
+    isimportant = RelationFilter(filterstr='isimportant', lookup_method='in')
     stime = RelationFilter(filterstr='createdtime', lookup_method='gte')
     etime = RelationFilter(filterstr='createdtime', lookup_method='lt')
     stimeM = RelationFilter(filterstr='lastmodifytime', lookup_method='gte')
