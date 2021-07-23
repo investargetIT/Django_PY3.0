@@ -12,6 +12,7 @@ from django.db.models import Q, QuerySet, Count
 from django.core.exceptions import FieldDoesNotExist
 from django.http import StreamingHttpResponse
 from django.shortcuts import render
+from django.utils.encoding import escape_uri_path
 from rest_framework import filters, viewsets
 import datetime
 
@@ -656,9 +657,10 @@ class ProjectView(viewsets.ModelViewSet):
                 out_path = pdfpath
             if aaa:
                 fn = open(out_path, 'rb')
+                filename = proj.projtitleC if lang == 'cn' else proj.projtitleE
                 response = StreamingHttpResponse(file_iterator(fn))
                 response['Content-Type'] = 'application/octet-stream'
-                response["content-disposition"] = 'attachment;filename=%s.pdf'% (proj.projtitleC if lang == 'cn' else proj.projtitleE)
+                response["content-disposition"] = "attachment; filename*=utf-8''{}.pdf".format(escape_uri_path(filename))
                 os.remove(out_path)
             else:
                 raise InvestError(4008, msg='获取项目pdf失败', detail='项目pdf生成失败')
