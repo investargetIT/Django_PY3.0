@@ -660,9 +660,8 @@ class ProjectView(viewsets.ModelViewSet):
                 fn = open(out_path, 'rb')
                 filename = "{}.pdf".format(proj.projtitleC if lang == 'cn' else proj.projtitleE)
                 response = StreamingHttpResponse(file_iterator(fn))
-                response['Content-Type'] = 'application/octet-stream'
-                # response["Content-disposition"] = "attachment; filename*=utf-8''{}".format(escape_uri_path(filename))
-                response["Content-Disposition"] = "attachment; filename*=UTF-8''{}".format(quote(filename, encoding="utf-8"))
+                response['Content-Type'] = 'application/octet-stream; charset=utf-8'
+                response["Content-disposition"] = "attachment;filename*=utf-8''{}".format(escape_uri_path(filename))
                 os.remove(out_path)
             else:
                 raise InvestError(4008, msg='获取项目pdf失败', detail='项目pdf生成失败')
