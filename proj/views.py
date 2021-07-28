@@ -3,6 +3,7 @@ import csv
 import json
 import os
 import traceback
+from urllib.parse import quote
 
 import chardet
 import pdfkit
@@ -657,10 +658,11 @@ class ProjectView(viewsets.ModelViewSet):
                 out_path = pdfpath
             if aaa:
                 fn = open(out_path, 'rb')
-                filename = proj.projtitleC if lang == 'cn' else proj.projtitleE
+                filename = "{}.pdf".format(proj.projtitleC if lang == 'cn' else proj.projtitleE)
                 response = StreamingHttpResponse(file_iterator(fn))
                 response['Content-Type'] = 'application/octet-stream'
-                response["content-disposition"] = "attachment; filename*=utf-8''{}.pdf".format(escape_uri_path(filename))
+                # response["Content-disposition"] = "attachment; filename*=utf-8''{}".format(escape_uri_path(filename))
+                response["Content-Disposition"] = "attachment; filename*=UTF-8''{}".format(quote(filename, encoding="utf-8"))
                 os.remove(out_path)
             else:
                 raise InvestError(4008, msg='获取项目pdf失败', detail='项目pdf生成失败')
