@@ -34,7 +34,7 @@ from proj.serializer import ProjSerializer, FinanceSerializer, ProjCreatSerializ
     ProjDetailSerializer_all, ProjTradersCreateSerializer, ProjTradersSerializer, DiDiRecordSerializer, \
     TaxiRecordCreateSerializer
 from sourcetype.models import Tag, TransactionType, DataSource, Service
-from third.views.qiniufile import deleteqiniufile
+from third.views.qiniufile import deleteqiniufile, qiniuuploadfile
 from usersys.models import MyUser
 from utils.logicJudge import is_projTrader
 from utils.somedef import addWaterMark, file_iterator
@@ -622,7 +622,7 @@ class ProjectView(viewsets.ModelViewSet):
     def sendPDF(self, request, *args, **kwargs):
         try:
             request.user = checkrequesttoken(request.GET.get('acw_tk'))
-            lang = request.GET.get('lang','cn')
+            lang = request.GET.get('lang', 'cn')
             proj = self.get_object()
             if proj.isHidden:
                 if request.user.has_perm('proj.admin_getproj'):
@@ -645,7 +645,9 @@ class ProjectView(viewsets.ModelViewSet):
             }
             pdfpath = APILOG_PATH['pdfpath_base'] + 'P' + datetime.datetime.now().strftime('%Y%m%d%H%M%S') + '.pdf'
             config = pdfkit.configuration(wkhtmltopdf=APILOG_PATH['wkhtmltopdf'])
-            aaa = pdfkit.from_url(PROJECTPDF_URLPATH + str(proj.id)+'&lang=%s'%lang, pdfpath, configuration=config, options=options)
+            aaa = pdfkit.from_url(PROJECTPDF_URLPATH + '{}&lang={}'.format(proj.id, lang), pdfpath, configuration=config, options=options)
+            if not aaa:
+                raise InvestError(4008, msg='获取项目pdf失败', detail='项目pdf生成失败')
             if not proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
                 username = request.user.usernameC
                 orgname = request.user.org.orgnameC if request.user.org else ''
@@ -656,16 +658,14 @@ class ProjectView(viewsets.ModelViewSet):
                 out_path = addWaterMark(pdfpath, watermarkcontent=[username, orgname, request.user.email])
             else:
                 out_path = pdfpath
-            if aaa:
-                fn = open(out_path, 'rb')
-                filename = "{}.pdf".format(proj.projtitleC if lang == 'cn' else proj.projtitleE)
-                response = StreamingHttpResponse(file_iterator(fn))
-                response['Content-Type'] = 'application/octet-stream; charset=utf-8'
-                response["Content-disposition"] = "attachment;filename*=utf-8''{}".format(escape_uri_path(filename))
+            bucket_key = "{}.pdf".format(proj.projtitleC if lang == 'cn' else proj.projtitleE)
+            res, url, key = qiniuuploadfile(out_path, 'file', bucket_key)
+            if os.path.exists(out_path):
                 os.remove(out_path)
+            if res:
+                return JSONResponse(SuccessResponse(url))
             else:
-                raise InvestError(4008, msg='获取项目pdf失败', detail='项目pdf生成失败')
-            return response
+                raise InvestError(4008, msg='获取项目pdf失败', detail='pdf上传七牛失败')
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
