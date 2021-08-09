@@ -520,8 +520,8 @@ class UserView(viewsets.ModelViewSet):
                                      'user_usertags', 'user_remarks', 'userreceive_msgs', 'user_workreport',
                                      'usersend_msgs', 'user_datarooms', 'user_userAttachments', 'user_userEvents',
                                      'contractors_projBDs', 'user_MeetBDs', 'user_favorite', 'user_sharetoken', 'user_projects',
-                                     'trader_favorite', 'user_MeetBDsharetoken', 'user_beschedule', 'user_orgBDs']:
-                        if link in ['usersupport_projs', 'investor_relations', 'trader_relations',
+                                     'trader_favorite', 'user_MeetBDsharetoken', 'user_beschedule', 'user_orgBDs', 'userPM_projs']:
+                        if link in ['usersupport_projs', 'investor_relations', 'trader_relations', 'userPM_projs',
                                     'user_userEvents', 'user_orgBDs', 'user_MeetBDs', 'user_projects', 'user_remarks',
                                     'user_userAttachments', 'user_dataroomTemp', 'user_datarooms', 'contractors_projBDs']:
                             manager = getattr(instance, link, None)

@@ -173,6 +173,7 @@ class OrgBD(MyModel):
 class OrgBDComments(MyModel):
     comments = models.TextField(blank=True, default=False, help_text='内容')
     event_date = models.DateTimeField(blank=True, null=True)
+    isPMComment = models.BooleanField(blank=True, default=False, help_text='项目PM')
     orgBD = MyForeignKey(OrgBD,blank=True,null=True,help_text='机构BD',related_name='OrgBD_comments')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_OrgBDComments')
     createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_OrgBDComments')

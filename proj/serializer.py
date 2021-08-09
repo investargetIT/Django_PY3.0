@@ -102,6 +102,7 @@ class ProjAttachmentSerializer(serializers.ModelSerializer):
 
 class ProjSerializer(serializers.ModelSerializer):
     supportUser = UserCommenSerializer()
+    PM = UserCommenSerializer()
     projTraders = serializers.SerializerMethodField()
     proj_finances = ProjFinanceSerializer(many=True)
     proj_attachment = ProjAttachmentSerializer(many=True)
@@ -121,6 +122,7 @@ class ProjSerializer(serializers.ModelSerializer):
 
 class ProjCommonSerializer(serializers.ModelSerializer):
     supportUser = UserCommenSerializer()
+    PM = UserCommenSerializer()
     country = countrySerializer()
     tags = serializers.SerializerMethodField()
     industries = serializers.SerializerMethodField()
@@ -128,7 +130,7 @@ class ProjCommonSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = project
-        fields = ('id','industries','projtitleC','projtitleE','tags', 'currency', 'financeAmount','financeAmount_USD','country','projstatus','isHidden','supportUser','lastProject','publishDate','createdtime')
+        fields = ('id','industries','projtitleC','projtitleE','tags', 'currency', 'financeAmount','financeAmount_USD','country','projstatus','isHidden','supportUser', 'PM','lastProject','publishDate','createdtime')
         depth = 1
 
     def get_tags(self, obj):
@@ -238,6 +240,7 @@ class ProjDetailSerializer_admin_withsecretinfo(serializers.ModelSerializer):
     country = countryWithContinentSerializer()
     transactionType = serializers.SerializerMethodField()
     supportUser = UserCommenSerializer()
+    PM = UserCommenSerializer()
     projTraders = serializers.SerializerMethodField()
     linkpdfurl = serializers.SerializerMethodField()
     lastProject = ProjSimpleSerializer()
@@ -303,6 +306,7 @@ class ProjDetailSerializer_user_withsecretinfo(serializers.ModelSerializer):
     finance = serializers.SerializerMethodField()
     attachment = serializers.SerializerMethodField()
     supportUser = UserCommenSerializer()
+    PM = UserCommenSerializer()
     projTraders = serializers.SerializerMethodField()
     linkpdfurl = serializers.SerializerMethodField()
     lastProject = ProjSimpleSerializer()
@@ -368,6 +372,7 @@ class ProjDetailSerializer_admin_withoutsecretinfo(serializers.ModelSerializer):
     attachment = serializers.SerializerMethodField()
     linkpdfurl = serializers.SerializerMethodField()
     lastProject = ProjSimpleSerializer()
+    PM = UserCommenSerializer()
 
     class Meta:
         model = project
@@ -424,6 +429,7 @@ class ProjDetailSerializer_user_withoutsecretinfo(serializers.ModelSerializer):
     country = countryWithContinentSerializer()
     linkpdfurl = serializers.SerializerMethodField()
     lastProject = ProjSimpleSerializer()
+    PM = UserCommenSerializer()
 
     class Meta:
         model = project
@@ -480,6 +486,7 @@ class ProjDetailSerializer_all(serializers.ModelSerializer):
     attachment = serializers.SerializerMethodField()
     country = countryWithContinentSerializer()
     supportUser = UserCommenSerializer()
+    PM = UserCommenSerializer()
     projTraders = serializers.SerializerMethodField()
     linkpdfurl = serializers.SerializerMethodField()
     lastProject = ProjSimpleSerializer()

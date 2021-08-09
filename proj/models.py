@@ -35,6 +35,7 @@ class project(MyModel):
     supportUser = MyForeignKey(MyUser,blank=True,null=True,related_name='usersupport_projs',help_text='项目方(上传方)')
     takeUser = MyForeignKey(MyUser,blank=True,null=True,related_name='usertake_projs',help_text='承揽人')
     makeUser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermake_projs', help_text='承做人')
+    PM = MyForeignKey(MyUser, blank=True, null=True, related_name='userPM_projs', help_text='项目PM')
     isHidden = models.BooleanField(blank=True,default=False)
     financeAmount = models.BigIntegerField(blank=True,null=True)
     financeAmount_USD = models.BigIntegerField(blank=True,null=True)
