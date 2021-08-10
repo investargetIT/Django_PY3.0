@@ -23,7 +23,7 @@ from django.db.models import Q
 
 from APIlog.models import userinfoupdatelog
 from sourcetype.models import AuditStatus, ClientType, TitleType, School, Specialty, Tag, DataSource, Country, OrgArea, \
-    FamiliarLevel, IndustryGroup
+    FamiliarLevel, IndustryGroup, Education, PerformanceAppraisalLevel
 from utils.customClass import InvestError, MyForeignKey, MyModel
 from utils.somedef import makeAvatar
 
@@ -296,8 +296,20 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
     gender = models.BooleanField(blank=True, default=False, help_text=('False=男，True=女'))
     onjob = models.BooleanField(blank=True, default=True, help_text='是否在职')
     remark = models.TextField(help_text='用户个人备注',blank=True,null=True)
-    school = MyForeignKey(School,help_text='院校',blank=True,null=True,related_name='school_users')
-    specialty = MyForeignKey(Specialty,help_text='专业',blank=True,null=True,related_name='profession_users')
+    entryTime = models.DateTimeField(blank=True, null=True, help_text='入职时间')
+    bornTime = models.DateTimeField(blank=True, null=True, help_text='出生日期')
+    isMarried = models.BooleanField(blank=True, default=True, help_text='是否已婚')
+    school = MyForeignKey(School,help_text='院校', blank=True, null=True, related_name='school_users')
+    specialty = MyForeignKey(Specialty, blank=True, null=True, related_name='specialty_users', help_text='专业')
+    education = MyForeignKey(Education, blank=True, null=True, related_name='education_users', help_text='学历')
+    directSupervisor = MyForeignKey('self', blank=True, null=True, related_name='directsupervisor_users', help_text='直接上司')
+    supervisorStartDate = models.DateTimeField(blank=True, null=True, help_text='直接上司对应开始日期')
+    supervisorEndDate = models.DateTimeField(blank=True, null=True, help_text='直接上司对应结束日期')
+    mentor = MyForeignKey('self', blank=True, null=True, related_name='mentor_users', help_text='mentor')
+    mentorStartDate = models.DateTimeField(blank=True, null=True, help_text='mentor对应开始日期')
+    mentorEndDate = models.DateTimeField(blank=True, null=True, help_text='mentor对应结束日期')
+    resumeBucket = models.CharField(max_length=32, blank=True, null=True, help_text='简历对应七牛Bucket')
+    resumeKey = models.CharField(max_length=128, blank=True, null=True, help_text='简历对应七牛Key')
     targetdemand = models.TextField(help_text='标的需求',blank=True, null=True, default='标的需求')
     mergedynamic = models.TextField(help_text='并购动态', blank=True, null=True, default='并购动态')
     ishasfundorplan = models.TextField(help_text='是否有产业基金或成立计划', blank=True, null=True, default='是否有产业基金或成立计划')
@@ -395,31 +407,21 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
         if self.pk:
             olduser = MyUser.objects.get(pk=self.pk,datasource=self.datasource)
             if not self.is_deleted:
-                if olduser.org and self.org and olduser.org != self.org:
-                    remove_perm('org.user_getorg',self,olduser.org)
-                    assign_perm('org.user_getorg',self,self.org)
-                elif olduser.org and not self.org:
-                    remove_perm('org.user_getorg', self, olduser.org)
-                elif not olduser.org and self.org:
-                    assign_perm('org.user_getorg', self, self.org)
                 if not olduser.createuser and self.createuser:
                     assign_perm('usersys.user_deleteuser', self.createuser, self)
                 if olduser.mobile != self.mobile and self.lastmodifyuser:
-                    userinfoupdatelog(user_id=self.pk, user_name=self.usernameC.encode(encoding='utf-8'), type='mobile', before=olduser.mobile,
-                                      after=self.mobile,
-                                      requestuser_id=self.lastmodifyuser_id,
+                    userinfoupdatelog(user_id=self.pk, user_name=self.usernameC.encode(encoding='utf-8'), type='mobile',
+                                      before=olduser.mobile, after=self.mobile, requestuser_id=self.lastmodifyuser_id,
                                       requestuser_name=self.lastmodifyuser.usernameC.encode(encoding='utf-8'),
                                       datasource=self.datasource_id).save()
                 if olduser.wechat != self.wechat and self.lastmodifyuser:
-                    userinfoupdatelog(user_id=self.pk, user_name=self.usernameC.encode(encoding='utf-8'), type='wechat', before=olduser.wechat,
-                                      after=self.wechat,
-                                      requestuser_id=self.lastmodifyuser_id,
+                    userinfoupdatelog(user_id=self.pk, user_name=self.usernameC.encode(encoding='utf-8'), type='wechat',
+                                      before=olduser.wechat, after=self.wechat,  requestuser_id=self.lastmodifyuser_id,
                                       requestuser_name=self.lastmodifyuser.usernameC.encode(encoding='utf-8'),
                                       datasource=self.datasource_id).save()
                 if olduser.email != self.email and self.lastmodifyuser:
-                    userinfoupdatelog(user_id=self.pk, user_name=self.usernameC.encode(encoding='utf-8'), type='email', before=olduser.email,
-                                      after=self.email,
-                                      requestuser_id=self.lastmodifyuser_id,
+                    userinfoupdatelog(user_id=self.pk, user_name=self.usernameC.encode(encoding='utf-8'), type='email',
+                                      before=olduser.email, after=self.email, requestuser_id=self.lastmodifyuser_id,
                                       requestuser_name=self.lastmodifyuser.usernameC.encode(encoding='utf-8'),
                                       datasource=self.datasource_id).save()
                 if olduser.org != self.org and self.lastmodifyuser:
@@ -429,9 +431,8 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
                                       before=oldOrgName, after=newOrgName, requestuser_id=self.lastmodifyuser_id,
                                       requestuser_name=self.lastmodifyuser.usernameC.encode(encoding='utf-8'),
                                       datasource=self.datasource_id).save()
+                self.checkPersonnelRelationsChange(olduser=olduser)
             else:
-                if olduser.org:
-                    remove_perm('org.user_getorg', self, olduser.org)
                 if olduser.createuser:
                     remove_perm('usersys.user_getuser', olduser.createuser, self)
                     remove_perm('usersys.user_changeuser', olduser.createuser, self)
@@ -443,6 +444,26 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
         self.exchangeUnreachuserToMyUser()
         super(MyUser,self).save(*args,**kwargs)
 
+    def checkPersonnelRelationsChange(self, olduser):
+        personnelRelation = UserPersonnelRelations()
+        changed = False
+        if olduser.directSupervisor != self.directSupervisor:
+            changed = True
+            personnelRelation.directSupervisor = self.directSupervisor
+            personnelRelation.supervisorStartDate = self.supervisorStartDate,
+            personnelRelation.supervisorEndDate = self.supervisorEndDate
+        if olduser.mentor != self.mentor:
+            changed = True
+            personnelRelation.mentor = self.mentor
+            personnelRelation.mentorStartDate = self.mentorStartDate,
+            personnelRelation.mentorEndDate = self.mentorEndDate
+        if changed:
+            personnelRelation.user = self
+            personnelRelation.createuser = self.lastmodifyuser
+            personnelRelation.datasource = self.datasource
+            personnelRelation.save()
+
+
     def exchangeUnreachuserToMyUser(self):
         unreachuser_qs = UnreachUser.objects.filter(title=self.title, org=self.org, name=self.usernameC,
                                                     is_deleted=False, datasource=self.datasource)
@@ -451,6 +472,52 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
             unreachuser.is_deleted = True
             unreachuser.deletedtime = datetime.datetime.now()
             unreachuser.save()
+
+class UserPersonnelRelations(MyModel):
+    id = models.AutoField(primary_key=True)
+    user = MyForeignKey(MyUser, related_name='mentoruser_personnelrelations', blank=True, null=True, on_delete=CASCADE)
+    directSupervisor = MyForeignKey(MyUser, blank=True, null=True, related_name='historysupervisor_personnelrelations', help_text='直接上司')
+    supervisorStartDate = models.DateTimeField(blank=True, null=True, help_text='直接上司对应开始日期')
+    supervisorEndDate = models.DateTimeField(blank=True, null=True, help_text='直接上司对应结束日期')
+    mentor = MyForeignKey(MyUser, blank=True, null=True, related_name='historymentor_personnelrelations', help_text='mentor')
+    mentorStartDate = models.DateTimeField(blank=True, null=True, help_text='mentor对应开始日期')
+    mentorEndDate = models.DateTimeField(blank=True, null=True, help_text='mentor对应结束日期')
+    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_personnelrelations')
+    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_personnelrelations')
+    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_personnelrelations')
+    datasource = MyForeignKey(DataSource, help_text='数据源', default=1, blank=True)
+
+    class Meta:
+        db_table = 'user_personnelrelations'
+
+    def save(self, *args, **kwargs):
+        if not self.datasource:
+            self.datasource = self.user.datasource
+        super(UserPersonnelRelations, self).save(*args,**kwargs)
+
+class UserPerformanceAppraisalRecord(MyModel):
+    id = models.AutoField(primary_key=True)
+    user = MyForeignKey(MyUser, related_name='user_performanceappraisalrecords', blank=True, null=True, on_delete=CASCADE)
+    startDate = models.DateTimeField(blank=True, null=True, help_text='对应开始日期')
+    endDate = models.DateTimeField(blank=True, null=True, help_text='对应结束日期')
+    level = MyForeignKey(PerformanceAppraisalLevel, blank=True, null=True)
+    performanceTableBucket = models.CharField(max_length=32, blank=True, null=True, help_text='绩效考核表对应七牛Bucket')
+    performanceTableKey = models.CharField(max_length=128, blank=True, null=True, help_text='绩效考核表对应七牛Key')
+    detail = models.TextField(blank=True, null=True, help_text='绩效考核具体情况')
+    remark = models.TextField(blank=True, null=True, help_text='备注')
+    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_performanceappraisalrecords')
+    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_performanceappraisalrecords')
+    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_performanceappraisalrecords')
+    datasource = MyForeignKey(DataSource, help_text='数据源', default=1, blank=True)
+
+    class Meta:
+        db_table = 'user_performanceappraisalrecords'
+
+    def save(self, *args, **kwargs):
+        if not self.datasource:
+            self.datasource = self.user.datasource
+        super(UserPerformanceAppraisalRecord, self).save(*args,**kwargs)
+
 
 class UserRemarks(MyModel):
     id = models.AutoField(primary_key=True)

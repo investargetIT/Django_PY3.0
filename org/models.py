@@ -97,14 +97,9 @@ class organization(MyModel):
             if not self.mobileAreaCode.isdigit():
                 raise InvestError(20071, msg='国家号 必须是纯数字')
         if self.pk:
-            oldorg = organization.objects.get(pk=self.pk)
             if self.orgfullname:
                 if organization.objects.exclude(pk=self.pk).filter(is_deleted=False,orgfullname=self.orgfullname).exists():
-                    raise InvestError(code=5001,msg='同名机构已存在,无法修改')
-            if self.is_deleted and oldorg.createuser:
-                remove_perm('org.user_getorg', oldorg.createuser, self)
-                remove_perm('org.user_changeorg', oldorg.createuser, self)
-                remove_perm('org.user_deleteorg', oldorg.createuser, self)
+                    raise InvestError(code=5001,msg='同名机构已存在, 无法修改')
         else:
             if self.orgfullname:
                 if organization.objects.filter(is_deleted=False,orgfullname=self.orgfullname).exists():

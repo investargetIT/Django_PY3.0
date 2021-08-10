@@ -290,6 +290,29 @@ class Specialty(models.Model):
     def __str__(self):
         return self.nameC
 
+class Education(models.Model):
+    '''
+    学历
+    '''
+    id = models.AutoField(primary_key=True)
+    nameC = models.TextField(blank=True, default='无')
+    nameE = models.TextField(blank=True, default='none')
+    is_deleted = models.BooleanField(blank=True, default=False)
+
+    def __str__(self):
+        return self.nameC
+
+class PerformanceAppraisalLevel(models.Model):
+    '''
+     绩效考核等级
+    '''
+    id = models.AutoField(primary_key=True)
+    name = models.TextField(blank=True, default='无')
+    is_deleted = models.BooleanField(blank=True, default=False)
+
+    def __str__(self):
+        return self.name
+
 
 class TransactionPhases(models.Model):
     '''
