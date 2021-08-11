@@ -22,7 +22,7 @@ from django.db import models
 from django.db.models import Q
 
 from APIlog.models import userinfoupdatelog
-from sourcetype.models import AuditStatus, ClientType, TitleType, School, Specialty, Tag, DataSource, Country, OrgArea, \
+from sourcetype.models import AuditStatus, ClientType, TitleType, Tag, DataSource, Country, OrgArea, \
     FamiliarLevel, IndustryGroup, Education, PerformanceAppraisalLevel
 from utils.customClass import InvestError, MyForeignKey, MyModel
 from utils.somedef import makeAvatar
@@ -299,15 +299,11 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
     entryTime = models.DateTimeField(blank=True, null=True, help_text='入职时间')
     bornTime = models.DateTimeField(blank=True, null=True, help_text='出生日期')
     isMarried = models.BooleanField(blank=True, default=True, help_text='是否已婚')
-    school = MyForeignKey(School,help_text='院校', blank=True, null=True, related_name='school_users')
-    specialty = MyForeignKey(Specialty, blank=True, null=True, related_name='specialty_users', help_text='专业')
+    school = models.CharField(max_length=64, blank=True, null=True, help_text='院校')
+    specialty = models.CharField(max_length=64, blank=True, null=True, help_text='专业')
     education = MyForeignKey(Education, blank=True, null=True, related_name='education_users', help_text='学历')
     directSupervisor = MyForeignKey('self', blank=True, null=True, related_name='directsupervisor_users', help_text='直接上司')
-    supervisorStartDate = models.DateTimeField(blank=True, null=True, help_text='直接上司对应开始日期')
-    supervisorEndDate = models.DateTimeField(blank=True, null=True, help_text='直接上司对应结束日期')
     mentor = MyForeignKey('self', blank=True, null=True, related_name='mentor_users', help_text='mentor')
-    mentorStartDate = models.DateTimeField(blank=True, null=True, help_text='mentor对应开始日期')
-    mentorEndDate = models.DateTimeField(blank=True, null=True, help_text='mentor对应结束日期')
     resumeBucket = models.CharField(max_length=32, blank=True, null=True, help_text='简历对应七牛Bucket')
     resumeKey = models.CharField(max_length=128, blank=True, null=True, help_text='简历对应七牛Key')
     targetdemand = models.TextField(help_text='标的需求',blank=True, null=True, default='标的需求')
@@ -431,7 +427,6 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
                                       before=oldOrgName, after=newOrgName, requestuser_id=self.lastmodifyuser_id,
                                       requestuser_name=self.lastmodifyuser.usernameC.encode(encoding='utf-8'),
                                       datasource=self.datasource_id).save()
-                self.checkPersonnelRelationsChange(olduser=olduser)
             else:
                 if olduser.createuser:
                     remove_perm('usersys.user_getuser', olduser.createuser, self)
@@ -444,24 +439,6 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
         self.exchangeUnreachuserToMyUser()
         super(MyUser,self).save(*args,**kwargs)
 
-    def checkPersonnelRelationsChange(self, olduser):
-        personnelRelation = UserPersonnelRelations()
-        changed = False
-        if olduser.directSupervisor != self.directSupervisor:
-            changed = True
-            personnelRelation.directSupervisor = self.directSupervisor
-            personnelRelation.supervisorStartDate = self.supervisorStartDate,
-            personnelRelation.supervisorEndDate = self.supervisorEndDate
-        if olduser.mentor != self.mentor:
-            changed = True
-            personnelRelation.mentor = self.mentor
-            personnelRelation.mentorStartDate = self.mentorStartDate,
-            personnelRelation.mentorEndDate = self.mentorEndDate
-        if changed:
-            personnelRelation.user = self
-            personnelRelation.createuser = self.lastmodifyuser
-            personnelRelation.datasource = self.datasource
-            personnelRelation.save()
 
 
     def exchangeUnreachuserToMyUser(self):

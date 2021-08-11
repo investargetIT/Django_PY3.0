@@ -265,42 +265,16 @@ class OrgArea(models.Model):
             super(OrgArea, self).save(force_insert, force_update, using, update_fields)
 
 
-class School(models.Model):
-    '''
-    学校
-    '''
-    id = models.AutoField(primary_key=True)
-    nameC = models.TextField(blank=True, default='无')
-    nameE = models.TextField(blank=True, default='none')
-    is_deleted = models.BooleanField(blank=True, default=False)
-
-    def __str__(self):
-        return self.nameC
-
-
-class Specialty(models.Model):
-    '''
-    专业
-    '''
-    id = models.AutoField(primary_key=True)
-    nameC = models.TextField(blank=True, default='无')
-    nameE = models.TextField(blank=True, default='none')
-    is_deleted = models.BooleanField(blank=True, default=False)
-
-    def __str__(self):
-        return self.nameC
-
 class Education(models.Model):
     '''
     学历
     '''
     id = models.AutoField(primary_key=True)
-    nameC = models.TextField(blank=True, default='无')
-    nameE = models.TextField(blank=True, default='none')
+    name = models.TextField(blank=True, default='无')
     is_deleted = models.BooleanField(blank=True, default=False)
 
     def __str__(self):
-        return self.nameC
+        return self.name
 
 class PerformanceAppraisalLevel(models.Model):
     '''

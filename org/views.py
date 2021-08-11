@@ -635,7 +635,7 @@ class OrgContactView(viewsets.ModelViewSet):
             instance = self.get_object()
             if request.user.has_perm('org.admin_changeorg'):
                 pass
-            elif request.user == instance.org.createuser:
+            elif request.user == instance.org.createuser or request.user == instance.createuser:
                 pass
             else:
                 raise InvestError(code=2009, msg='删除机构联系方式失败', detail='没有权限')

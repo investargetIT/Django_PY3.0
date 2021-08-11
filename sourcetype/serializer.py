@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from sourcetype.models import TransactionType, TransactionPhases, Specialty, School, OrgArea, Tag, Industry, \
+from sourcetype.models import TransactionType, TransactionPhases, OrgArea, Tag, Industry, \
     CurrencyType, \
     AuditStatus, ProjectStatus, OrgType, FavoriteType, ClientType, TitleType, Country, \
     DataSource, TransactionStatus, webmenu, CharacterType, orgtitletable, Service, OrgAttribute, BDStatus, \
@@ -158,18 +158,6 @@ class serviceSerializer(serializers.ModelSerializer):
 class orgAreaSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrgArea
-        exclude = ('is_deleted',)
-
-
-class schoolSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = School
-        exclude = ('is_deleted',)
-
-
-class specialtySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Specialty
         exclude = ('is_deleted',)
 
 
