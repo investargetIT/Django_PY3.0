@@ -453,12 +453,10 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
 class UserPersonnelRelations(MyModel):
     id = models.AutoField(primary_key=True)
     user = MyForeignKey(MyUser, related_name='mentoruser_personnelrelations', blank=True, null=True, on_delete=CASCADE)
-    directSupervisor = MyForeignKey(MyUser, blank=True, null=True, related_name='historysupervisor_personnelrelations', help_text='直接上司')
-    supervisorStartDate = models.DateTimeField(blank=True, null=True, help_text='直接上司对应开始日期')
-    supervisorEndDate = models.DateTimeField(blank=True, null=True, help_text='直接上司对应结束日期')
-    mentor = MyForeignKey(MyUser, blank=True, null=True, related_name='historymentor_personnelrelations', help_text='mentor')
-    mentorStartDate = models.DateTimeField(blank=True, null=True, help_text='mentor对应开始日期')
-    mentorEndDate = models.DateTimeField(blank=True, null=True, help_text='mentor对应结束日期')
+    supervisorOrMentor = MyForeignKey(MyUser, blank=True, null=True, related_name='historysupervisor_personnelrelations', help_text='直接上司')
+    startDate = models.DateTimeField(blank=True, null=True, help_text='开始日期')
+    endDate = models.DateTimeField(blank=True, null=True, help_text='结束日期')
+    type = models.BooleanField(blank=True, default=0, help_text='类型（直接上司或mentor）')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_personnelrelations')
     createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_personnelrelations')
     lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_personnelrelations')
@@ -489,6 +487,7 @@ class UserPerformanceAppraisalRecord(MyModel):
 
     class Meta:
         db_table = 'user_performanceappraisalrecords'
+        ordering = ('user', '-startDate')
 
     def save(self, *args, **kwargs):
         if not self.datasource:
