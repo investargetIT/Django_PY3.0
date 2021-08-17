@@ -392,7 +392,7 @@ class UserPersonnelRelationsCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserPersonnelRelations
-        field = '__all__'
+        fields = '__all__'
 
 
 class UserPersonnelRelationsSerializer(serializers.ModelSerializer):
@@ -409,7 +409,7 @@ class UserPerformanceAppraisalRecordCreateSerializer(serializers.ModelSerializer
 
     class Meta:
         model = UserPerformanceAppraisalRecord
-        field = '__all__'
+        fields = '__all__'
 
 
 class UserPerformanceAppraisalRecordSerializer(serializers.ModelSerializer):

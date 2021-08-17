@@ -181,5 +181,9 @@ urlpatterns = [
     url(r'^remark/(?P<pk>\d+)/$', userremark_detail, name='userremark-detail'),
     url(r'^session/$', views.getSessionToken),
     url(r'^checksession/$', views.checkRequestSessionToken),
+    url(r'^personnelrelations/$', userpersonnelrelations_list, name='userpersonnelrelations-list'),
+    url(r'^personnelrelations/(?P<pk>\d+)/$', userpersonnelrelations_deteil, name='userpersonnelrelations-detail'),
+    url(r'^performanceappraisal/$', userperformanceappraisalrecord_list, name='userperformanceappraisalrecord-list'),
+    url(r'^performanceappraisal/(?P<pk>\d+)/$', userperformanceappraisalrecord_deteil, name='userperformanceappraisalrecord-detail'),
     # url(r'^test/$',views.test)
 ]

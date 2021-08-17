@@ -1543,13 +1543,13 @@ class UserPersonnelRelationsView(viewsets.ModelViewSet):
     def checkMentorAndDirectSupervisor(self, user):
         if UserPersonnelRelations.objects.filter(is_deleted=False, user=user, type=0).exists():
             personnelRelationsInstance = UserPersonnelRelations.objects.filter(is_deleted=False, user=user, type=0).order_by('-startDate').first()
-            if user.directSupervisor != personnelRelationsInstance.directSupervisor:
-                user.directSupervisor = personnelRelationsInstance.directSupervisor
+            if user.directSupervisor != personnelRelationsInstance.supervisorOrMentor:
+                user.directSupervisor = personnelRelationsInstance.supervisorOrMentor
                 user.save()
         if UserPersonnelRelations.objects.filter(is_deleted=False, user=user, type=1).exists():
             personnelRelationsInstance = UserPersonnelRelations.objects.filter(is_deleted=False, user=user, type=1).order_by('-startDate').first()
-            if user.mentor != personnelRelationsInstance.directSupervisor:
-                user.mentor = personnelRelationsInstance.directSupervisor
+            if user.mentor != personnelRelationsInstance.supervisorOrMentor:
+                user.mentor = personnelRelationsInstance.supervisorOrMentor
                 user.save()
 
 
