@@ -456,7 +456,7 @@ class UserPersonnelRelations(MyModel):
     supervisorOrMentor = MyForeignKey(MyUser, blank=True, null=True, related_name='historysupervisor_personnelrelations', help_text='直接上司')
     startDate = models.DateTimeField(blank=True, null=True, help_text='开始日期')
     endDate = models.DateTimeField(blank=True, null=True, help_text='结束日期')
-    type = models.BooleanField(blank=True, default=0, help_text='类型（直接上司或mentor）')
+    type = models.BooleanField(blank=True, default=0, help_text='类型（直接上司/0或mentor/1）')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_personnelrelations')
     createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_personnelrelations')
     lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_personnelrelations')
@@ -466,6 +466,18 @@ class UserPersonnelRelations(MyModel):
         db_table = 'user_personnelrelations'
 
     def save(self, *args, **kwargs):
+        if not self.is_deleted:
+            QS = UserPersonnelRelations.objects.exclude(pk=self.pk).filter(is_deleted=False, user=self.user, type=self.type)
+            laterMeetingQS = QS.filter(startDate__gte=self.startDate)
+            earlierMeetingQS = QS.filter(startDate__lte=self.startDate)
+            if laterMeetingQS.exists():
+                laterMeeting = laterMeetingQS.order_by('startDate').first()
+                if self.endDate > laterMeeting.startDate:
+                    raise InvestError(2028, msg='任职时间冲突，编辑人事记录失败', detail='已存在开始时间处于本时间段内的记录')
+            if earlierMeetingQS.exists():
+                earlierMeeting = earlierMeetingQS.order_by('startDate').last()
+                if earlierMeeting.endDate > self.startDate:
+                    raise InvestError(2028, msg='任职时间冲突，编辑人事记录失败', detail='已存在结束时间处于本时间段内的记录')
         if not self.datasource:
             self.datasource = self.user.datasource
         super(UserPersonnelRelations, self).save(*args,**kwargs)
@@ -490,6 +502,18 @@ class UserPerformanceAppraisalRecord(MyModel):
         ordering = ('user', '-startDate')
 
     def save(self, *args, **kwargs):
+        if not self.is_deleted:
+            QS = UserPerformanceAppraisalRecord.objects.exclude(pk=self.pk).filter(is_deleted=False, user=self.user)
+            laterMeetingQS = QS.filter(startDate__gte=self.startDate)
+            earlierMeetingQS = QS.filter(startDate__lte=self.startDate)
+            if laterMeetingQS.exists():
+                laterMeeting = laterMeetingQS.order_by('startDate').first()
+                if self.endDate > laterMeeting.startDate:
+                    raise InvestError(2027, msg='绩效考核时间冲突，编辑绩效考核记录失败', detail='已存在开始时间处于本时间段内的记录')
+            if earlierMeetingQS.exists():
+                earlierMeeting = earlierMeetingQS.order_by('startDate').last()
+                if earlierMeeting.endDate > self.startDate:
+                    raise InvestError(2027, msg='绩效考核时间冲突，编辑绩效考核记录失败', detail='已存在结束时间处于本时间段内的记录')
         if not self.datasource:
             self.datasource = self.user.datasource
         super(UserPerformanceAppraisalRecord, self).save(*args,**kwargs)

@@ -11,6 +11,7 @@ from django.db.models import Q, Count, QuerySet
 from rest_framework import filters, viewsets
 from rest_framework.decorators import api_view, detail_route, list_route
 from APIlog.views import logininlog, apilog
+from BD.serializers import OrgBDBlackCreateSerializer
 from dataroom.models import dataroom
 from org.models import organization
 from sourcetype.views import getmenulist
@@ -19,14 +20,16 @@ from third.views.huanxin import registHuanXinIMWithUser, deleteHuanXinIMWithUser
 from third.views.qiniufile import deleteqiniufile
 from third.views.weixinlogin import get_openid
 from usersys.models import MyUser, UserRelation, userTags, UserFriendship, MyToken, UnreachUser, UserRemarks, \
-    userAttachments, userEvents, UserContrastThirdAccount, registersourcechoice
+    userAttachments, userEvents, UserContrastThirdAccount, registersourcechoice, UserPerformanceAppraisalRecord, \
+    UserPersonnelRelations
 from usersys.serializer import UserSerializer, UserListSerializer, UserRelationSerializer, \
     CreatUserSerializer, UserCommenSerializer, UserRelationCreateSerializer, UserFriendshipSerializer, \
     UserFriendshipDetailSerializer, UserFriendshipUpdateSerializer, GroupSerializer, GroupDetailSerializer, \
     GroupCreateSerializer, PermissionSerializer, \
     UpdateUserSerializer, UnreachUserSerializer, UserRemarkSerializer, UserRemarkCreateSerializer, \
     UserListCommenSerializer, UserAttachmentSerializer, UserEventSerializer, UserSimpleSerializer, UserInfoSerializer, \
-    InvestorUserSerializer
+    InvestorUserSerializer, UserPerformanceAppraisalRecordSerializer, UserPerformanceAppraisalRecordCreateSerializer, \
+    UserPersonnelRelationsSerializer, UserPersonnelRelationsCreateSerializer
 from sourcetype.models import Tag, DataSource, TagContrastTable
 from utils import perimissionfields
 from utils.customClass import JSONResponse, InvestError, RelationFilter
@@ -1478,6 +1481,254 @@ class UserRelationView(viewsets.ModelViewSet):
         except Exception:
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+class UserPersonnelRelationsFilter(FilterSet):
+    user = RelationFilter(filterstr='user', lookup_method='in')
+    supervisorOrMentor = RelationFilter(filterstr='supervisorOrMentor', lookup_method='in')
+    stime = RelationFilter(filterstr='supervisorStartDate', lookup_method='gte')
+    etime = RelationFilter(filterstr='supervisorEndDate', lookup_method='lt')
+
+    class Meta:
+        model = UserPersonnelRelations
+        fields = ('user', 'supervisorOrMentor', 'stime', 'etime')
+
+class UserPersonnelRelationsView(viewsets.ModelViewSet):
+    """
+    list:获取用户人事关系记录
+    create:添加用户人事关系记录
+    update:修改用户人事关系记录
+    destroy:删除用户人事关系记录
+    """
+    filter_backends = (filters.DjangoFilterBackend, filters.SearchFilter)
+    filter_class = UserPersonnelRelationsFilter
+    queryset = UserPersonnelRelations.objects.filter(is_deleted=False)
+    serializer_class = UserPersonnelRelationsSerializer
+
+    def get_queryset(self):
+        assert self.queryset is not None, (
+            "'%s' should either include a `queryset` attribute, "
+            "or override the `get_queryset()` method."
+            % self.__class__.__name__
+        )
+        queryset = self.queryset
+        if isinstance(queryset, QuerySet):
+            if self.request.user.is_authenticated:
+                queryset = queryset.filter(datasource=self.request.user.datasource)
+            else:
+                queryset = queryset.all()
+        else:
+            raise InvestError(code=8890)
+        return queryset
+
+    @loginTokenIsAvailable()
+    def list(self, request, *args, **kwargs):
+        try:
+            page_size = request.GET.get('page_size', 10)
+            page_index = request.GET.get('page_index', 1)
+            lang = request.GET.get('lang', 'cn')
+            queryset = self.filter_queryset(self.get_queryset())
+            try:
+                count = queryset.count()
+                queryset = Paginator(queryset, page_size)
+                queryset = queryset.page(page_index)
+            except EmptyPage:
+                return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(SuccessResponse({'count':count,'data':returnListChangeToLanguage(serializer.data,lang)}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    def checkMentorAndDirectSupervisor(self, user):
+        if UserPersonnelRelations.objects.filter(is_deleted=False, user=user, type=0).exists():
+            personnelRelationsInstance = UserPersonnelRelations.objects.filter(is_deleted=False, user=user, type=0).order_by('-startDate').first()
+            if user.directSupervisor != personnelRelationsInstance.directSupervisor:
+                user.directSupervisor = personnelRelationsInstance.directSupervisor
+                user.save()
+        if UserPersonnelRelations.objects.filter(is_deleted=False, user=user, type=1).exists():
+            personnelRelationsInstance = UserPersonnelRelations.objects.filter(is_deleted=False, user=user, type=1).order_by('-startDate').first()
+            if user.mentor != personnelRelationsInstance.directSupervisor:
+                user.mentor = personnelRelationsInstance.directSupervisor
+                user.save()
+
+
+    @loginTokenIsAvailable()
+    def create(self, request, *args, **kwargs):
+        try:
+            data = request.data
+            lang = request.GET.get('lang')
+            data['createuser'] = request.user.id
+            data['datasource'] = request.user.datasource.id
+
+            with transaction.atomic():
+                instanceSerializer = UserPersonnelRelationsCreateSerializer(data=data)
+                if instanceSerializer.is_valid():
+                    instance = instanceSerializer.save()
+                else:
+                    raise InvestError(2028, msg='创建用户人事关系记录失败', detail='新增失败--%s' % instanceSerializer.errors)
+                self.checkMentorAndDirectSupervisor(user=instance.user)
+                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(instanceSerializer.data, lang)))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable()
+    def update(self, request, *args, **kwargs):
+        try:
+            data = request.data
+            lang = request.GET.get('lang')
+            instance = self.get_object()
+            with transaction.atomic():
+                newinstanceSeria = UserPersonnelRelationsCreateSerializer(instance, data=data)
+                if newinstanceSeria.is_valid():
+                    instance = newinstanceSeria.save()
+                else:
+                    raise InvestError(2028, msg='修改用户人事关系记录失败', detail='修改失败——%s' % newinstanceSeria.errors)
+                self.checkMentorAndDirectSupervisor(user=instance.user)
+                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(newinstanceSeria.data, lang)))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable()
+    def destroy(self, request, *args, **kwargs):
+        try:
+            lang = request.GET.get('lang')
+            instance = self.get_object()
+            with transaction.atomic():
+                instance.is_deleted = True
+                instance.deleteduser = request.user
+                instance.deletedtime = datetime.datetime.now()
+                instance.save()
+                self.checkMentorAndDirectSupervisor(user=instance.user)
+                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(self.serializer_class(instance).data, lang)))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+
+class UserPerformanceAppraisalRecordFilter(FilterSet):
+    user = RelationFilter(filterstr='user', lookup_method='in')
+    level = RelationFilter(filterstr='level', lookup_method='in')
+    stime = RelationFilter(filterstr='startDate', lookup_method='gte')
+    etime = RelationFilter(filterstr='endDate', lookup_method='lt')
+    class Meta:
+        model = UserPerformanceAppraisalRecord
+        fields = ('user', 'level', 'stime', 'etime')
+
+class UserPerformanceAppraisalRecordView(viewsets.ModelViewSet):
+    """
+    list:获取用户绩效考核记录
+    create:添加绩效考核记录
+    update:修改绩效考核记录
+    destroy:删除绩效考核记录
+    """
+    filter_backends = (filters.DjangoFilterBackend, filters.SearchFilter)
+    filter_class = UserPerformanceAppraisalRecordFilter
+    queryset = UserPerformanceAppraisalRecord.objects.filter(is_deleted=False)
+    serializer_class = UserPerformanceAppraisalRecordSerializer
+
+    def get_queryset(self):
+        assert self.queryset is not None, (
+            "'%s' should either include a `queryset` attribute, "
+            "or override the `get_queryset()` method."
+            % self.__class__.__name__
+        )
+        queryset = self.queryset
+        if isinstance(queryset, QuerySet):
+            if self.request.user.is_authenticated:
+                queryset = queryset.filter(datasource=self.request.user.datasource)
+            else:
+                queryset = queryset.all()
+        else:
+            raise InvestError(code=8890)
+        return queryset
+
+    @loginTokenIsAvailable()
+    def list(self, request, *args, **kwargs):
+        try:
+            page_size = request.GET.get('page_size', 10)
+            page_index = request.GET.get('page_index', 1)
+            lang = request.GET.get('lang', 'cn')
+            queryset = self.filter_queryset(self.get_queryset())
+            try:
+                count = queryset.count()
+                queryset = Paginator(queryset, page_size)
+                queryset = queryset.page(page_index)
+            except EmptyPage:
+                return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(SuccessResponse({'count':count,'data':returnListChangeToLanguage(serializer.data, lang)}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable()
+    def create(self, request, *args, **kwargs):
+        try:
+            data = request.data
+            lang = request.GET.get('lang')
+            data['createuser'] = request.user.id
+            data['datasource'] = request.user.datasource.id
+
+            with transaction.atomic():
+                instanceSerializer = UserPerformanceAppraisalRecordCreateSerializer(data=data)
+                if instanceSerializer.is_valid():
+                    instanceSerializer.save()
+                else:
+                    raise InvestError(2027, msg='创建用户考核记录失败', detail='新增失败--%s' % instanceSerializer.errors)
+                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(instanceSerializer.data, lang)))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable()
+    def update(self, request, *args, **kwargs):
+        try:
+            data = request.data
+            lang = request.GET.get('lang')
+            instance = self.get_object()
+            with transaction.atomic():
+                newinstanceSeria = UserPerformanceAppraisalRecordCreateSerializer(instance, data=data)
+                if newinstanceSeria.is_valid():
+                    newinstanceSeria.save()
+                else:
+                    raise InvestError(2027, msg='修改用户考核记录失败', detail='修改失败——%s' % newinstanceSeria.errors)
+                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(newinstanceSeria.data, lang)))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable()
+    def destroy(self, request, *args, **kwargs):
+        try:
+            lang = request.GET.get('lang')
+            instance = self.get_object()
+            with transaction.atomic():
+                instance.is_deleted = True
+                instance.deleteduser = request.user
+                instance.deletedtime = datetime.datetime.now()
+                instance.save()
+                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(self.serializer_class(instance).data, lang)))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
 
 class UserFriendshipView(viewsets.ModelViewSet):
     """

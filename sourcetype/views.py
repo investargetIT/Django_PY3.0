@@ -8,14 +8,14 @@ from rest_framework import viewsets
 from sourcetype.models import Tag, TitleType, DataSource, Country, Industry, TransactionType, \
     TransactionPhases, OrgArea, CurrencyType, OrgType, CharacterType, ProjectStatus, TransactionStatus, orgtitletable, \
     webmenu, Service, OrgAttribute, BDStatus, AndroidAppVersion, OrgBdResponse, OrgLevelType, FamiliarLevel, \
-    IndustryGroup, DidiOrderType
+    IndustryGroup, DidiOrderType, Education, PerformanceAppraisalLevel
 from sourcetype.serializer import tagSerializer, countrySerializer, industrySerializer, \
     titleTypeSerializer, DataSourceSerializer, orgAreaSerializer, transactionTypeSerializer, \
     transactionPhasesSerializer, \
     currencyTypeSerializer, orgTypeSerializer, characterTypeSerializer, ProjectStatusSerializer, \
     transactionStatuSerializer, OrgtitletableSerializer, WebMenuSerializer, serviceSerializer, orgAttributeSerializer, \
     BDStatusSerializer, AndroidAppSerializer, OrgBdResponseSerializer, OrgLevelTypeSerializer, FamiliarLevelSerializer, \
-    industryGroupSerializer
+    industryGroupSerializer, PerformanceAppraisalLevelSerializer, EducationSerializer
 from utils.customClass import  JSONResponse, InvestError
 from utils.util import SuccessResponse, InvestErrorResponse, ExceptionResponse, returnListChangeToLanguage, \
     catchexcption, loginTokenIsAvailable, removeDuclicates
@@ -387,6 +387,47 @@ class TransactionPhasesView(viewsets.ModelViewSet):
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+class EducationView(viewsets.ModelViewSet):
+    """
+        list:获取所有学历
+        create:新增学历
+        update:修改学历
+        destroy:删除学历
+    """
+    queryset = Education.objects.all().filter(is_deleted=False)
+    serializer_class = EducationSerializer
+    def list(self, request, *args, **kwargs):
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(SuccessResponse(serializer.data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+class PerformanceAppraisalLevelView(viewsets.ModelViewSet):
+    """
+        list:获取所有绩效考核等级
+        create:新增绩效考核等级
+        update:修改绩效考核等级
+        destroy:删除绩效考核等级
+    """
+    queryset = PerformanceAppraisalLevel.objects.all().filter(is_deleted=False)
+    serializer_class = PerformanceAppraisalLevelSerializer
+    def list(self, request, *args, **kwargs):
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(SuccessResponse(serializer.data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
 
 class TransactionStatusView(viewsets.ModelViewSet):
     """

@@ -103,6 +103,16 @@ transactionStatus = views.TransactionStatusView.as_view({
         # 'post':'create',
 })
 
+educationType = views.EducationView.as_view({
+        'get': 'list',
+        # 'post':'create',
+})
+
+performanceAppraisalLevelType = views.PerformanceAppraisalLevelView.as_view({
+        'get': 'list',
+        # 'post':'create',
+})
+
 
 currencyType = views.CurrencyTypeView.as_view({
         'get': 'list',
@@ -176,6 +186,10 @@ urlpatterns = [
     url(r'^orgtitletable$', Orgtitletable,name='Orgtitletablesource',),
 
     url(r'^industryGroup$', IndustryGroup,name='IndustryGroupSource',),
+
+    url(r'^education$', educationType,name='EducationSource',),
+
+    url(r'^palevel$', performanceAppraisalLevelType,name='PerformanceAppraisalLevelSource',),
 
     url(r'^android$', AndroidVersion,name='AndroidVersion',),
 

@@ -127,6 +127,28 @@ unreachuser_deteil = views.UnReachUserView.as_view({
         'delete': 'destroy',
 })
 
+
+userpersonnelrelations_list = views.UserPersonnelRelationsView.as_view({
+        'get': 'list',
+        'post': 'create',
+})
+
+userpersonnelrelations_deteil = views.UserPersonnelRelationsView.as_view({
+        'put': 'update',
+        'delete': 'destroy',
+})
+
+
+userperformanceappraisalrecord_list = views.UserPerformanceAppraisalRecordView.as_view({
+        'get': 'list',
+        'post': 'create',
+})
+
+userperformanceappraisalrecord_deteil = views.UserPerformanceAppraisalRecordView.as_view({
+        'put': 'update',
+        'delete': 'destroy',
+})
+
 checkUserAccountExist = views.UserView.as_view({
         'get':'checkUserAccountExist',
 })

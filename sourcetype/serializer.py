@@ -161,12 +161,12 @@ class orgAreaSerializer(serializers.ModelSerializer):
         exclude = ('is_deleted',)
 
 
-class educationSerializer(serializers.ModelSerializer):
+class EducationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Education
         exclude = ('is_deleted',)
 
-class performanceAppraisalLevelSerializer(serializers.ModelSerializer):
+class PerformanceAppraisalLevelSerializer(serializers.ModelSerializer):
     class Meta:
         model = PerformanceAppraisalLevel
         exclude = ('is_deleted',)

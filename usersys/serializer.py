@@ -6,10 +6,12 @@ from rest_framework import serializers
 
 from mongoDoc.models import MergeFinanceData
 from org.serializer import OrgCommonSerializer
-from sourcetype.serializer import tagSerializer, countrySerializer, titleTypeSerializer
+from sourcetype.serializer import tagSerializer, countrySerializer, titleTypeSerializer, \
+    PerformanceAppraisalLevelSerializer
 from third.views.qiniufile import getUrlWithBucketAndKey
 from utils.util import checkMobileTrue
-from .models import MyUser, UserRelation, UserFriendship, UnreachUser, UserRemarks, userAttachments, userEvents
+from .models import MyUser, UserRelation, UserFriendship, UnreachUser, UserRemarks, userAttachments, userEvents, \
+    UserPerformanceAppraisalRecord, UserPersonnelRelations
 
 
 class UnreachUserSerializer(serializers.ModelSerializer):
@@ -252,6 +254,7 @@ class UserSerializer(serializers.ModelSerializer):
     groups = GroupSerializer(MyUser.groups,many=True)
     tags = serializers.SerializerMethodField()
     photourl = serializers.SerializerMethodField()
+    resumeurl = serializers.SerializerMethodField()
 
     class Meta:
         model = MyUser
@@ -268,6 +271,12 @@ class UserSerializer(serializers.ModelSerializer):
     def get_photourl(self, obj):
         if obj.photoKey:
             return getUrlWithBucketAndKey('image', obj.photoKey)
+        else:
+            return None
+
+    def get_resumeurl(self, obj):
+        if obj.resumeBucket and obj.resumeKey:
+            return getUrlWithBucketAndKey(obj.resumeBucket, obj.resumeKey)
         else:
             return None
 
@@ -376,5 +385,44 @@ class UserListCommenSerializer(serializers.ModelSerializer):
             else:
                 center = '****'
             return center
+        else:
+            return None
+
+class UserPersonnelRelationsCreateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = UserPersonnelRelations
+        field = '__all__'
+
+
+class UserPersonnelRelationsSerializer(serializers.ModelSerializer):
+    user = UserSimpleSerializer()
+    supervisorOrMentor = UserSimpleSerializer()
+
+    class Meta:
+        model = UserPersonnelRelations
+        exclude = ('deleteduser', 'datasource', 'is_deleted', 'deletedtime')
+
+
+
+class UserPerformanceAppraisalRecordCreateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = UserPerformanceAppraisalRecord
+        field = '__all__'
+
+
+class UserPerformanceAppraisalRecordSerializer(serializers.ModelSerializer):
+    user = UserSimpleSerializer()
+    level = PerformanceAppraisalLevelSerializer()
+    performanceTableUrl = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserPerformanceAppraisalRecord
+        exclude = ('deleteduser', 'datasource', 'is_deleted', 'deletedtime')
+
+    def get_performanceTableUrl(self, obj):
+        if obj.performanceTableBucket and obj.performanceTableKey:
+            return getUrlWithBucketAndKey(obj.performanceTableBucket, obj.performanceTableKey)
         else:
             return None
