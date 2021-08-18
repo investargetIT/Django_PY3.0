@@ -779,7 +779,6 @@ class OrgBDView(viewsets.ModelViewSet):
             instance = self.get_object()
             oldmanager = instance.manager
             data.pop('datasource', None)
-            remark = data.get('remark', None)
             if request.user.has_perm('BD.manageOrgBD'):
                 pass
             elif request.user in [instance.createuser, instance.manager]:
@@ -794,15 +793,6 @@ class OrgBDView(viewsets.ModelViewSet):
                 if orgBD.is_valid():
                     neworgBD = orgBD.save()
                     cache_delete_patternKey(key='/bd/orgbd*')
-                    if remark and remark.strip() != '' and neworgBD.response_id not in [4, 5, 6, None] and neworgBD.bduser and neworgBD.proj:
-                        try:
-                            timeline_qs = timeline.objects.filter(is_deleted=0, investor=neworgBD.bduser,
-                                                                  proj=neworgBD.proj, trader=neworgBD.manager)
-                            if timeline_qs.exists():
-                                timelineremark(timeline=timeline_qs.first(), remark=remark,
-                                               createuser=neworgBD.createuser, datasource=neworgBD.datasource).save()
-                        except Exception:
-                            logexcption(msg='同步备注失败，OrgBD_id-%s ' % neworgBD.id)
                     oldmanager_id = data.get('manager', None)
                     if oldmanager_id and oldmanager_id != oldmanager.id:
                         if request.user != neworgBD.manager:
@@ -999,6 +989,7 @@ class OrgBDBlackView(viewsets.ModelViewSet):
 
 class OrgBDCommentsFilter(FilterSet):
     orgBD = RelationFilter(filterstr='orgBD',lookup_method='in')
+    isPMComment = RelationFilter(filterstr='isPMComment',lookup_method='in')
     stime = RelationFilter(filterstr='createdtime', lookup_method='gte')
     etime = RelationFilter(filterstr='createdtime', lookup_method='lt')
     stimeM = RelationFilter(filterstr='lastmodifytime', lookup_method='gte')

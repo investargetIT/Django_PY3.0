@@ -127,7 +127,7 @@ class OrgBD(MyModel):
     isimportant = models.IntegerField(blank=True, default=False, help_text='是否重点BD')
     expirationtime = models.DateTimeField(blank=True,null=True,help_text='BD过期时间')
     response = MyForeignKey(OrgBdResponse, blank=True, null=True, related_name='OrgBD_response')
-    material = models.CharField(max_length=8,blank=True, null=True, help_text='数位表示是否有材料')
+    material = models.CharField(max_length=64, null=True, help_text='数位表示是否有材料')
     isSolved = models.BooleanField(blank=True, default=False, help_text='BD是否已处理')
     isRead = models.BooleanField(blank=True, default=False, help_text='是否已读')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_OrgBD')
