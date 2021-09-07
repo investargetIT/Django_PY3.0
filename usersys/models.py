@@ -467,6 +467,8 @@ class UserPersonnelRelations(MyModel):
 
     def save(self, *args, **kwargs):
         if not self.is_deleted:
+            if self.startDate >= self.endDate:
+                raise InvestError(2028, msg='任职时间冲突，编辑人事记录失败', detail='任职日期不符合实际')
             QS = UserPersonnelRelations.objects.exclude(pk=self.pk).filter(is_deleted=False, user=self.user, type=self.type)
             laterMeetingQS = QS.filter(startDate__gte=self.startDate)
             earlierMeetingQS = QS.filter(startDate__lte=self.startDate)
@@ -503,6 +505,8 @@ class UserPerformanceAppraisalRecord(MyModel):
 
     def save(self, *args, **kwargs):
         if not self.is_deleted:
+            if self.startDate >= self.endDate:
+                raise InvestError(2027, msg='绩效考核时间冲突，编辑绩效考核记录失败', detail='绩效考核日期不符合实际')
             QS = UserPerformanceAppraisalRecord.objects.exclude(pk=self.pk).filter(is_deleted=False, user=self.user)
             laterMeetingQS = QS.filter(startDate__gte=self.startDate)
             earlierMeetingQS = QS.filter(startDate__lte=self.startDate)
