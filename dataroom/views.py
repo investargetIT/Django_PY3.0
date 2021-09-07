@@ -42,9 +42,10 @@ class DataroomFilter(FilterSet):
     user = RelationFilter(filterstr='dataroom_users__user', lookup_method='in', relationName='dataroom_users__is_deleted')
     proj = RelationFilter(filterstr='proj', lookup_method='in')
     isClose = RelationFilter(filterstr='isClose', lookup_method='in')
+    isCompanyFile = RelationFilter(filterstr='isCompanyFile', lookup_method='in')
     class Meta:
         model = dataroom
-        fields = ('proj', 'isClose', 'supportuser', 'user')
+        fields = ('proj', 'isClose', 'supportuser', 'user', 'isCompanyFile')
 
 class DataroomView(viewsets.ModelViewSet):
     """
@@ -83,16 +84,18 @@ class DataroomView(viewsets.ModelViewSet):
                 page_size = 10
             if not page_index:
                 page_index = 1
-            queryset = self.filter_queryset(self.get_queryset()).filter(datasource=self.request.user.datasource, isCompanyFile=False)
+            queryset = self.filter_queryset(self.get_queryset()).filter(datasource=self.request.user.datasource)
+            if not request.user.has_perm('usersys.as_trader'):
+                queryset = queryset.filter(isCompanyFile=False)
+            if request.user.has_perm('dataroom.admin_getdataroom'):
+                queryset = queryset
+            else:
+                queryset = queryset.filter(Q(dataroom_users__in=request.user.user_datarooms.filter(), dataroom_users__is_deleted=False) | Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False)).distinct()
             sort = request.GET.get('sort')
             if sort not in ['True', 'true', True, 1, 'Yes', 'yes', 'YES', 'TRUE']:
                 queryset = queryset.order_by('-lastmodifytime', '-createdtime')
             else:
                 queryset = queryset.order_by('lastmodifytime', 'createdtime')
-            if request.user.has_perm('dataroom.admin_getdataroom'):
-                queryset = queryset
-            else:
-                queryset = queryset.filter(Q(dataroom_users__in=request.user.user_datarooms.filter(), dataroom_users__is_deleted=False) | Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False)).distinct()
             try:
                 count = queryset.count()
                 queryset = Paginator(queryset, page_size)
