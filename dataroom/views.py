@@ -85,7 +85,7 @@ class DataroomView(viewsets.ModelViewSet):
             if not page_index:
                 page_index = 1
             queryset = self.filter_queryset(self.get_queryset()).filter(datasource=self.request.user.datasource)
-            if not request.user.has_perm('usersys.as_trader'):
+            if not request.user.has_perm('dataroom.get_companydataroom'):
                 queryset = queryset.filter(isCompanyFile=False)
             if request.user.has_perm('dataroom.admin_getdataroom'):
                 queryset = queryset
@@ -549,6 +549,9 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         try:
             lang = request.GET.get('lang',None)
+            sortfield = request.GET.get('sort', 'orgimportant')
+            if request.GET.get('desc', 1) in ('1', u'1', 1):
+                sortfield = '-' + sortfield
             dataroomid = request.GET.get('dataroom',None)
             if dataroomid is None:
                 raise InvestError(code=20072, msg='获取dataroom文件失败', detail='dataroom 不能空')
@@ -561,7 +564,7 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
                 pass
             else:
                 raise InvestError(2009, msg='获取该dataroom文件失败')
-            queryset = self.filter_queryset(self.get_queryset()).filter(datasource=self.request.user.datasource)
+            queryset = self.filter_queryset(self.get_queryset()).filter(datasource=self.request.user.datasource).order_by(sortfield)
             count = queryset.count()
             serializer = DataroomdirectoryorfileSerializer(queryset, many=True)
             return JSONResponse(SuccessResponse({'count':count,'data':returnListChangeToLanguage(serializer.data,lang)}))
