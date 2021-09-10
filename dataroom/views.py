@@ -549,7 +549,7 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         try:
             lang = request.GET.get('lang',None)
-            sortfield = request.GET.get('sort', 'orgimportant')
+            sortfield = request.GET.get('sort', 'createdtime')
             if request.GET.get('desc', 1) in ('1', u'1', 1):
                 sortfield = '-' + sortfield
             dataroomid = request.GET.get('dataroom',None)
