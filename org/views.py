@@ -1786,7 +1786,7 @@ def fulltextsearch(request):
         queryset = organization.objects.filter(is_deleted=False)
         queryset = OrganizationFilter(request.query_params, queryset=queryset, request=request).qs
         es = Elasticsearch({HAYSTACK_CONNECTIONS['default']['URL']})
-        ret = es.search(index=HAYSTACK_CONNECTIONS['default']['INDEX_NAME'],
+        ret = es.search(index=HAYSTACK_CONNECTIONS['default']['INDEX_NAME'], size=50,
                         body={
                             "query": {
                                 "bool": {
