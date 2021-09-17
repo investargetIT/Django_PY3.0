@@ -585,7 +585,7 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
             fileid_list = list(queryset.values_list('id', flat=True))
             search = request.GET.get('search', '')
             es = Elasticsearch({HAYSTACK_CONNECTIONS['default']['URL']})
-            ret = es.search(index=HAYSTACK_CONNECTIONS['default']['INDEX_NAME'], size=50
+            ret = es.search(index=HAYSTACK_CONNECTIONS['default']['INDEX_NAME'], size=50,
                             body={
                                     "_source": ["id", "dataroom", "filename"],
                                     "query": {
