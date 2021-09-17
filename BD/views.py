@@ -1500,7 +1500,7 @@ class WorkReportView(viewsets.ModelViewSet):
             search = request.GET.get('search')
             if search:
                 es = Elasticsearch({HAYSTACK_CONNECTIONS['default']['URL']})
-                ret = es.search(index=HAYSTACK_CONNECTIONS['default']['INDEX_NAME'],
+                ret = es.search(index=HAYSTACK_CONNECTIONS['default']['INDEX_NAME'], size=50,
                                 body={
                                     "_source": ["id", "report"],
                                     "query": {
