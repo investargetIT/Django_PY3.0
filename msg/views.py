@@ -160,7 +160,7 @@ class WebEXMeetingView(viewsets.ModelViewSet):
     filter_backends = (MySearchFilter, filters.DjangoFilterBackend,)
     queryset = webexMeeting.objects.all().filter(is_deleted=False)
     filter_fields = ('title', 'meetingKey', 'createuser')
-    search_fields = ('startDate', 'createuser__usernameC', 'createuser__usernameE')
+    search_fields = ('createuser__usernameC', 'createuser__usernameE')
     serializer_class = WebEXMeetingSerializer
     webex_url = 'https://investarget.webex.com.cn/WBXService/XMLService'
 
@@ -764,7 +764,7 @@ class WebEXUserView(viewsets.ModelViewSet):
     filter_backends = (MySearchFilter, filters.DjangoFilterBackend,)
     queryset = webexUser.objects.all().filter(is_deleted=False)
     filter_fields = ('user', 'name', 'email', 'meeting', 'meetingRole')
-    search_fields = ('meeting__startDate', 'user__usernameC', 'user__usernameE', 'name', 'email')
+    search_fields = ('user__usernameC', 'user__usernameE', 'name', 'email')
     serializer_class = WebEXUserSerializer
 
 

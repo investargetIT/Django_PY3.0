@@ -67,7 +67,7 @@ class ProjectBDView(viewsets.ModelViewSet):
     filter_backends = (filters.DjangoFilterBackend, MySearchFilter)
     queryset = ProjectBD.objects.filter(is_deleted=False)
     filter_class = ProjectBDFilter
-    search_fields = ('com_name', 'username', 'source')
+    search_fields = ('com_name', 'username')
     serializer_class = ProjectBDSerializer
 
     def get_queryset(self):

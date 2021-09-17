@@ -127,7 +127,8 @@ class ViewprojLogView(viewsets.ModelViewSet):
 class UserInfoUpdateLogView(viewsets.ModelViewSet):
 
     filter_backends = (MySearchFilter,)
-    search_fields = ('user_name','requestuser_name')
+    filter_fields = ('user_name', 'requestuser_name', 'type', 'before', 'after')
+    search_fields = ('user_name', 'requestuser_name')
     queryset = userinfoupdatelog.objects.filter(is_deleted=False)
     serializer_class = UserInfoUpdateLogSerializer
 

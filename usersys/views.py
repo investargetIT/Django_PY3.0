@@ -739,7 +739,7 @@ class UnReachUserView(viewsets.ModelViewSet):
     """
     filter_backends = (filters.DjangoFilterBackend, MySearchFilter)
     filter_fields = ('org', 'name', 'title')
-    search_fields = ('name', 'org', 'title', 'email','mobile')
+    search_fields = ('name', 'org__orgnameC', 'org__orgfullname', 'title__nameC', 'email', 'mobile')
     queryset = UnreachUser.objects.filter(is_deleted=False)
     serializer_class = UnreachUserSerializer
 
