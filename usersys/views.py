@@ -32,7 +32,7 @@ from usersys.serializer import UserSerializer, UserListSerializer, UserRelationS
     InvestorUserSerializer
 from sourcetype.models import Tag, DataSource, TagContrastTable
 from utils import perimissionfields
-from utils.customClass import JSONResponse, InvestError, RelationFilter
+from utils.customClass import JSONResponse, InvestError, RelationFilter, MySearchFilter
 from utils.sendMessage import sendmessage_userauditstatuchange, sendmessage_userregister, sendmessage_traderadd, \
     sendmessage_usermakefriends
 from utils.util import read_from_cache, write_to_cache, loginTokenIsAvailable, \
@@ -74,7 +74,7 @@ class UserView(viewsets.ModelViewSet):
     update:修改用户信息
     destroy:删除用户
     """
-    filter_backends = (filters.SearchFilter, filters.DjangoFilterBackend,)
+    filter_backends = (MySearchFilter, filters.DjangoFilterBackend,)
     queryset = MyUser.objects.filter(is_deleted=False)
     search_fields = ('mobile','email','usernameC','usernameE','org__orgnameC','orgarea__nameC','org__orgfullname','investor_relations__traderuser__usernameC')
     serializer_class = UserSerializer
@@ -737,7 +737,7 @@ class UnReachUserView(viewsets.ModelViewSet):
         update:修改unreachuser
         destroy:删除unreachuser
     """
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (filters.DjangoFilterBackend, MySearchFilter)
     filter_fields = ('org', 'name', 'title')
     search_fields = ('name', 'org', 'title', 'email','mobile')
     queryset = UnreachUser.objects.filter(is_deleted=False)
@@ -1252,7 +1252,7 @@ class UserRelationView(viewsets.ModelViewSet):
     update:修改业务关系联系人(批量)
     destroy:删除业务关系联系人(批量)
     """
-    filter_backends = (filters.DjangoFilterBackend, filters.SearchFilter)
+    filter_backends = (filters.DjangoFilterBackend, MySearchFilter)
     filter_class = UserRelationFilter
     search_fields = ('investoruser__usernameC', 'investoruser__usernameE', 'traderuser__usernameC', 'traderuser__usernameE','investoruser__org__orgnameC')
     queryset = UserRelation.objects.filter(is_deleted=False)

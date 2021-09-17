@@ -22,7 +22,7 @@ from proj.models import project
 from sourcetype.models import Tag, TransactionType, Industry
 from third.views.submail import xsendEmail, checkSubhookKey
 from usersys.models import MyUser
-from utils.customClass import InvestError, JSONResponse
+from utils.customClass import InvestError, JSONResponse, MySearchFilter
 from utils.util import loginTokenIsAvailable, SuccessResponse, InvestErrorResponse, ExceptionResponse, catchexcption, \
     logexcption, mySortQuery, checkEmailTrue
 
@@ -165,7 +165,7 @@ class EmailgroupsendlistView(viewsets.ModelViewSet):
     list:获取邮件发送记录列表
     update:发送已读回执
     """
-    filter_backends = (filters.SearchFilter,filters.DjangoFilterBackend)
+    filter_backends = (MySearchFilter, filters.DjangoFilterBackend)
     queryset = emailgroupsendlist.objects.all()
     filter_fields = ('proj','isRead','isSend','projtitle',)
     search_fields = ('username','userEmail','userMobile')

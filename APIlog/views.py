@@ -11,7 +11,7 @@ from rest_framework import viewsets
 
 from APIlog.models import loginlog, userviewprojlog, APILog, userinfoupdatelog
 from APIlog.serializer import APILogSerializer, ViewProjLogSerializer, LoginLogSerializer, UserInfoUpdateLogSerializer
-from utils.customClass import JSONResponse, InvestError
+from utils.customClass import JSONResponse, InvestError, MySearchFilter
 from utils.util import SuccessResponse, InvestErrorResponse, ExceptionResponse, catchexcption, loginTokenIsAvailable
 
 
@@ -126,7 +126,7 @@ class ViewprojLogView(viewsets.ModelViewSet):
 
 class UserInfoUpdateLogView(viewsets.ModelViewSet):
 
-    filter_backends = (filters.SearchFilter,)
+    filter_backends = (MySearchFilter,)
     search_fields = ('user_name','requestuser_name')
     queryset = userinfoupdatelog.objects.filter(is_deleted=False)
     serializer_class = UserInfoUpdateLogSerializer

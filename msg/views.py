@@ -22,7 +22,7 @@ from msg.serializer import MsgSerializer, ScheduleSerializer, ScheduleCreateSeri
     WebEXMeetingSerializer, ScheduleMeetingSerializer, InternOnlineTestSerializer, InternOnlineTestCreateSerializer
 from third.thirdconfig import webEX_siteName, webEX_webExID, webEX_password
 from third.views.submail import sendEmailWithAttachmentFile
-from utils.customClass import InvestError, JSONResponse, MyCalendar, add_CalendarEvent
+from utils.customClass import InvestError, JSONResponse, MyCalendar, add_CalendarEvent, MySearchFilter
 import utils.sendMessage
 from utils.util import logexcption, loginTokenIsAvailable, SuccessResponse, InvestErrorResponse, ExceptionResponse, \
     catchexcption, returnListChangeToLanguage, returnDictChangeToLanguage, mySortQuery, checkSessionToken, \
@@ -157,7 +157,7 @@ class WebEXMeetingView(viewsets.ModelViewSet):
         update: 修改某一视频会议信息
         destroy: 删除某一视频会议
         """
-    filter_backends = (filters.SearchFilter, filters.DjangoFilterBackend,)
+    filter_backends = (MySearchFilter, filters.DjangoFilterBackend,)
     queryset = webexMeeting.objects.all().filter(is_deleted=False)
     filter_fields = ('title', 'meetingKey', 'createuser')
     search_fields = ('startDate', 'createuser__usernameC', 'createuser__usernameE')
@@ -610,7 +610,7 @@ class ScheduleView(viewsets.ModelViewSet):
         update:修改日程安排信息
         destroy:删除日程安排
         """
-    filter_backends = (filters.SearchFilter, filters.DjangoFilterBackend,)
+    filter_backends = (MySearchFilter, filters.DjangoFilterBackend,)
     queryset = schedule.objects.all().filter(is_deleted=False)
     filter_fields = ('proj', 'createuser', 'user', 'projtitle', 'country', 'manager')
     search_fields = ('createuser__usernameC', 'user__usernameC', 'user__mobile', 'proj__projtitleC', 'proj__projtitleE')
@@ -761,7 +761,7 @@ class WebEXUserView(viewsets.ModelViewSet):
         update: 修改某一视频会议参会人员信息
         destroy: 删除某一视频会议参会人员
         """
-    filter_backends = (filters.SearchFilter, filters.DjangoFilterBackend,)
+    filter_backends = (MySearchFilter, filters.DjangoFilterBackend,)
     queryset = webexUser.objects.all().filter(is_deleted=False)
     filter_fields = ('user', 'name', 'email', 'meeting', 'meetingRole')
     search_fields = ('meeting__startDate', 'user__usernameC', 'user__usernameE', 'name', 'email')

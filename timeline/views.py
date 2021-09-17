@@ -12,7 +12,7 @@ from timeline.models import timeline, timelineTransationStatu, timelineremark
 from timeline.serializer import TimeLineSerializer, TimeLineStatuSerializer, TimeLineCreateSerializer, \
     TimeLineStatuCreateSerializer, TimeLineRemarkSerializer, TimeLineListSerializer_admin, TimeLineUpdateSerializer, \
     TimeLineListSerializer_anonymous
-from utils.customClass import InvestError, JSONResponse
+from utils.customClass import InvestError, JSONResponse, MySearchFilter
 from utils.sendMessage import sendmessage_timelineauditstatuchange
 from utils.util import read_from_cache, write_to_cache, returnListChangeToLanguage, loginTokenIsAvailable, \
     returnDictChangeToLanguage, catchexcption, cache_delete_key, SuccessResponse, InvestErrorResponse, ExceptionResponse, \
@@ -27,7 +27,7 @@ class TimelineView(viewsets.ModelViewSet):
     update:修改时间轴信息
     destroy:删除时间轴
     """
-    filter_backends = (filters.SearchFilter, filters.DjangoFilterBackend,)
+    filter_backends = (MySearchFilter, filters.DjangoFilterBackend,)
     queryset = timeline.objects.all().filter(is_deleted=False)
     filter_fields = ('proj', 'investor','trader','isClose')
     search_fields = ('investor__usernameC', 'investor__usernameE', 'trader__usernameE', 'trader__usernameC', 'proj__projtitleC', 'proj__projtitleE')

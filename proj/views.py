@@ -37,7 +37,7 @@ from utils.util import catchexcption, read_from_cache, write_to_cache, loginToke
     returnListChangeToLanguage, \
     returnDictChangeToLanguage, SuccessResponse, InvestErrorResponse, ExceptionResponse, setrequestuser, \
     setUserObjectPermission, cache_delete_key, checkrequesttoken, logexcption, mySortQuery
-from utils.customClass import JSONResponse, InvestError, RelationFilter
+from utils.customClass import JSONResponse, InvestError, RelationFilter, MySearchFilter
 from django_filters import FilterSet
 
 class ProjectFilter(FilterSet):
@@ -73,7 +73,7 @@ class ProjectView(viewsets.ModelViewSet):
     getshareproj:获取分享的项目详情
     sendWXGroupPdf:发送群pdf
     """
-    filter_backends = (filters.SearchFilter,filters.DjangoFilterBackend,)
+    filter_backends = (MySearchFilter,filters.DjangoFilterBackend,)
     queryset = project.objects.all().filter(is_deleted=False)
     filter_class = ProjectFilter
     search_fields = ('projtitleC', 'projtitleE',)

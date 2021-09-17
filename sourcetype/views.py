@@ -16,7 +16,7 @@ from sourcetype.serializer import tagSerializer, countrySerializer, industrySeri
     transactionStatuSerializer, OrgtitletableSerializer, WebMenuSerializer, serviceSerializer, orgAttributeSerializer, \
     BDStatusSerializer, AndroidAppSerializer, OrgBdResponseSerializer, OrgLevelTypeSerializer, FamiliarLevelSerializer, \
     industryGroupSerializer
-from utils.customClass import  JSONResponse, InvestError
+from utils.customClass import JSONResponse, InvestError, MySearchFilter
 from utils.util import SuccessResponse, InvestErrorResponse, ExceptionResponse, returnListChangeToLanguage, \
     catchexcption, loginTokenIsAvailable, removeDuclicates
 
@@ -185,7 +185,7 @@ class CountryView(viewsets.ModelViewSet):
         update:修改国家
         destroy:删除国家
     """
-    filter_backends = (filters.SearchFilter, filters.DjangoFilterBackend,)
+    filter_backends = (MySearchFilter, filters.DjangoFilterBackend,)
     filter_fields = ('level', 'parent', 'countryC')
     search_fields = ('countryC', 'countryE', 'areaCode')
     queryset = Country.objects.all().filter(is_deleted=False)
@@ -269,7 +269,7 @@ class TitleView(viewsets.ModelViewSet):
         update:修改职位
         destroy:删除职位
     """
-    filter_backends = (filters.SearchFilter,)
+    filter_backends = (MySearchFilter,)
     search_fields = ('nameC', 'nameE')
     queryset = TitleType.objects.all().filter(is_deleted=False)
     serializer_class = titleTypeSerializer

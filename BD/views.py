@@ -28,7 +28,7 @@ from third.views.qiniufile import deleteqiniufile
 from timeline.models import timeline
 from timeline.models import timelineremark
 from usersys.models import MyUser
-from utils.customClass import RelationFilter, InvestError, JSONResponse, MyFilterSet
+from utils.customClass import RelationFilter, InvestError, JSONResponse, MyFilterSet, MySearchFilter
 from utils.sendMessage import sendmessage_orgBDMessage, sendmessage_orgBDExpireMessage, sendmessage_workReportDonotWrite
 from utils.util import loginTokenIsAvailable, SuccessResponse, InvestErrorResponse, ExceptionResponse, \
     returnListChangeToLanguage, catchexcption, returnDictChangeToLanguage, mySortQuery, add_perm, rem_perm, \
@@ -64,7 +64,7 @@ class ProjectBDView(viewsets.ModelViewSet):
     update:修改bd信息
     destroy:删除新项目BD
     """
-    filter_backends = (filters.DjangoFilterBackend,filters.SearchFilter)
+    filter_backends = (filters.DjangoFilterBackend, MySearchFilter)
     queryset = ProjectBD.objects.filter(is_deleted=False)
     filter_class = ProjectBDFilter
     search_fields = ('com_name', 'username', 'source')
@@ -532,7 +532,7 @@ class OrgBDView(viewsets.ModelViewSet):
     update:修改机构BD信息
     destroy:删除机构BD
     """
-    filter_backends = (filters.DjangoFilterBackend,filters.SearchFilter)
+    filter_backends = (filters.DjangoFilterBackend, MySearchFilter)
     queryset = OrgBD.objects.filter(is_deleted=False)
     filter_class = OrgBDFilter
     search_fields = ('proj__projtitleC', 'username', 'usermobile', 'manager__usernameC', 'org__orgnameC', 'org__orgnameE')
@@ -1172,7 +1172,7 @@ class MeetingBDView(viewsets.ModelViewSet):
     getShareMeetingBDdetail:根据sharetoken获取会议BD
     getShareMeetingBDtoken:获取会议BD分享sharetoken
     """
-    filter_backends = (filters.DjangoFilterBackend,filters.SearchFilter)
+    filter_backends = (filters.DjangoFilterBackend, MySearchFilter)
     queryset = MeetingBD.objects.filter(is_deleted=False)
     filter_class = MeetBDFilter
     search_fields = ('proj__projtitleC', 'username','manager__usernameC')
@@ -1899,7 +1899,7 @@ class OKRView(viewsets.ModelViewSet):
     update: 修改某一季度OKR
     destroy: 删除某一季度OKR
     """
-    filter_backends = (filters.DjangoFilterBackend, filters.SearchFilter)
+    filter_backends = (filters.DjangoFilterBackend, MySearchFilter)
     queryset = OKR.objects.filter(is_deleted=False)
     filter_class = OKRFilter
     search_fields = ('target',)
@@ -2052,7 +2052,7 @@ class OKRResultView(viewsets.ModelViewSet):
     update: 修改某一季度OKR相关结果
     destroy: 删除某一季度OKR相关结果
     """
-    filter_backends = (filters.DjangoFilterBackend, filters.SearchFilter)
+    filter_backends = (filters.DjangoFilterBackend, MySearchFilter)
     queryset = OKRResult.objects.filter(is_deleted=False)
     filter_class = OKRResultFilter
     search_fields = ('krs',)
