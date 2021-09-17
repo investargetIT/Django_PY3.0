@@ -1785,21 +1785,32 @@ def fulltextsearch(request):
         lang = request.GET.get('lang', 'cn')
         queryset = organization.objects.filter(is_deleted=False)
         queryset = OrganizationFilter(request.query_params, queryset=queryset, request=request).qs
-        es = Elasticsearch({HAYSTACK_CONNECTIONS['default']['URL']})
-        ret = es.search(index=HAYSTACK_CONNECTIONS['default']['INDEX_NAME'], size=50,
-                        body={
-                            "query": {
-                                "bool": {
-                                    "should": [
-                                        {"match_phrase": {"fileContent": searchText}},
-                                        {"match_phrase": {"remark": searchText}},
-                                    ]
-                                }
+        search_body = {
+            "query": {
+                "bool": {
+                    "must": [
+                        {
+                            "bool": {
+                                "must": {"terms": {"django_ct": ["org.orgremarks", "org.orgattachments"]}}
                             },
-                            "_source": ["id", "org", "remark", "fileContent"]
-                        })
+                        },
+                        {
+                            "bool": {
+                                "should": [
+                                    {"match_phrase": {"remark": searchText}},
+                                    {"match_phrase": {"fileContent": searchText}}
+                                ]
+                            }
+                        }
+                    ]
+                }
+            },
+            "_source": ["id", "org", "django_ct"]
+        }
+
+        results = getEsScrollResult(search_body)
         orgId_list = set()
-        for source in ret["hits"]["hits"]:
+        for source in results:
             orgid = source['_source'].get('org')
             if orgid:
                 orgId_list.add(orgid)
@@ -1837,6 +1848,25 @@ def fulltextsearch(request):
     except Exception:
         catchexcption(request)
         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+def getEsScrollResult(body):
+    es = Elasticsearch({HAYSTACK_CONNECTIONS['default']['URL']})
+    query = es.search(index=HAYSTACK_CONNECTIONS['default']['INDEX_NAME'], body=body, scroll='5m', size=1000)
+    results = query['hits']['hits']  # es查询出的结果第一页
+    total = query['hits']['total']  # es查询出的结果总量
+    scroll_id = query['_scroll_id']  # 游标用于输出es查询出的所有结果
+
+    for i in range(0, int(total / 1000) + 1):
+        scroll_body = {
+            "scroll": "5m",
+            "scroll_id": scroll_id
+        }
+        scroll_query = es.scroll(body=scroll_body)
+        scroll_id = scroll_query['_scroll_id']
+        scroll_result = scroll_query['hits']['hits']
+        results += scroll_result
+    return results
+
 
 def downloadOrgAttachments():
     attachment_qs = orgAttachments.objects.filter(is_deleted=False, key__isnull=False, org__is_deleted=False)
