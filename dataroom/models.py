@@ -140,9 +140,6 @@ class dataroom_User_file(MyModel):
                 pass
             else:
                 raise InvestError(code=2004, msg='用户已存在一个相同项目的dataroom了')
-        if not self.user.is_active:
-            self.user.is_active = True
-            self.user.save()
         super(dataroom_User_file, self).save(force_insert, force_update, using, update_fields)
 
 
