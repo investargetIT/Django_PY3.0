@@ -28,7 +28,7 @@ from third.views.qiniufile import deleteqiniufile, downloadFileToPath
 from utils.customClass import InvestError, JSONResponse, RelationFilter
 from utils.logicJudge import is_dataroomTrader, is_dataroomInvestor, is_projTrader
 from utils.sendMessage import sendmessage_dataroomuseradd, sendmessage_dataroomuserfileupdate
-from utils.somedef import file_iterator, addWaterMarkToPdfFiles, encryptPdfFilesWithPassword
+from utils.somedef import file_iterator, addWaterMarkToPdfFiles, encryptPdfFilesWithPassword, getEsScrollResult
 from utils.util import returnListChangeToLanguage, loginTokenIsAvailable, \
     returnDictChangeToLanguage, catchexcption, SuccessResponse, InvestErrorResponse, ExceptionResponse, \
     logexcption, checkrequesttoken, deleteExpireDir
@@ -475,7 +475,7 @@ def startMakeDataroomZipThread(directory_qs, file_qs, path, watermarkcontent=Non
                             arcname = pathfile[pre_len:].strip(os.path.sep)  # 相对路径
                             zipf.write(pathfile, arcname)
                 zipf.close()
-                zipf.close()
+
             if os.path.exists(self.path):
                 shutil.rmtree(self.path)
 
@@ -553,8 +553,8 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
             if request.GET.get('desc', 1) in ('1', u'1', 1):
                 sortfield = '-' + sortfield
             dataroomid = request.GET.get('dataroom',None)
-            if dataroomid is None:
-                raise InvestError(code=20072, msg='获取dataroom文件失败', detail='dataroom 不能空')
+            if dataroomid is None or not dataroom.objects.filter(id=dataroomid).exists():
+                raise InvestError(code=20072, msg='获取dataroom文件失败', detail='dataroom不能为空或者不存在')
             dataroominstance = dataroom.objects.get(id=dataroomid, is_deleted=False)
             if request.user.has_perm('dataroom.admin_getdataroom'):
                 pass
@@ -589,32 +589,39 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
                 queryset = user_dataroomInstance.file_userSeeFile.all().filter(is_deleted=False)
             else:
                 raise InvestError(2009, msg='获取dataroom文件路径失败')
-            queryset = self.filter_queryset(queryset).filter(isFile=True)
-            fileid_list = list(queryset.values_list('id', flat=True))
+            queryset = self.filter_queryset(queryset)
             search = request.GET.get('search', '')
-            es = Elasticsearch({HAYSTACK_CONNECTIONS['default']['URL']})
-            ret = es.search(index=HAYSTACK_CONNECTIONS['default']['INDEX_NAME'],
-                            body={
-                                    "_source": ["id", "dataroom", "filename"],
-                                    "query": {
-                                        "bool": {
-                                            "must":[
-                                                {"terms": {"id": fileid_list}},
-                                                {"bool": {"should": [
-                                                            {"match_phrase": {"fileContent": search}}
-                                                ]}}
-                                            ]
-                                        }
-                                    }
-                            })
+            search_body = {
+                "query": {
+                    "bool": {
+                        "must": [
+                            {
+                                "bool": {
+                                    "must": [{"term": {"django_ct": "dataroom.dataroomdirectoryorfile"}},
+                                             {"term": {"dataroom": int(dataroomid)}}]
+                                },
+                            },
+                            {
+                                "bool": {
+                                    "should": [
+                                        {"match_phrase": {"filename": search}},
+                                        {"match_phrase": {"fileContent": search}}
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                },
+                "_source": ["id", "dataroom", "filename", "django_ct"]
+            }
+            results = getEsScrollResult(search_body)
             searchIds = set()
-            for source in ret["hits"]["hits"]:
+            for source in results:
                 searchIds.add(source['_source']['id'])
             file_qs = queryset.filter(Q(id__in=searchIds) | Q(filename__icontains=search))
             count = file_qs.count()
             serializer = DataroomdirectoryorfilePathSerializer(file_qs, many=True)
-            return JSONResponse(
-                SuccessResponse({'count': count, 'data': returnListChangeToLanguage(serializer.data, lang)}))
+            return JSONResponse(SuccessResponse({'count': count, 'data': returnListChangeToLanguage(serializer.data, lang)}))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
