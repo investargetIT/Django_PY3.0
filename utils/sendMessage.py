@@ -317,11 +317,6 @@ def sendmessage_userauditstatuchange(model,receiver,types,sender=None):
                         logexcption()
                 if 'email' in types and sendEmail and checkEmailTrue(receiver.email):
                     try:
-                        if model.userstatus.id == 2:
-                            destination = receiver.email
-                            projectsign = 'uszOI1'
-                            vars = {'nameC':model.usernameC,'nameE':model.usernameE}
-                            xsendEmail(destination, projectsign, vars)
                         if model.userstatus.id == 3:
                             destination = receiver.email
                             projectsign = 'ZNRYV3'
@@ -527,8 +522,7 @@ def sendmessage_dataroomuseradd(model,receiver,types,sender=None):
                     except Exception:
                         logexcption()
 
-    if checkReceiverToSendMsg(receiver):
-        sendmessage_dataroomuseraddThread(model,receiver,types,sender).start()
+    sendmessage_dataroomuseraddThread(model,receiver,types,sender).start()
 
 
 def sendmessage_dataroomuserfileupdate(model,receiver,types,sender=None):
