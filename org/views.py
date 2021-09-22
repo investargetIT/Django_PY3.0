@@ -6,13 +6,12 @@ import datetime
 
 import xlwt
 from django.core.paginator import Paginator, EmptyPage
-from django.db.models import Q, FieldDoesNotExist, Max, Count
+from django.db.models import Q, FieldDoesNotExist
 from django.http import StreamingHttpResponse
-from elasticsearch import Elasticsearch
 from rest_framework import filters , viewsets
 from rest_framework.decorators import api_view
 
-from invest.settings import APILOG_PATH, HAYSTACK_CONNECTIONS
+from invest.settings import APILOG_PATH
 from mongoDoc.models import ProjectData, MergeFinanceData
 from org.models import organization, orgTransactionPhase, orgRemarks, orgContact, orgBuyout, orgManageFund, \
     orgInvestEvent, orgCooperativeRelationship, \
@@ -28,7 +27,7 @@ from sourcetype.models import TransactionPhases, TagContrastTable
 from third.views.qiniufile import deleteqiniufile, downloadFileToPath
 from usersys.models import UserRelation
 from utils.customClass import InvestError, JSONResponse, RelationFilter, MySearchFilter
-from utils.somedef import file_iterator
+from utils.somedef import file_iterator, getEsScrollResult
 from utils.util import loginTokenIsAvailable, catchexcption, read_from_cache, write_to_cache, \
     returnListChangeToLanguage, \
     returnDictChangeToLanguage, SuccessResponse, InvestErrorResponse, ExceptionResponse, setrequestuser, add_perm, \
@@ -1849,23 +1848,6 @@ def fulltextsearch(request):
         catchexcption(request)
         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-def getEsScrollResult(body):
-    es = Elasticsearch({HAYSTACK_CONNECTIONS['default']['URL']})
-    query = es.search(index=HAYSTACK_CONNECTIONS['default']['INDEX_NAME'], body=body, scroll='5m', size=1000)
-    results = query['hits']['hits']  # es查询出的结果第一页
-    total = query['hits']['total']  # es查询出的结果总量
-    scroll_id = query['_scroll_id']  # 游标用于输出es查询出的所有结果
-
-    for i in range(0, int(total / 1000) + 1):
-        scroll_body = {
-            "scroll": "5m",
-            "scroll_id": scroll_id
-        }
-        scroll_query = es.scroll(body=scroll_body)
-        scroll_id = scroll_query['_scroll_id']
-        scroll_result = scroll_query['hits']['hits']
-        results += scroll_result
-    return results
 
 
 def downloadOrgAttachments():

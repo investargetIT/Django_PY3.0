@@ -27,7 +27,7 @@ from proj.models import project
 from third.views.qiniufile import deleteqiniufile, downloadFileToPath
 from utils.customClass import InvestError, JSONResponse, RelationFilter, MySearchFilter
 from utils.sendMessage import sendmessage_dataroomuseradd, sendmessage_dataroomuserfileupdate
-from utils.somedef import file_iterator, addWaterMarkToPdfFiles, encryptPdfFilesWithPassword
+from utils.somedef import file_iterator, addWaterMarkToPdfFiles, encryptPdfFilesWithPassword, getEsScrollResult
 from utils.util import returnListChangeToLanguage, loginTokenIsAvailable, \
     returnDictChangeToLanguage, catchexcption, SuccessResponse, InvestErrorResponse, ExceptionResponse, \
     logexcption, checkrequesttoken, deleteExpireDir
@@ -581,32 +581,39 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
                 queryset = user_dataroomInstance.file_userSeeFile.all().filter(is_deleted=False)
             else:
                 raise InvestError(2009)
-            queryset = self.filter_queryset(queryset).filter(isFile=True)
-            fileid_list = list(queryset.values_list('id', flat=True))
+            queryset = self.filter_queryset(queryset)
             search = request.GET.get('search', '')
-            es = Elasticsearch({HAYSTACK_CONNECTIONS['default']['URL']})
-            ret = es.search(index=HAYSTACK_CONNECTIONS['default']['INDEX_NAME'], size=50,
-                            body={
-                                    "_source": ["id", "dataroom", "filename"],
-                                    "query": {
-                                        "bool": {
-                                            "must":[
-                                                {"terms": {"id": fileid_list}},
-                                                {"bool": {"should": [
-                                                            {"match_phrase": {"fileContent": search}}
-                                                ]}}
-                                            ]
-                                        }
-                                    }
-                            })
+            search_body = {
+                "query": {
+                    "bool": {
+                        "must": [
+                            {
+                                "bool": {
+                                    "must": [{"term": {"django_ct": "dataroom.dataroomdirectoryorfile"}},
+                                             {"term": {"dataroom": int(dataroomid)}},]
+                                },
+                            },
+                            {
+                                "bool": {
+                                    "should": [
+                                        {"match_phrase": {"filename": search}},
+                                        {"match_phrase": {"fileContent": search}}
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                },
+                "_source": ["id", "dataroom", "filename", "django_ct"]
+            }
+            results = getEsScrollResult(search_body)
             searchIds = set()
-            for source in ret["hits"]["hits"]:
+            for source in results:
                 searchIds.add(source['_source']['id'])
-            file_qs = queryset.filter(Q(id__in=searchIds) | Q(filename__icontains=search))
+            file_qs = queryset.filter(Q(id__in=searchIds) | Q(filename__icontains=search)).distinct()
             count = file_qs.count()
             serializer = DataroomdirectoryorfilePathSerializer(file_qs, many=True)
-            return JSONResponse(
-                SuccessResponse({'count': count, 'data': returnListChangeToLanguage(serializer.data, lang)}))
+            return JSONResponse(SuccessResponse({'count': count, 'data': returnListChangeToLanguage(serializer.data, lang)}))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:

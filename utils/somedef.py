@@ -7,10 +7,11 @@ from PIL import Image, ImageDraw, ImageFont
 import random
 
 from aip import AipOcr
+from elasticsearch import Elasticsearch
 from reportlab.lib.pagesizes import A1
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfgen import canvas
-from invest.settings import APILOG_PATH
+from invest.settings import APILOG_PATH, HAYSTACK_CONNECTIONS
 from reportlab.pdfbase.ttfonts import TTFont
 from pdfrw import PdfReader, PdfWriter, PageMerge
 from pdfminer.pdfparser import PDFParser
@@ -256,6 +257,24 @@ def BaiDuAipGetImageWord(image_path):
         f = open(filepath, 'a')
         f.writelines(now.strftime('%H:%M:%S') + '\n' + traceback.format_exc() + '\n\n')
         f.close()
+
+def getEsScrollResult(body):
+    es = Elasticsearch({HAYSTACK_CONNECTIONS['default']['URL']})
+    query = es.search(index=HAYSTACK_CONNECTIONS['default']['INDEX_NAME'], body=body, scroll='5m', size=1000)
+    results = query['hits']['hits']  # es查询出的结果第一页
+    total = query['hits']['total']  # es查询出的结果总量
+    scroll_id = query['_scroll_id']  # 游标用于输出es查询出的所有结果
+
+    for i in range(0, int(total / 1000) + 1):
+        scroll_body = {
+            "scroll": "5m",
+            "scroll_id": scroll_id
+        }
+        scroll_query = es.scroll(body=scroll_body)
+        scroll_id = scroll_query['_scroll_id']
+        scroll_result = scroll_query['hits']['hits']
+        results += scroll_result
+    return results
 
 
 #文件分片
