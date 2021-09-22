@@ -30,6 +30,7 @@ from timeline.models import timelineremark
 from usersys.models import MyUser
 from utils.customClass import RelationFilter, InvestError, JSONResponse, MyFilterSet, MySearchFilter
 from utils.sendMessage import sendmessage_orgBDMessage, sendmessage_orgBDExpireMessage, sendmessage_workReportDonotWrite
+from utils.somedef import getEsScrollResult
 from utils.util import loginTokenIsAvailable, SuccessResponse, InvestErrorResponse, ExceptionResponse, \
     returnListChangeToLanguage, catchexcption, returnDictChangeToLanguage, mySortQuery, add_perm, rem_perm, \
     read_from_cache, write_to_cache, cache_delete_key, logexcption, cache_delete_patternKey, checkSessionToken
@@ -1499,22 +1500,21 @@ class WorkReportView(viewsets.ModelViewSet):
                 queryset = queryset.filter(user=request.user)
             search = request.GET.get('search')
             if search:
-                es = Elasticsearch({HAYSTACK_CONNECTIONS['default']['URL']})
-                ret = es.search(index=HAYSTACK_CONNECTIONS['default']['INDEX_NAME'], size=50,
-                                body={
-                                    "_source": ["id", "report"],
-                                    "query": {
-                                        "bool": {
-                                            "must": {"match_phrase": {"marketMsg": search}},
-                                            "should": [
-                                                    {"match_phrase": {"django_ct": "BD.WorkReport"}},
-                                                    {"match_phrase": {"django_ct": "BD.WorkReportMarketMsg"}}
-                                            ]
-                                        }
-                                    }
-                                })
+                search_body = {
+                    "_source": ["id", "report"],
+                    "query": {
+                        "bool": {
+                            "must": {"match_phrase": {"marketMsg": search}},
+                            "should": [
+                                {"match_phrase": {"django_ct": "BD.WorkReport"}},
+                                {"match_phrase": {"django_ct": "BD.WorkReportMarketMsg"}}
+                            ]
+                        }
+                    }
+                }
+                results = getEsScrollResult(search_body)
                 searchIds = set()
-                for source in ret["hits"]["hits"]:
+                for source in results:
                     if source['_source'].get('report'):
                         searchIds.add(source['_source']['report'])
                 queryset = queryset.filter(id__in=searchIds)
