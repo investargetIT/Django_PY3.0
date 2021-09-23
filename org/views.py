@@ -155,7 +155,8 @@ class OrganizationView(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         data = request.data
         lang = request.GET.get('lang')
-        data['createuser'] = request.user.id
+        if not data.get('createuser'):
+            data['createuser'] = request.user.id
         data['datasource'] = request.user.datasource.id
         if request.user.has_perm('org.admin_addorg'):
             pass
