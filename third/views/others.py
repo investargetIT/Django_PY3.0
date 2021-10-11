@@ -24,18 +24,18 @@ def getcurrencyreat(request):
     try:
         tokenkey = request.META.get('HTTP_TOKEN')
         checkrequesttoken(tokenkey)
-        tcur = request.GET.get('tcur', None)
-        scur = request.GET.get('scur', None)
+        scur = request.GET.get('scur', None)  # 原币种
+        tcur = request.GET.get('tcur', None)  # 目标币种
         if not tcur or not scur:
             raise InvestError(20072)
-        response = requests.get('https://api.nowapi.com/?app=finance.rate&scur=%s&tcur=%s&appkey=18220&sign=9b97118c7cf61df11c736c79ce94dcf9'% (scur, tcur)).content
+        response = requests.get('http://op.juhe.cn/onebox/exchange/currency?from={}&to={}&key=92ad022726cff74d15d1d3b761701fa4'.format(scur, tcur)).content
         response = json.loads(response.decode())
         if isinstance(response, dict):
-            success = response.get('success',False)
-            if success in ['1',True]:
+            error_code = response.get('error_code')
+            if error_code == 0:
                 result = response.get('result',{})
             else:
-                raise InvestError(20071,msg=response.get('msg',None))
+                raise InvestError(20071,msg=response.get('reason',None))
         else:
             raise InvestError(20071,msg=response)
         return JSONResponse(SuccessResponse(result))
@@ -54,14 +54,14 @@ def getMobilePhoneAddress(request):
         mobile = request.GET.get('mobile', None)
         if not mobile:
             raise InvestError(20072, msg='手机号码不能为空')
-        response = requests.get('https://api.nowapi.com/?app=phone.get&phone=%s&appkey=18220&sign=9b97118c7cf61df11c736c79ce94dcf9&format=json' % mobile).content
+        response = requests.get('http://apis.juhe.cn/mobile/get?phone={}&dtype=&key=f439062c59bb86db8156446aa9737c72'.format(mobile)).content
         response = json.loads(response.decode())
         if isinstance(response,dict):
-            success = response.get('success',False)
-            if success in ['1',True]:
-                result = response.get('result',{})
+            error_code = response.get('error_code')
+            if error_code == 0:
+                result = response.get('result', {})
             else:
-                raise InvestError(20071,msg=response.get('msg',None))
+                raise InvestError(20071, msg=response.get('reason', None))
         else:
             raise InvestError(20071,msg=response)
         return JSONResponse(SuccessResponse(result))
