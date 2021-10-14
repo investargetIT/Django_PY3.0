@@ -1,4 +1,5 @@
 #coding=utf-8
+import base64
 import json
 import os
 import random
@@ -87,6 +88,57 @@ def ccupload(request):
         return JSONResponse(InvestErrorResponse(err))
     except Exception:
         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+#百度名片识别
+import json
+from urllib.request import urlopen
+from urllib.request import Request
+from urllib.error import URLError
+from urllib.parse import urlencode
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+
+
+"""
+    获取百度ocrtoken
+"""
+def fetch_token():
+    params = {'grant_type': 'client_credentials',
+              'client_id': 'XkI5HwU0R5RTdPNqepqq0Le5',
+              'client_secret': 'PlqfGj0bt2XGx61gKErUFfpm72ducMEt'}
+    post_data = urlencode(params).encode('utf-8')
+    req = Request('https://aip.baidubce.com/oauth/2.0/token', post_data)
+    try:
+        f = urlopen(req, timeout=10)
+        result_str = f.read()
+    except URLError as err:
+        raise InvestError(9999, msg='网络错误', detail=str(err))
+    result_str = result_str.decode()
+    result = json.loads(result_str)
+    if ('access_token' in result.keys() and 'scope' in result.keys()):
+        if not 'brain_all_scope' in result['scope'].split(' '):
+            raise InvestError(20071, msg='获取百度ocr token失败', detail='please ensure has check the ability')
+        return result['access_token']
+    else:
+        raise InvestError(20071, msg='获取百度ocr token失败', detail='client_id/client_secret参数错误')
+
+def ccupload_baidu(request):
+    try:
+        data_dict = request.FILES
+        uploaddata = None
+        for keya in data_dict.keys():
+            uploaddata = data_dict[keya]
+        token = fetch_token()
+        urlstr = "https://aip.baidubce.com/rest/2.0/ocr/v1/business_card" + "?access_token=" + token
+        headers = {'content-type': 'application/x-www-form-urlencoded'}
+        params = {"image": base64.b64encode(uploaddata.read())}
+        response = requests.post(urlstr, data=params, headers=headers)
+        return JSONResponse(SuccessResponse(response.content))
+    except InvestError as err:
+        return JSONResponse(InvestErrorResponse(err))
+    except Exception:
+        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
 
 import qrcode
 
