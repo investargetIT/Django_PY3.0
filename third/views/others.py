@@ -1,4 +1,5 @@
 #coding=utf-8
+import base64
 import json
 import os
 import random
@@ -28,14 +29,14 @@ def getcurrencyreat(request):
         tcur = request.GET.get('tcur', None)  # 目标币种
         if not tcur or not scur:
             raise InvestError(20072)
-        response = requests.get('http://op.juhe.cn/onebox/exchange/currency?from={}&to={}&key=92ad022726cff74d15d1d3b761701fa4'.format(scur, tcur)).content
+        response = requests.get('https://api.nowapi.com/?app=finance.rate&scur=%s&tcur=%s&appkey=18220&sign=9b97118c7cf61df11c736c79ce94dcf9' % (scur, tcur)).content
         response = json.loads(response.decode())
         if isinstance(response, dict):
-            error_code = response.get('error_code')
-            if error_code == 0:
+            success = response.get('success', False)
+            if success in ['1', True]:
                 result = response.get('result',{})
             else:
-                raise InvestError(code=2007, msg=response.get('reason',None))
+                raise InvestError(code=2007, msg=response.get('msg',None))
         else:
             raise InvestError(code=2007,msg=response)
         return JSONResponse(SuccessResponse(result))
@@ -54,14 +55,14 @@ def getMobilePhoneAddress(request):
         mobile = request.GET.get('mobile', None)
         if not mobile:
             raise InvestError(20072, msg='手机号码不能为空')
-        response = requests.get('http://apis.juhe.cn/mobile/get?phone={}&dtype=&key=f439062c59bb86db8156446aa9737c72'.format(mobile)).content
+        response = requests.get('https://api.nowapi.com/?app=phone.get&phone=%s&appkey=18220&sign=9b97118c7cf61df11c736c79ce94dcf9&format=json' % mobile).content
         response = json.loads(response.decode())
-        if isinstance(response,dict):
-            error_code = response.get('error_code')
-            if error_code == 0:
+        if isinstance(response, dict):
+            success = response.get('success', False)
+            if success in ['1', True]:
                 result = response.get('result', {})
             else:
-                raise InvestError(code=2007, msg=response.get('reason', None))
+                raise InvestError(code=2007, msg=response.get('msg', None))
         else:
             raise InvestError(code=2007,msg=response)
         return JSONResponse(SuccessResponse(result))
@@ -82,6 +83,56 @@ def ccupload(request):
             uploaddata = data_dict[keya]
         urlstr = 'http://bcr2.intsig.net/BCRService/BCR_VCF2?user=summer.xia@investarget.com&pass=P8YSCG7AQLM66S7M&json=1&lang=15'
         response = requests.post(urlstr, uploaddata)
+        return JSONResponse(SuccessResponse(response.content))
+    except InvestError as err:
+        return JSONResponse(InvestErrorResponse(err))
+    except Exception:
+        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+#百度名片识别
+import json
+from urllib.request import urlopen
+from urllib.request import Request
+from urllib.error import URLError
+from urllib.parse import urlencode
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+
+
+"""
+    获取百度ocrtoken
+"""
+def fetch_token():
+    params = {'grant_type': 'client_credentials',
+              'client_id': 'XkI5HwU0R5RTdPNqepqq0Le5',
+              'client_secret': 'PlqfGj0bt2XGx61gKErUFfpm72ducMEt'}
+    post_data = urlencode(params).encode('utf-8')
+    req = Request('https://aip.baidubce.com/oauth/2.0/token', post_data)
+    try:
+        f = urlopen(req, timeout=10)
+        result_str = f.read()
+    except URLError as err:
+        raise InvestError(9999, msg='网络错误-%s' % str(err))
+    result_str = result_str.decode()
+    result = json.loads(result_str)
+    if ('access_token' in result.keys() and 'scope' in result.keys()):
+        if not 'brain_all_scope' in result['scope'].split(' '):
+            raise InvestError(20071, msg='获取百度ocr token失败, please ensure has check the ability')
+        return result['access_token']
+    else:
+        raise InvestError(20071, msg='获取百度ocr token失败, client_id/client_secret参数错误')
+
+def ccupload_baidu(request):
+    try:
+        data_dict = request.FILES
+        uploaddata = None
+        for keya in data_dict.keys():
+            uploaddata = data_dict[keya]
+        token = fetch_token()
+        urlstr = "https://aip.baidubce.com/rest/2.0/ocr/v1/business_card" + "?access_token=" + token
+        headers = {'content-type': 'application/x-www-form-urlencoded'}
+        params = {"image": base64.b64encode(uploaddata.read())}
+        response = requests.post(urlstr, data=params, headers=headers)
         return JSONResponse(SuccessResponse(response.content))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
