@@ -130,6 +130,16 @@ IndustryGroup = views.IndustryGroupView.as_view({
         'get': 'list',
 })
 
+
+TrainingType = views.TrainingTypeView.as_view({
+        'get': 'list',
+})
+
+
+TrainingStatus = views.TrainingStatusView.as_view({
+        'get': 'list',
+})
+
 AndroidVersion = views.AndroidAppVersionView.as_view({
         'get': 'list',
         'post':'create',
@@ -186,6 +196,10 @@ urlpatterns = [
     url(r'^orgtitletable$', Orgtitletable,name='Orgtitletablesource',),
 
     url(r'^industryGroup$', IndustryGroup,name='IndustryGroupSource',),
+
+    url(r'^trainingType$', TrainingType,name='TrainingTypeSource',),
+
+    url(r'^trainingStatus$', TrainingStatus,name='TrainingStatusSource',),
 
     url(r'^education$', educationType,name='EducationSource',),
 

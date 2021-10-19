@@ -149,6 +149,44 @@ userperformanceappraisalrecord_deteil = views.UserPerformanceAppraisalRecordView
         'delete': 'destroy',
 })
 
+userWorkingPositionRecords_list = views.UserWorkingPositionRecordsView.as_view({
+        'get': 'list',
+        'post': 'create',
+})
+
+userWorkingPositionRecords_deteil = views.UserWorkingPositionRecordsView.as_view({
+        'put': 'update',
+        'delete': 'destroy',
+})
+userTrainingRecords_list = views.UserTrainingRecordsView.as_view({
+        'get': 'list',
+        'post': 'create',
+})
+
+userTrainingRecords_deteil = views.UserTrainingRecordsView.as_view({
+        'put': 'update',
+        'delete': 'destroy',
+})
+userMentorTrackingRecords_list = views.UserMentorTrackingRecordsView.as_view({
+        'get': 'list',
+        'post': 'create',
+})
+
+userMentorTrackingRecords_deteil = views.UserMentorTrackingRecordsView.as_view({
+        'put': 'update',
+        'delete': 'destroy',
+})
+
+userManageIndustryGroup_list = views.UserManageIndustryGroupView.as_view({
+        'get': 'list',
+        'post': 'create',
+})
+
+userManageIndustryGroup_deteil = views.UserManageIndustryGroupView.as_view({
+        'put': 'update',
+        'delete': 'destroy',
+})
+
 checkUserAccountExist = views.UserView.as_view({
         'get':'checkUserAccountExist',
 })
@@ -185,5 +223,13 @@ urlpatterns = [
     url(r'^personnelrelations/(?P<pk>\d+)/$', userpersonnelrelations_deteil, name='userpersonnelrelations-detail'),
     url(r'^performanceappraisal/$', userperformanceappraisalrecord_list, name='userperformanceappraisalrecord-list'),
     url(r'^performanceappraisal/(?P<pk>\d+)/$', userperformanceappraisalrecord_deteil, name='userperformanceappraisalrecord-detail'),
+    url(r'^workingposition/$', userWorkingPositionRecords_list, name='userworkingposition-list'),
+    url(r'^workingposition/(?P<pk>\d+)/$', userWorkingPositionRecords_deteil, name='userworkingposition-detail'),
+    url(r'^trainingrecords/$', userTrainingRecords_list, name='usertrainingrecords-list'),
+    url(r'^trainingrecords/(?P<pk>\d+)/$', userTrainingRecords_deteil, name='usertrainingrecords-detail'),
+    url(r'^mentortracking/$', userMentorTrackingRecords_list, name='usermentortracking-list'),
+    url(r'^mentortracking/(?P<pk>\d+)/$', userMentorTrackingRecords_deteil, name='usermentortracking-detail'),
+    url(r'^mentorindgroup/$', userManageIndustryGroup_list, name='userManageIndustryGroup-list'),
+    url(r'^manageindgroup/(?P<pk>\d+)/$', userManageIndustryGroup_deteil, name='userManageIndustryGroup-detail'),
     # url(r'^test/$',views.test)
 ]

@@ -23,7 +23,7 @@ from django.db.models import Q
 
 from APIlog.models import userinfoupdatelog
 from sourcetype.models import AuditStatus, ClientType, TitleType, Tag, DataSource, Country, OrgArea, \
-    FamiliarLevel, IndustryGroup, Education, PerformanceAppraisalLevel
+    FamiliarLevel, IndustryGroup, Education, PerformanceAppraisalLevel, TrainingType, TrainingStatus
 from utils.customClass import InvestError, MyForeignKey, MyModel
 from utils.somedef import makeAvatar
 
@@ -302,6 +302,8 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
     school = models.CharField(max_length=64, blank=True, null=True, help_text='院校')
     specialty = models.CharField(max_length=64, blank=True, null=True, help_text='专业')
     education = MyForeignKey(Education, blank=True, null=True, related_name='education_users', help_text='学历')
+    specialtyhobby = models.TextField(help_text='特长爱好', blank=True, null=True)
+    others = models.TextField(help_text='其他', blank=True, null=True)
     directSupervisor = MyForeignKey('self', blank=True, null=True, related_name='directsupervisor_users', help_text='直接上司')
     mentor = MyForeignKey('self', blank=True, null=True, related_name='mentor_users', help_text='mentor')
     resumeBucket = models.CharField(max_length=32, blank=True, null=True, help_text='简历对应七牛Bucket')
@@ -450,6 +452,7 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
             unreachuser.deletedtime = datetime.datetime.now()
             unreachuser.save()
 
+# 人事关系表
 class UserPersonnelRelations(MyModel):
     id = models.AutoField(primary_key=True)
     user = MyForeignKey(MyUser, related_name='mentoruser_personnelrelations', blank=True, null=True, on_delete=CASCADE)
@@ -467,23 +470,33 @@ class UserPersonnelRelations(MyModel):
 
     def save(self, *args, **kwargs):
         if not self.is_deleted:
-            if self.startDate >= self.endDate:
-                raise InvestError(2028, msg='任职时间冲突，编辑人事记录失败', detail='任职日期不符合实际')
-            QS = UserPersonnelRelations.objects.exclude(pk=self.pk).filter(is_deleted=False, user=self.user, type=self.type)
-            laterMeetingQS = QS.filter(startDate__gte=self.startDate)
-            earlierMeetingQS = QS.filter(startDate__lte=self.startDate)
-            if laterMeetingQS.exists():
-                laterMeeting = laterMeetingQS.order_by('startDate').first()
-                if self.endDate > laterMeeting.startDate:
-                    raise InvestError(2028, msg='任职时间冲突，编辑人事记录失败', detail='已存在开始时间处于本时间段内的记录')
-            if earlierMeetingQS.exists():
-                earlierMeeting = earlierMeetingQS.order_by('startDate').last()
-                if earlierMeeting.endDate > self.startDate:
-                    raise InvestError(2028, msg='任职时间冲突，编辑人事记录失败', detail='已存在结束时间处于本时间段内的记录')
+            if not self.startDate:
+                raise InvestError(2029, msg='开始时间不能为空，编辑人事记录失败', detail='开始时间不能为空')
+            if not self.endDate:
+                QS = UserPersonnelRelations.objects.exclude(pk=self.pk).filter(is_deleted=False, user=self.user)
+                if QS.filter(endDate=None).exists():
+                    raise InvestError(2029, msg='时间冲突，编辑人事记录失败', detail='结束日期冲突')
+                if QS.filter(endDate__gte=self.startDate).exists():
+                    raise InvestError(2029, msg='时间冲突，编辑人事记录失败', detail='开始日期冲突')
+            else:
+                if self.startDate >= self.endDate:
+                    raise InvestError(2028, msg='时间冲突，编辑人事记录失败', detail='日期不符合实际')
+                QS = UserPersonnelRelations.objects.exclude(pk=self.pk).filter(is_deleted=False, user=self.user, type=self.type)
+                laterMeetingQS = QS.filter(startDate__gte=self.startDate)
+                earlierMeetingQS = QS.filter(startDate__lte=self.startDate)
+                if laterMeetingQS.exists():
+                    laterMeeting = laterMeetingQS.order_by('startDate').first()
+                    if self.endDate > laterMeeting.startDate:
+                        raise InvestError(2028, msg='时间冲突，编辑人事记录失败', detail='已存在开始时间处于本时间段内的记录')
+                if earlierMeetingQS.exists():
+                    earlierMeeting = earlierMeetingQS.order_by('startDate').last()
+                    if earlierMeeting.endDate > self.startDate:
+                        raise InvestError(2028, msg='时间冲突，编辑人事记录失败', detail='已存在结束时间处于本时间段内的记录')
         if not self.datasource:
             self.datasource = self.user.datasource
         super(UserPersonnelRelations, self).save(*args,**kwargs)
 
+# 用户绩效考核记录表
 class UserPerformanceAppraisalRecord(MyModel):
     id = models.AutoField(primary_key=True)
     user = MyForeignKey(MyUser, related_name='user_performanceappraisalrecords', blank=True, null=True, on_delete=CASCADE)
@@ -505,6 +518,8 @@ class UserPerformanceAppraisalRecord(MyModel):
 
     def save(self, *args, **kwargs):
         if not self.is_deleted:
+            if not self.startDate or not self.endDate:
+                raise InvestError(2027, msg='开始结束时间不能为空，编辑绩效考核记录失败', detail='开始结束时间不能为空')
             if self.startDate >= self.endDate:
                 raise InvestError(2027, msg='绩效考核时间冲突，编辑绩效考核记录失败', detail='绩效考核日期不符合实际')
             QS = UserPerformanceAppraisalRecord.objects.exclude(pk=self.pk).filter(is_deleted=False, user=self.user)
@@ -522,6 +537,112 @@ class UserPerformanceAppraisalRecord(MyModel):
             self.datasource = self.user.datasource
         super(UserPerformanceAppraisalRecord, self).save(*args,**kwargs)
 
+# 任职岗位记录表
+class UserWorkingPositionRecords(MyModel):
+    id = models.AutoField(primary_key=True)
+    user = MyForeignKey(MyUser, related_name='user_workingpositions', blank=True, null=True, on_delete=CASCADE)
+    indGroup = MyForeignKey(IndustryGroup, blank=True, help_text='部门')
+    title = MyForeignKey(TitleType, blank=True, help_text='职位')
+    startDate = models.DateTimeField(blank=True, null=True, help_text='开始日期')
+    endDate = models.DateTimeField(blank=True, null=True, help_text='结束日期')
+    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_workingpositions')
+    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_workingpositions')
+    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_workingpositions')
+    datasource = MyForeignKey(DataSource, help_text='数据源', default=1, blank=True)
+
+    class Meta:
+        db_table = 'user_personnelrelations'
+
+    def save(self, *args, **kwargs):
+        if not self.is_deleted:
+            if not self.startDate:
+                raise InvestError(2029, msg='任职开始时间不能为空，编辑人事记录失败', detail='任职日期不符合实际')
+            QS = UserWorkingPositionRecords.objects.exclude(pk=self.pk).filter(is_deleted=False, user=self.user)
+            if not self.endDate:
+                if QS.filter(endDate=None).exists():
+                    raise InvestError(2029, msg='任职时间冲突，编辑人事记录失败', detail='任职结束日期冲突')
+                if QS.filter(endDate__gte=self.startDate).exists():
+                    raise InvestError(2029, msg='任职时间冲突，编辑人事记录失败', detail='任职开始日期冲突')
+            else:
+                if self.startDate >= self.endDate:
+                    raise InvestError(2029, msg='任职时间冲突，编辑人事记录失败', detail='任职日期不符合实际')
+                laterMeetingQS = QS.filter(startDate__gte=self.startDate)
+                earlierMeetingQS = QS.filter(startDate__lte=self.startDate)
+                if laterMeetingQS.exists():
+                    laterMeeting = laterMeetingQS.order_by('startDate').first()
+                    if self.endDate > laterMeeting.startDate:
+                        raise InvestError(2029, msg='任职时间冲突，编辑人事记录失败', detail='已存在开始时间处于本时间段内的记录')
+                if earlierMeetingQS.exists():
+                    earlierMeeting = earlierMeetingQS.order_by('startDate').last()
+                    if earlierMeeting.endDate > self.startDate:
+                        raise InvestError(2029, msg='任职时间冲突，编辑人事记录失败', detail='已存在结束时间处于本时间段内的记录')
+        if not self.datasource:
+            self.datasource = self.user.datasource
+        super(UserWorkingPositionRecords, self).save(*args,**kwargs)
+
+
+# 用户培训记录表
+class UserTrainingRecords(MyModel):
+    user = MyForeignKey(MyUser, related_name='user_trainingrecords', blank=True, null=True, on_delete=CASCADE)
+    trainingDate = models.DateTimeField(blank=True, null=True, help_text='培训日期')
+    trainingType = MyForeignKey(TrainingType, blank=True, help_text='培训形式')
+    trainingContent = models.TextField(blank=True, null=True, help_text='培训内容')
+    trainingStatus = MyForeignKey(TrainingStatus, blank=True, help_text='培训状态')
+    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_trainingrecords')
+    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_trainingrecords')
+    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_trainingrecords')
+    datasource = MyForeignKey(DataSource, help_text='数据源', default=1, blank=True)
+
+    class Meta:
+        db_table = 'user_trainingrecords'
+        ordering = ('user', '-trainingDate')
+
+    def save(self, *args, **kwargs):
+        if not self.datasource:
+            self.datasource = self.user.datasource
+        super(UserTrainingRecords, self).save(*args, **kwargs)
+
+#入职后导师计划跟踪记录表
+class UserMentorTrackingRecords(MyModel):
+    user = MyForeignKey(MyUser, related_name='user_mentortrackingrecords', blank=True, on_delete=CASCADE)
+    communicateDate = models.DateTimeField(blank=True, null=True, help_text='沟通日期')
+    communicateUser = MyForeignKey(MyUser, related_name='mentor_usertrackingrecords', blank=True, on_delete=CASCADE, help_text='沟通人')
+    communicateType = models.TextField(blank=True, null=True, help_text='沟通方式')
+    communicateContent = models.TextField(blank=True, null=True, help_text='沟通主要内容')
+    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_mentortrackingrecords')
+    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_mentortrackingrecords')
+    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_mentortrackingrecords')
+    datasource = MyForeignKey(DataSource, help_text='数据源', default=1, blank=True)
+
+    class Meta:
+        db_table = 'user_mentortrackingrecords'
+        ordering = ('user', '-communicateDate')
+
+    def save(self, *args, **kwargs):
+        if not self.datasource:
+            self.datasource = self.user.datasource
+        super(UserMentorTrackingRecords, self).save(*args, **kwargs)
+
+# 行业组负责人/部门主管
+class UserManageIndustryGroup(MyModel):
+    id = models.AutoField(primary_key=True)
+    manager = MyForeignKey(MyUser, related_name='user_manageindgroups', blank=True, null=True, on_delete=CASCADE)
+    indGroup = MyForeignKey(IndustryGroup, blank=True)
+    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_usermanageindgroups')
+    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_usermanageindgroups')
+    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_usermanageindgroups')
+    datasource = MyForeignKey(DataSource, help_text='数据源', default=1)
+
+    class Meta:
+        db_table = 'user_manageindustrygroup'
+
+    def save(self, *args, **kwargs):
+        if not self.is_deleted:
+            if UserManageIndustryGroup.objects.exclude(pk=self.pk).filter(is_deleted=False, indGroup=self.indGroup).exists():
+                raise InvestError(2035, msg='创建行业组负责人失败', detail='行业组负责人已存在')
+        if not self.datasource:
+            self.datasource = self.manager.datasource
+        super(UserManageIndustryGroup, self).save(*args, **kwargs)
 
 class UserRemarks(MyModel):
     id = models.AutoField(primary_key=True)

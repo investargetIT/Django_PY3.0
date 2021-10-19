@@ -5,7 +5,8 @@ from sourcetype.models import TransactionType, TransactionPhases, OrgArea, Tag, 
     AuditStatus, ProjectStatus, OrgType, FavoriteType, ClientType, TitleType, Country, \
     DataSource, TransactionStatus, webmenu, CharacterType, orgtitletable, Service, OrgAttribute, BDStatus, \
     AndroidAppVersion, OrgBdResponse, \
-    OrgLevelType, FamiliarLevel, IndustryGroup, DidiOrderType, Education, PerformanceAppraisalLevel
+    OrgLevelType, FamiliarLevel, IndustryGroup, DidiOrderType, Education, PerformanceAppraisalLevel, TrainingType, \
+    TrainingStatus
 from third.views.qiniufile import getUrlWithBucketAndKey
 
 
@@ -206,6 +207,16 @@ class OrgtitletableSerializer(serializers.ModelSerializer):
         model = orgtitletable
         exclude = ('is_deleted',)
         depth = 1
+
+class TrainingTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TrainingType
+        exclude = ('is_deleted',)
+
+class TrainingStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TrainingStatus
+        exclude = ('is_deleted',)
 
 
 class AndroidAppSerializer(serializers.ModelSerializer):

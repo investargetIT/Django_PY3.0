@@ -145,7 +145,7 @@ class TitleType(models.Model):
 
 class CharacterType(models.Model):
     '''
-    职位
+    角色
     '''
     id = models.AutoField(primary_key=True)
     characterC = models.CharField(max_length=20,blank=True,null=True)
@@ -155,6 +155,28 @@ class CharacterType(models.Model):
     def __str__(self):
         return self.characterC
 
+
+class TrainingType(models.Model):
+    '''
+    培训方式
+    '''
+    id = models.AutoField(primary_key=True)
+    type = models.CharField(max_length=32, blank=True, null=True)
+    is_deleted = models.BooleanField(blank=True, default=False)
+
+    def __str__(self):
+        return self.type
+
+class TrainingStatus(models.Model):
+    '''
+    培训状态
+    '''
+    id = models.AutoField(primary_key=True)
+    status = models.CharField(max_length=32, blank=True, null=True)
+    is_deleted = models.BooleanField(blank=True, default=False)
+
+    def __str__(self):
+        return self.status
 
 
 

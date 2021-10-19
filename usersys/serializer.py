@@ -7,11 +7,12 @@ from rest_framework import serializers
 from mongoDoc.models import MergeFinanceData
 from org.serializer import OrgCommonSerializer
 from sourcetype.serializer import tagSerializer, countrySerializer, titleTypeSerializer, \
-    PerformanceAppraisalLevelSerializer
+    PerformanceAppraisalLevelSerializer, TrainingStatusSerializer, TrainingTypeSerializer, industryGroupSerializer
 from third.views.qiniufile import getUrlWithBucketAndKey
 from utils.util import checkMobileTrue
 from .models import MyUser, UserRelation, UserFriendship, UnreachUser, UserRemarks, userAttachments, userEvents, \
-    UserPerformanceAppraisalRecord, UserPersonnelRelations
+    UserPerformanceAppraisalRecord, UserPersonnelRelations, UserTrainingRecords, UserMentorTrackingRecords, \
+    UserWorkingPositionRecords, UserManageIndustryGroup
 
 
 class UnreachUserSerializer(serializers.ModelSerializer):
@@ -43,7 +44,7 @@ class UserCommenSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = ('id', 'usernameC', 'usernameE', 'tags', 'userstatus', 'photourl', 'title', 'onjob', 'mobile', 'email',
-                  'is_active', 'org')
+                  'is_active', 'org', 'specialtyhobby', 'others', 'school', 'specialty', 'entryTime', 'bornTime', 'isMarried')
         depth = 1
 
     def get_tags(self, obj):
@@ -426,3 +427,70 @@ class UserPerformanceAppraisalRecordSerializer(serializers.ModelSerializer):
             return getUrlWithBucketAndKey(obj.performanceTableBucket, obj.performanceTableKey)
         else:
             return None
+
+
+class UserWorkingPositionRecordsCreateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = UserWorkingPositionRecords
+        fields = '__all__'
+
+
+class UserWorkingPositionRecordsSerializer(serializers.ModelSerializer):
+    user = UserSimpleSerializer()
+    indGroup = industryGroupSerializer()
+    title = titleTypeSerializer()
+
+    class Meta:
+        model = UserWorkingPositionRecords
+        exclude = ('deleteduser', 'datasource', 'is_deleted', 'deletedtime')
+
+
+class UserTrainingRecordsCreateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = UserTrainingRecords
+        fields = '__all__'
+
+
+class UserTrainingRecordsSerializer(serializers.ModelSerializer):
+    user = UserSimpleSerializer()
+    trainingStatus = TrainingStatusSerializer()
+    trainingType = TrainingTypeSerializer()
+
+    class Meta:
+        model = UserTrainingRecords
+        exclude = ('deleteduser', 'datasource', 'is_deleted', 'deletedtime')
+
+class UserMentorTrackingRecordsCreateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = UserMentorTrackingRecords
+        fields = '__all__'
+
+
+class UserMentorTrackingRecordsSerializer(serializers.ModelSerializer):
+    user = UserSimpleSerializer()
+    communicateUser = UserSimpleSerializer()
+
+
+    class Meta:
+        model = UserMentorTrackingRecords
+        exclude = ('deleteduser', 'datasource', 'is_deleted', 'deletedtime')
+
+
+class UserManageIndustryGroupCreateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = UserManageIndustryGroup
+        fields = '__all__'
+
+
+class UserManageIndustryGroupSerializer(serializers.ModelSerializer):
+    manager = UserSimpleSerializer()
+    indGroup = industryGroupSerializer()
+
+
+    class Meta:
+        model = UserManageIndustryGroup
+        exclude = ('deleteduser', 'datasource', 'is_deleted', 'deletedtime')

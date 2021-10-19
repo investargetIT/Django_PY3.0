@@ -8,14 +8,15 @@ from rest_framework import viewsets
 from sourcetype.models import Tag, TitleType, DataSource, Country, Industry, TransactionType, \
     TransactionPhases, OrgArea, CurrencyType, OrgType, CharacterType, ProjectStatus, TransactionStatus, orgtitletable, \
     webmenu, Service, OrgAttribute, BDStatus, AndroidAppVersion, OrgBdResponse, OrgLevelType, FamiliarLevel, \
-    IndustryGroup, DidiOrderType, Education, PerformanceAppraisalLevel
+    IndustryGroup, DidiOrderType, Education, PerformanceAppraisalLevel, TrainingType, TrainingStatus
 from sourcetype.serializer import tagSerializer, countrySerializer, industrySerializer, \
     titleTypeSerializer, DataSourceSerializer, orgAreaSerializer, transactionTypeSerializer, \
     transactionPhasesSerializer, \
     currencyTypeSerializer, orgTypeSerializer, characterTypeSerializer, ProjectStatusSerializer, \
     transactionStatuSerializer, OrgtitletableSerializer, WebMenuSerializer, serviceSerializer, orgAttributeSerializer, \
     BDStatusSerializer, AndroidAppSerializer, OrgBdResponseSerializer, OrgLevelTypeSerializer, FamiliarLevelSerializer, \
-    industryGroupSerializer, PerformanceAppraisalLevelSerializer, EducationSerializer
+    industryGroupSerializer, PerformanceAppraisalLevelSerializer, EducationSerializer, TrainingTypeSerializer, \
+    TrainingStatusSerializer
 from utils.customClass import  JSONResponse, InvestError
 from utils.util import SuccessResponse, InvestErrorResponse, ExceptionResponse, returnListChangeToLanguage, \
     catchexcption, loginTokenIsAvailable, removeDuclicates
@@ -43,27 +44,6 @@ class TagView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    # @loginTokenIsAvailable()
-    # def create(self, request, *args, **kwargs):
-    #     try:
-    #         if not request.user.is_superuser:
-    #             raise InvestError(2009,msg='没有操作权限')
-    #         with transaction.atomic():
-    #             lang = request.GET.get('lang')
-    #             data = request.data
-    #             serializer = self.serializer_class(data=data)
-    #             if serializer.is_valid():
-    #                  serializer.save()
-    #             else:
-    #                 raise InvestError(code=msg='%s' % serializer.error_messages)
-    #             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data, lang)))
-    #     except InvestError as err:
-    #         return JSONResponse(InvestErrorResponse(err))
-    #     except Exception:
-    #         catchexcption(request)
-    #         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
-
 
 class OrgBdResponseView(viewsets.ModelViewSet):
     """
@@ -83,7 +63,6 @@ class OrgBdResponseView(viewsets.ModelViewSet):
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
 
 class FamiliarLevelView(viewsets.ModelViewSet):
     """
@@ -560,6 +539,45 @@ class IndustryGroupView(viewsets.ModelViewSet):
     """
     queryset = IndustryGroup.objects.all().filter(is_deleted=False)
     serializer_class = industryGroupSerializer
+
+    def list(self, request, *args, **kwargs):
+        try:
+            lang = request.GET.get('lang')
+            queryset = self.filter_queryset(self.get_queryset())
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(SuccessResponse(returnListChangeToLanguage(serializer.data,lang)))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+class TrainingTypeView(viewsets.ModelViewSet):
+    """
+        list:获取所有培训方式
+    """
+
+    queryset = TrainingType.objects.all().filter(is_deleted=False)
+    serializer_class = TrainingTypeSerializer
+
+    def list(self, request, *args, **kwargs):
+        try:
+            lang = request.GET.get('lang')
+            queryset = self.filter_queryset(self.get_queryset())
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(SuccessResponse(returnListChangeToLanguage(serializer.data,lang)))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+class TrainingStatusView(viewsets.ModelViewSet):
+    """
+        list:获取所有培训状态
+    """
+
+    queryset = TrainingStatus.objects.all().filter(is_deleted=False)
+    serializer_class = TrainingStatusSerializer
 
     def list(self, request, *args, **kwargs):
         try:
