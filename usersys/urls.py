@@ -26,6 +26,10 @@ getRegistSource = views.UserView.as_view({
         'get': 'getUserRegisterSource',   # 获取注册来源
 })
 
+checkRequestTokenAvailable = views.UserView.as_view({
+        'get': 'checkRequestTokenAvailable',
+})
+
 find_password = views.UserView.as_view({
         'post': 'findpassword',
 })
@@ -198,6 +202,7 @@ urlpatterns = [
     url(r'^regsource$', getRegistSource, name='getRegistSource', ),
     url(r'^mobile$', getFalseMobile, name='getAvaibleFalseMobileNumber', ),
     url(r'^count$', getUserCount, name='getUserCount', ),
+    url(r'^checkToken/$', checkRequestTokenAvailable,name='user-checkRequestTokenAvailable',),
     url(r'^checkexists/$', checkUserAccountExist,name='user-checkUserAccountExist',),
     url(r'^(?P<pk>\d+)/$', user_detail,name='user-one'),
     url(r'^password/$', find_password ,name='find-password'),

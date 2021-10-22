@@ -703,6 +703,16 @@ class UserView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
     @loginTokenIsAvailable()
+    def checkRequestTokenAvailable(self, request, *args, **kwargs):
+        try:
+            return JSONResponse(SuccessResponse(True))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable()
     def getAvaibleFalseMobileNumber(self, request, *args, **kwargs):
         try:
             cursor = connection.cursor()
