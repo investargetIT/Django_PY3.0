@@ -181,16 +181,6 @@ userMentorTrackingRecords_deteil = views.UserMentorTrackingRecordsView.as_view({
         'delete': 'destroy',
 })
 
-userManageIndustryGroup_list = views.UserManageIndustryGroupView.as_view({
-        'get': 'list',
-        'post': 'create',
-})
-
-userManageIndustryGroup_deteil = views.UserManageIndustryGroupView.as_view({
-        'put': 'update',
-        'delete': 'destroy',
-})
-
 checkUserAccountExist = views.UserView.as_view({
         'get':'checkUserAccountExist',
 })
@@ -234,7 +224,5 @@ urlpatterns = [
     url(r'^trainingrecords/(?P<pk>\d+)/$', userTrainingRecords_deteil, name='usertrainingrecords-detail'),
     url(r'^mentortracking/$', userMentorTrackingRecords_list, name='usermentortracking-list'),
     url(r'^mentortracking/(?P<pk>\d+)/$', userMentorTrackingRecords_deteil, name='usermentortracking-detail'),
-    url(r'^mentorindgroup/$', userManageIndustryGroup_list, name='userManageIndustryGroup-list'),
-    url(r'^manageindgroup/(?P<pk>\d+)/$', userManageIndustryGroup_deteil, name='userManageIndustryGroup-detail'),
     # url(r'^test/$',views.test)
 ]

@@ -419,6 +419,7 @@ class IndustryGroup(models.Model):
     id = models.AutoField(primary_key=True)
     nameC = models.CharField(max_length=32, blank=True, null=True)
     nameE = models.CharField(max_length=32, blank=True, null=True)
+    manager = models.BigIntegerField(blank=True, null=True)
     shareInvestor = models.BooleanField(blank=True, default=False, help_text='是否共享投资人')
     datasource = MyForeignKey(DataSource, help_text='数据源', blank=True, default=1)
     is_deleted = models.BooleanField(blank=True, default=False)

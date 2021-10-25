@@ -623,26 +623,6 @@ class UserMentorTrackingRecords(MyModel):
             self.datasource = self.user.datasource
         super(UserMentorTrackingRecords, self).save(*args, **kwargs)
 
-# 行业组负责人/部门主管
-class UserManageIndustryGroup(MyModel):
-    id = models.AutoField(primary_key=True)
-    manager = MyForeignKey(MyUser, related_name='user_manageindgroups', blank=True, null=True, on_delete=CASCADE)
-    indGroup = MyForeignKey(IndustryGroup, blank=True)
-    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_usermanageindgroups')
-    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_usermanageindgroups')
-    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_usermanageindgroups')
-    datasource = MyForeignKey(DataSource, help_text='数据源', default=1)
-
-    class Meta:
-        db_table = 'user_manageindustrygroup'
-
-    def save(self, *args, **kwargs):
-        if not self.is_deleted:
-            if UserManageIndustryGroup.objects.exclude(pk=self.pk).filter(is_deleted=False, indGroup=self.indGroup).exists():
-                raise InvestError(2035, msg='创建行业组负责人失败', detail='行业组负责人已存在')
-        if not self.datasource:
-            self.datasource = self.manager.datasource
-        super(UserManageIndustryGroup, self).save(*args, **kwargs)
 
 class UserRemarks(MyModel):
     id = models.AutoField(primary_key=True)
