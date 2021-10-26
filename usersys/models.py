@@ -456,7 +456,7 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
 class UserPersonnelRelations(MyModel):
     id = models.AutoField(primary_key=True)
     user = MyForeignKey(MyUser, related_name='mentoruser_personnelrelations', blank=True, null=True, on_delete=CASCADE)
-    supervisorOrMentor = MyForeignKey(MyUser, blank=True, null=True, related_name='historysupervisor_personnelrelations', help_text='直接上司')
+    supervisorOrMentor = MyForeignKey(MyUser, blank=True, null=True, related_name='supervisorOrMentor_personnelrelations', help_text='直接上司')
     startDate = models.DateTimeField(blank=True, null=True, help_text='开始日期')
     endDate = models.DateTimeField(blank=True, null=True, help_text='结束日期')
     type = models.BooleanField(blank=True, default=0, help_text='类型（直接上司/0或mentor/1）')
@@ -466,14 +466,14 @@ class UserPersonnelRelations(MyModel):
     datasource = MyForeignKey(DataSource, help_text='数据源', default=1, blank=True)
 
     class Meta:
-        db_table = 'user_personnelrelations'
+        db_table = 'user_personnelrelation'
 
     def save(self, *args, **kwargs):
         if not self.is_deleted:
             if not self.startDate:
                 raise InvestError(2029, msg='开始时间不能为空，编辑人事记录失败', detail='开始时间不能为空')
             if not self.endDate:
-                QS = UserPersonnelRelations.objects.exclude(pk=self.pk).filter(is_deleted=False, user=self.user)
+                QS = UserPersonnelRelations.objects.exclude(pk=self.pk).filter(is_deleted=False, user=self.user, type=self.type)
                 if QS.filter(endDate=None).exists():
                     raise InvestError(2029, msg='时间冲突，编辑人事记录失败', detail='结束日期冲突')
                 if QS.filter(endDate__gte=self.startDate).exists():
@@ -551,7 +551,7 @@ class UserWorkingPositionRecords(MyModel):
     datasource = MyForeignKey(DataSource, help_text='数据源', default=1, blank=True)
 
     class Meta:
-        db_table = 'user_personnelrelations'
+        db_table = 'user_workingpositionrecord'
 
     def save(self, *args, **kwargs):
         if not self.is_deleted:
