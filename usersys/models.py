@@ -466,7 +466,7 @@ class UserPersonnelRelations(MyModel):
     datasource = MyForeignKey(DataSource, help_text='数据源', default=1, blank=True)
 
     class Meta:
-        db_table = 'user_personnelrelation'
+        db_table = 'user_personnelrelations'
 
     def save(self, *args, **kwargs):
         if not self.is_deleted:
@@ -551,7 +551,7 @@ class UserWorkingPositionRecords(MyModel):
     datasource = MyForeignKey(DataSource, help_text='数据源', default=1, blank=True)
 
     class Meta:
-        db_table = 'user_workingpositionrecord'
+        db_table = 'user_workingpositionrecords'
 
     def save(self, *args, **kwargs):
         if not self.is_deleted:
