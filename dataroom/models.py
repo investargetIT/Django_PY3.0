@@ -72,6 +72,7 @@ class dataroomdirectoryorfile(MyModel):
     key = models.CharField(max_length=128,blank=True,null=True,help_text='文件路径')
     bucket = models.CharField(max_length=128,blank=True,null=True,help_text='文件所在空间')
     isFile = models.BooleanField(blank=True,default=False,help_text='true/文件，false/目录')
+    isTraingFile = models.BooleanField(blank=True, default=False, help_text='true/培训文件，false/普通文件')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_dataroomdirectories')
     createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_dataroomdirectories')
     lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_dataroomdirectories')
