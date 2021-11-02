@@ -105,13 +105,14 @@ class DataroomView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable()
+    @loginTokenIsAvailable(['dataroom.get_companydataroom'])
     def companylist(self, request, *args, **kwargs):
         try:
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
             queryset = self.filter_queryset(self.get_queryset()).filter(datasource=self.request.user.datasource, isCompanyFile=True)
+            queryset = queryset.filter(Q(onlyTrader=False ) | Q(onlyTrader=True, proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False))
             try:
                 count = queryset.count()
                 queryset = Paginator(queryset, page_size)
@@ -553,7 +554,8 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
             elif dataroominstance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
                 pass
             elif dataroominstance.isCompanyFile and request.user.has_perm('dataroom.get_companydataroom'):
-                pass
+                if dataroominstance.onlyTrader and not dataroominstance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+                    raise InvestError(2009)
             else:
                 raise InvestError(2009)
             queryset = self.filter_queryset(self.get_queryset()).filter(datasource=self.request.user.datasource)
@@ -574,8 +576,13 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
             if dataroomid is None:
                 raise InvestError(code=20072, msg='dataroom 不能空')
             dataroominstance = dataroom.objects.get(id=dataroomid, is_deleted=False)
-            if request.user.has_perm('dataroom.admin_getdataroom') or dataroominstance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists() or (dataroominstance.isCompanyFile and request.user.has_perm('dataroom.get_companydataroom')):
+            if request.user.has_perm('dataroom.admin_getdataroom') or dataroominstance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
                 queryset = self.get_queryset()
+            elif dataroominstance.isCompanyFile and request.user.has_perm('dataroom.get_companydataroom'):
+                if dataroominstance.onlyTrader and not dataroominstance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+                    raise InvestError(2009)
+                else:
+                    queryset = self.get_queryset()
             elif dataroom_User_file.objects.filter(user=request.user, dataroom=dataroomid).exists():
                 user_dataroomInstance = dataroom_User_file.objects.filter(user=request.user, dataroom__id=dataroomid).first()
                 queryset = user_dataroomInstance.file_userSeeFile.all().filter(is_deleted=False)
