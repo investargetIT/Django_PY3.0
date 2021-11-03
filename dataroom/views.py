@@ -112,7 +112,8 @@ class DataroomView(viewsets.ModelViewSet):
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
             queryset = self.filter_queryset(self.get_queryset()).filter(datasource=self.request.user.datasource, isCompanyFile=True)
-            queryset = queryset.filter(Q(onlyTrader=False ) | Q(onlyTrader=True, proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False))
+            if not request.user.has_perm('dataroom.admin_deletedataroom'):
+                queryset = queryset.filter(Q(onlyTrader=False ) | Q(onlyTrader=True, proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False))
             try:
                 count = queryset.count()
                 queryset = Paginator(queryset, page_size)
