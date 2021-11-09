@@ -172,6 +172,7 @@ urlpatterns = [
         url(r'^orgbd/response/$', orgbd_responsecount, name='orgbd_responsecount'),
         url(r'^orgbd/proj/$', orgbd_projectcount, name='orgbd_projectcount'),
         url(r'^orgbd/(?P<pk>\d+)/$', orgbd_detail, name='orgbd_detail'),
+        url(r'^orgbd/import/$', views.importOrgBDWithXlsfile, name='orgbd_detail'),
         url(r'^orgbd/black/$', orgbdblack_list, name='orgbdblack_list'),
         url(r'^orgbd/black/(?P<pk>\d+)/$', orgbdblack_detail, name='orgbdblack_detail'),
         url(r'^orgbd/comment/$', orgbdcomment_list, name='orgbdcomment_list'),
