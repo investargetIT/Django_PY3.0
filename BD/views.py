@@ -1137,14 +1137,13 @@ class OrgBDCommentsView(viewsets.ModelViewSet):
 
 
 
-def saveOrgBdAndRemark(proj, org, manager, isimportant, createuser, expirationtime=None, bduser=None, remark=None):
+def saveOrgBdAndRemark(proj_id, org, manager, isimportant, createuser, bduser=None, remark=None):
     try:
         bdinstance = OrgBD()
-        bdinstance.proj = proj
+        bdinstance.proj_id = proj_id
         bdinstance.org = org
         bdinstance.manager = manager
         bdinstance.isimportant = isimportant
-        bdinstance.expirationtime = expirationtime
         bdinstance.bduser = bduser
         bdinstance.createuser = createuser
         bdinstance.save()
@@ -1153,35 +1152,29 @@ def saveOrgBdAndRemark(proj, org, manager, isimportant, createuser, expirationti
             commentinstance.orgBD = bdinstance
             commentinstance.comments = remark
             commentinstance.save()
-    except Exception:
-        logexcption()
+    except Exception as err:
+        logexcption(str(err))
 
 
-def importOrgBD(xls_datas, createuser):
+def importOrgBD(xls_datas, proj_id, createuser):
     try:
-        orgs, projs, users= {}, {}, {}
+        orgs, users= {}, {}
         has_perm = False
         if createuser.has_perm('BD.manageOrgBD') or createuser.has_perm('BD.user_addOrgBD') :
             has_perm = True
         for row in xls_datas:
             try:
-                projtitle = row['项目名称']
-                if projs.get(projtitle):
-                    proj = projs[projtitle]
-                else:
-                    proj = project.objects.get(is_deleted=False, projtitleC=projtitle)
-                    projs[projtitle] = proj
                 orgfullname = row['机构全称']
                 if orgs.get(orgfullname):
                     org = orgs[orgfullname]
                 else:
                     org = organization.objects.get(is_deleted=False, orgfullname=orgfullname)
                     orgs[orgfullname] = org
-                if has_perm or is_projTrader(createuser, proj.id):
+                if has_perm or is_projTrader(createuser, proj_id):
                     pass      # 有权限，通过
                 else:
                     continue  # 没有权限，跳过
-                if OrgBDBlack.objects.filter(is_deleted=False, org=org, proj=proj).exists():
+                if OrgBDBlack.objects.filter(is_deleted=False, org=org, proj_id=proj_id).exists():
                     continue  # 黑名单机构，跳过
                 usermobile = row['联系人手机号码']
                 if usermobile:
@@ -1190,37 +1183,33 @@ def importOrgBD(xls_datas, createuser):
                         continue  # bd用户姓名与手机号码不匹配，跳过
                 else:
                     bduser = None
-
                 managermobile = row['负责人手机号码']
                 if users.get(managermobile):
                     manager = users[managermobile]
                 else:
                     manager = MyUser.objects.get(is_deleted=False, mobile=managermobile)
                     users[managermobile] = manager
-                if row['负责人'] and manager.usernameC != row['负责人']:
-                    continue  # 负责人姓名与手机号码不匹配，跳过
-
-                isImportant = row['是否重点BD']
-                isimportant = True if isImportant == '是' else False
-                expirationtime = row['任务时间']
-                expirationtime = expirationtime + 'T00:00:00' if expirationtime else None
-                remark = row['机构BD备注'] if row['机构BD备注'] else None
-                saveOrgBdAndRemark(proj, org, manager, isimportant, createuser, expirationtime, bduser, remark)
-            except Exception:
-                logexcption()     # 解析单行数据失败，跳过该行
+                level = {'低': 0, '中': 1, '高': 2, '': 0}
+                isimportant = level[row['机构优先级']] if row['机构优先级'] else 0
+                remark = row['机构反馈'] if row['机构反馈'] else None
+                saveOrgBdAndRemark(proj_id, org, manager, isimportant, createuser, bduser, remark)
+            except Exception as err:
+                logexcption(str(err))     # 解析单行数据失败，跳过该行
     except Exception:
         logexcption()
+
 @api_view(['POST'])
 @checkRequestToken()
 def importOrgBDWithXlsfile(request):
     try:
+        proj_id = request.data['proj']
         uploaddata = request.FILES.get('file')
         uploaddata.open()
         r = uploaddata.read()
         uploaddata.close()
         xls_datas = excel_table_byindex(file_contents=r)
         # importOrgBD(xls_datas)
-        t = threading.Thread(target=importOrgBD, args=(xls_datas, request.user))
+        t = threading.Thread(target=importOrgBD, args=(xls_datas, proj_id, request.user))
         t.start()  # 启动线程，即让线程开始执行
         return JSONResponse(SuccessResponse({'isStart': True}))
     except InvestError as err:
