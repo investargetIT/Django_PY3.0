@@ -1177,12 +1177,34 @@ def importOrgBD(xls_datas, proj_id, createuser):
                 if OrgBDBlack.objects.filter(is_deleted=False, org=org, proj_id=proj_id).exists():
                     continue  # 黑名单机构，跳过
                 usermobile = row['联系人手机号码']
-                if usermobile:
-                    bduser = MyUser.objects.get(is_deleted=False, mobile=usermobile)
-                    if row['联系人'] and bduser.usernameC != row['联系人']:
-                        continue  # bd用户姓名与手机号码不匹配，跳过
-                else:
+                useremail = row['联系人邮箱']
+                if usermobile and useremail:   # 手机邮箱都存在
+                    try:                       # 先尝试用手机查询用户
+                        bduser = MyUser.objects.get(is_deleted=False, mobile=usermobile)
+                    except MyUser.DoesNotExist:    # 手机查询未找到用户
+                        try:                       # 再尝试用邮箱查询用户
+                            bduser = MyUser.objects.get(is_deleted=False, email=useremail)
+                        except MyUser.DoesNotExist:    # 邮箱查询也未找到用户
+                            user = MyUser(email=useremail, mobile=usermobile, usernameC=row['联系人'], userstatus_id=2, datasource=createuser.datasource)
+                            user.set_password('Aa123456')  # 创建新用户
+                            user.save()
+                            bduser = user
+                elif usermobile or useremail:   # 只存在手机或者邮箱
                     bduser = None
+                    if usermobile:
+                        try:
+                            bduser = MyUser.objects.get(is_deleted=False, mobile=usermobile)
+                        except MyUser.DoesNotExist:
+                            continue     # 查询不到用户 跳过
+                    if useremail:
+                        try:
+                            bduser = MyUser.objects.get(is_deleted=False, email=useremail)
+                        except MyUser.DoesNotExist:
+                            continue     # 查询不到用户 跳过
+                    if bduser and row['联系人'] and bduser.usernameC != row['联系人']:
+                        continue     # 查到的用户与输入的姓名不匹配，跳过
+                else:
+                    bduser = None    # 未输入手机或者邮箱，按照无用户创建
                 managermobile = row['负责人手机号码']
                 if users.get(managermobile):
                     manager = users[managermobile]
