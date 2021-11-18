@@ -316,7 +316,7 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
     is_staff = models.BooleanField(help_text='登录admin', default=False, blank=True,)
     hasIM = models.BooleanField(help_text='是否已注册环信聊天账号', default=False, blank=True)
     page = models.SmallIntegerField(blank=True, default=10, null=True, help_text='分页条数')
-    is_active = models.BooleanField(help_text='是否活跃', default=True, blank=True,)
+    is_active = models.BooleanField(help_text='是否活跃', default=False, blank=True,)
     deleteduser = MyForeignKey('self',blank=True,null=True,related_name='userdelete_users')
     createuser = MyForeignKey('self',blank=True,null=True,related_name='usercreate_users')
     datasource = MyForeignKey(DataSource,help_text='数据源',blank=True,null=True)
@@ -336,28 +336,10 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
         permissions = (
             ('as_investor', u'投资人身份类型'),
             ('as_trader', u'交易师身份类型'),
-            ('as_admin', u'管理员身份类型'),
 
-            ('user_adduser', u'用户新增用户'),
-            ('user_deleteuser', u'用户删除用户(obj级别)'),
-            ('user_changeuser', u'用户修改用户(obj级别)'),
-            ('user_getuser', u'用户查看用户(obj级别)'),
-            ('user_getuserbase', u'用户查看用户基本信息'),
+            ('admin_manageuser', u'管理用户数据'),
 
-            ('getProjReport', u'获取项目报表'),
-
-            ('admin_adduser', u'管理员新增用户'),
-            ('admin_deleteuser', u'管理员删除用户'),
-            ('admin_changeuser', u'管理员修改用户基本信息'),
-            ('admin_getuser', u'管理员查看用户'),
-
-            ('user_addfavorite', '用户主动推荐favorite(obj级别——给交易师的)'),
-            ('user_getfavorite', '用户查看favorite(obj级别——给交易师的)'),
-            ('user_interestproj', '用户主动联系favorite(obj级别——给投资人的)'),
-
-            ('admin_getmongoprojremark', u'管理员查看mongo项目备注'),
-            ('admin_deletemongoprojremark', u'管理员删除mongo项目备注'),
-            ('admin_manageWXChatData', u'管理员管理微信消息'),
+            ('admin_managemongo', u'管理mongo数据'),
         )
     def save(self, *args, **kwargs):
         if not self.usercode:
@@ -366,9 +348,6 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
             raise InvestError(code=8888,msg='datasource有误')
         if self.pk and self.groups.exists() and self.groups.first().datasource != self.datasource:
             raise InvestError(code=8888,msg='group 与 user datasource不同')
-        # if self.country:
-        #     if self.country.datasource != self.datasource:
-        #         raise InvestError(8888)
         try:
             if not self.mobileAreaCode:
                 self.mobileAreaCode = '86'
@@ -405,8 +384,6 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
         if self.pk:
             olduser = MyUser.objects.get(pk=self.pk,datasource=self.datasource)
             if not self.is_deleted:
-                if not olduser.createuser and self.createuser:
-                    assign_perm('usersys.user_deleteuser', self.createuser, self)
                 if olduser.mobile != self.mobile and self.lastmodifyuser:
                     userinfoupdatelog(user_id=self.pk, user_name=self.usernameC.encode(encoding='utf-8'), type='mobile',
                                       before=olduser.mobile, after=self.mobile, requestuser_id=self.lastmodifyuser_id,
@@ -429,11 +406,6 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
                                       before=oldOrgName, after=newOrgName, requestuser_id=self.lastmodifyuser_id,
                                       requestuser_name=self.lastmodifyuser.usernameC.encode(encoding='utf-8'),
                                       datasource=self.datasource_id).save()
-            else:
-                if olduser.createuser:
-                    remove_perm('usersys.user_getuser', olduser.createuser, self)
-                    remove_perm('usersys.user_changeuser', olduser.createuser, self)
-                    remove_perm('usersys.user_deleteuser', olduser.createuser, self)
 
         if not self.photoKey:
             if self.usernameC:
@@ -467,7 +439,9 @@ class UserPersonnelRelations(MyModel):
 
     class Meta:
         db_table = 'user_personnelrelations'
-
+        permissions = (
+            ('admin_managepersonnelrelation', u'管理人事关系'),
+        )
     def save(self, *args, **kwargs):
         if not self.is_deleted:
             if not self.startDate:
@@ -636,9 +610,7 @@ class UserRemarks(MyModel):
     class Meta:
         db_table = 'user_remarks'
         permissions = (
-            ('get_userremark', u'查看所有用户备注'),
-            ('update_userremark', u'修改所有用户备注'),
-            ('delete_userremark', u'删除所有用户备注'),
+
         )
 
 
@@ -767,66 +739,12 @@ class UserRelation(MyModel):
                     self.relationtype = False
         if self.investoruser.id == self.traderuser.id:
             raise InvestError(code=2014,msg='投资人和交易师不能是同一个人')
-        if self.pk:
-            if self.is_deleted:
-                remove_perm('usersys.user_getuser', self.traderuser, self.investoruser)
-                remove_perm('usersys.user_changeuser', self.traderuser, self.investoruser)
-                remove_perm('usersys.user_deleteuser', self.traderuser, self.investoruser)
-
-                remove_perm('usersys.user_getuserrelation', self.traderuser, self)
-                remove_perm('usersys.user_changeuserrelation', self.traderuser, self)
-                remove_perm('usersys.user_deleteuserrelation', self.traderuser, self)
-
-                remove_perm('usersys.user_addfavorite', self.traderuser, self.investoruser)
-                remove_perm('usersys.user_getfavorite', self.traderuser, self.investoruser)
-                remove_perm('usersys.user_interestproj', self.investoruser, self.traderuser)
-            else:
-                oldrela = UserRelation.objects.get(pk=self.pk)
-                if oldrela.traderuser != self.traderuser or oldrela.investoruser != self.investoruser:
-                    remove_perm('usersys.user_getuser', oldrela.traderuser, oldrela.investoruser)
-                    remove_perm('usersys.user_changeuser', oldrela.traderuser, oldrela.investoruser)
-                    remove_perm('usersys.user_deleteuser', oldrela.traderuser, oldrela.investoruser)
-
-                    remove_perm('usersys.user_getuserrelation', oldrela.traderuser, self)
-                    remove_perm('usersys.user_changeuserrelation', oldrela.traderuser, self)
-                    remove_perm('usersys.user_deleteuserrelation', oldrela.traderuser, self)
-
-                    remove_perm('usersys.user_addfavorite', self.traderuser, self.investoruser)
-                    remove_perm('usersys.user_getfavorite', self.traderuser, self.investoruser)
-                    remove_perm('usersys.user_interestproj', self.investoruser, self.traderuser)
-
-                    assign_perm('usersys.user_getuser', self.traderuser, self.investoruser)
-                    assign_perm('usersys.user_changeuser', self.traderuser, self.investoruser)
-                    assign_perm('usersys.user_deleteuser', self.traderuser, self.investoruser)
-
-                    assign_perm('usersys.user_getuserrelation', self.traderuser, self)
-                    assign_perm('usersys.user_changeuserrelation', self.traderuser, self)
-                    assign_perm('usersys.user_deleteuserrelation', self.traderuser, self)
-
-                    assign_perm('usersys.user_addfavorite', self.traderuser, self.investoruser)
-                    assign_perm('usersys.user_getfavorite', self.traderuser, self.investoruser)
-                    assign_perm('usersys.user_interestproj', self.investoruser, self.traderuser)
-        else:
-            assign_perm('usersys.user_getuser', self.traderuser, self.investoruser)
-            assign_perm('usersys.user_changeuser', self.traderuser, self.investoruser)
-            assign_perm('usersys.user_deleteuser', self.traderuser, self.investoruser)
-
-            assign_perm('usersys.user_addfavorite', self.traderuser, self.investoruser)
-            assign_perm('usersys.user_getfavorite', self.traderuser, self.investoruser)
-            assign_perm('usersys.user_interestproj', self.investoruser, self.traderuser)
         super(UserRelation, self).save(*args, **kwargs)
+
     class Meta:
         db_table = "user_relation"
         permissions =  (
-            ('admin_adduserrelation', u'管理员建立用户联系'),
-            ('admin_changeuserrelation', u'管理员修改用户联系'),
-            ('admin_deleteuserrelation', u'管理员删除用户联系'),
-            ('admin_getuserrelation', u'管理员查看用户联系'),
-
-
-            ('user_changeuserrelation', u'用户改用户联系（obj级别）'),
-            ('user_deleteuserrelation', u'用户删除用户联系（obj级别）'),
-            ('user_getuserrelation', u'用户查看用户联系（obj级别）'),
+            ('admin_manageuserrelation', u'管理投资人交易师关系'),
 
         )
 
@@ -836,52 +754,3 @@ class UserContrastThirdAccount(MyModel):
 
     class Meta:
         db_table = "user_contrastaccount"
-
-class UserFriendship(MyModel):
-    id = models.AutoField(primary_key=True)
-    user = MyForeignKey(MyUser,related_name='user_friends',help_text='发起人',on_delete=CASCADE)
-    friend = MyForeignKey(MyUser,related_name='friend_users',help_text='接收人',on_delete=CASCADE)
-    isaccept = models.BooleanField(blank=True,default=False)
-    accepttime = models.DateTimeField(blank=True,null=True)
-    userallowgetfavoriteproj = models.BooleanField(blank=True,default=True,help_text='发起人允许好友查看自己的项目收藏')
-    friendallowgetfavoriteproj = models.BooleanField(blank=True, default=True,help_text='接收人允许好友查看自己的项目收藏')
-    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_userfriends',)
-    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_userfriends',)
-    datasource = MyForeignKey(DataSource,blank=True,default=1, help_text='数据源')
-
-    class Meta:
-        db_table = "user_friendship"
-        permissions =  (
-            ('admin_addfriend', u'管理员建立用户好友关系'),
-            ('admin_changefriend', u'管理员修改用户好友关系'),
-            ('admin_deletefriend', u'管理员删除用户好友关系'),
-            ('admin_getfriend', u'管理员查看用户好友关系'),
-
-            ('user_addfriend', u'用户主动建立用户好友关系（未审核用户不要给）'),
-        )
-
-    def save(self, *args, **kwargs):
-        if not self.datasource:
-            raise InvestError(code=8888,msg='datasource有误')
-        if self.datasource != self.user.datasource or self.datasource != self.friend.datasource:
-            raise InvestError(code=8888,msg='user.datasource不匹配')
-        if self.user == self.friend:
-            raise InvestError(2016)
-        if not self.accepttime and self.isaccept:
-            self.accepttime = datetime.datetime.now()
-        if not self.pk:
-            if UserFriendship.objects.filter(Q(user=self.user,friend=self.friend,is_deleted=False) | Q(friend=self.user,user=self.friend,is_deleted=False)).exists():
-                raise InvestError(2017)
-        if self.pk:
-            if self.isaccept is False:
-                self.is_deleted = True
-        if self.is_deleted is False:
-            if self.isaccept and self.friendallowgetfavoriteproj:
-                assign_perm('usersys.user_getfavorite', self.user, self.friend)
-            else:
-                remove_perm('usersys.user_getfavorite', self.user, self.friend)
-            if self.isaccept and self.userallowgetfavoriteproj:
-                assign_perm('usersys.user_getfavorite', self.friend, self.user)
-            else:
-                remove_perm('usersys.user_getfavorite', self.friend, self.user)
-        super(UserFriendship,self).save(*args, **kwargs)

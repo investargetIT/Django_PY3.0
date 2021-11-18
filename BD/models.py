@@ -52,8 +52,6 @@ class ProjectBD(MyModel):
     class Meta:
         permissions = (
             ('manageProjectBD', '管理员管理项目BD'),
-            ('user_getProjectBD', u'用户查看个人项目BD'),
-            ('user_addProjectBD', u'用户新建个人项目BD'),
         )
 
     def save(self, *args, **kwargs):
@@ -138,8 +136,7 @@ class OrgBD(MyModel):
     class Meta:
         permissions = (
             ('manageOrgBD', '管理机构BD'),
-            ('user_getOrgBD', u'用户查看个人机构BD'),
-            ('user_addOrgBD', u'用户新建机构BD'),
+
         )
 
     def save(self, *args, **kwargs):
@@ -210,10 +207,7 @@ class OrgBDBlack(MyModel):
 
     class Meta:
         permissions = (
-            ('manageOrgBDBlack', '管理-机构BD黑名单'),
-            ('getOrgBDBlack', u'查看-机构BD黑名单'),
-            ('addOrgBDBlack', u'新增-机构BD黑名单'),
-            ('delOrgBDBlack', u'删除-机构BD黑名单'),
+
         )
 
     def save(self, *args, **kwargs):
@@ -226,67 +220,6 @@ class OrgBDBlack(MyModel):
             if OrgBDBlack.objects.exclude(pk=self.pk).filter(is_deleted=False, org=self.org, proj=self.proj).exists():
                 raise InvestError(20071, msg='该机构已经在黑名单中了')
         return super(OrgBDBlack, self).save(*args, **kwargs)
-
-
-class MeetingBD(MyModel):
-    org = MyForeignKey(organization, blank=True, null=True, help_text='BD机构', related_name='org_meetBDs')
-    proj = MyForeignKey(project, blank=True, null=True, help_text='项目名称', related_name='proj_meetBDs')
-    usertitle = MyForeignKey(TitleType, blank=True, null=True, help_text='职位')
-    username = models.CharField(max_length=64, blank=True, null=True, help_text='姓名')
-    usermobile = models.CharField(max_length=64, blank=True, null=True, help_text='电话')
-    bduser = MyForeignKey(MyUser, blank=True, null=True, help_text='bd对象id')
-    country = MyForeignKey(Country, blank=True, null=True, help_text='国家')
-    location = MyForeignKey(OrgArea, blank=True, null=True, help_text='地区')
-    address = models.TextField(blank=True, null=True, help_text='会议具体地址')
-    isShow = models.BooleanField(blank=True, default=False, help_text='是否展示给对应用户')
-    manager = MyForeignKey(MyUser, blank=True, null=True, help_text='负责人', related_name='user_MeetBDs')
-    comments = models.TextField(blank=True, null=True, help_text='会议纪要')
-    meet_date = models.DateTimeField(blank=True, null=True, help_text='会议时间')
-    title = models.TextField(blank=True, null=True, help_text='会议标题')
-    attachmentbucket = models.CharField(max_length=16, blank=True, null=True, help_text='附件存储空间')
-    attachment = models.CharField(max_length=64, blank=True, null=True, help_text='会议附件')
-    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_MeetBD')
-    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_MeetBD')
-    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_MeetBD')
-    datasource = MyForeignKey(DataSource, help_text='数据源', blank=True, default=1)
-
-    class Meta:
-        permissions = (
-            ('manageMeetBD', '管理会议BD'),
-            ('user_getMeetBD', u'用户查看个人会议BD'),
-            ('user_addMeetBD', u'用户新建个人会议BD'),
-        )
-
-    def save(self, *args, **kwargs):
-        if self.manager is None:
-            raise InvestError(20071, msg='manager can`t be null')
-        if not self.manager.onjob and not self.is_deleted:
-            raise InvestError(2024)
-        if self.bduser:
-            self.username = self.bduser.usernameC
-            self.usermobile = self.bduser.mobile
-            self.usertitle = self.bduser.title
-        self.datasource = self.manager.datasource
-        return super(MeetingBD, self).save(*args, **kwargs)
-
-
-class MeetBDShareToken(models.Model):
-    key = models.CharField(max_length=50, primary_key=True,help_text='sharetoken')
-    user = MyForeignKey(MyUser, related_name='user_MeetBDsharetoken',help_text='用户的分享token')
-    meetings = models.TextField(blank=True, null=True, help_text='BD记录的分享token')
-    created = models.DateTimeField(help_text="CreatedTime", auto_now_add=True, blank=True)
-    is_deleted = models.BooleanField(help_text='是否已被删除', blank=True, default=False)
-
-    class Meta:
-        db_table = 'BD_meetingbdsharetoken'
-
-    def save(self, *args, **kwargs):
-        if not self.key:
-            self.key = self.generate_key()
-        return super(MeetBDShareToken, self).save(*args, **kwargs)
-
-    def generate_key(self):
-        return binascii.hexlify(os.urandom(25)).decode()
 
 
 
@@ -353,7 +286,7 @@ class WorkReportProjInfo(MyModel):
     class Meta:
         db_table = 'user_reportprojinfo'
         permissions = (
-            ('admin_getWorkReport', u'管理员级查看用户工作报表'),
+            ('admin_getWorkReport', u'管理员查看用户工作报表'),
 
         )
 

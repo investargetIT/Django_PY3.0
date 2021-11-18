@@ -59,9 +59,9 @@ class OrgListSerializer(serializers.ModelSerializer):
         exclude = ('datasource', 'createuser', 'createdtime', 'is_deleted', 'deleteduser', 'deletedtime', 'lastmodifyuser', 'lastmodifytime',)
 
     def get_orgtransactionphase(self, obj):
-        usertrader = obj.orgtransactionphase.filter(transactionPhase_orgs__is_deleted=False)
-        if usertrader.exists():
-            return transactionPhasesSerializer(usertrader, many=True).data
+        phase = obj.orgtransactionphase.filter(transactionPhase_orgs__is_deleted=False)
+        if phase.exists():
+            return transactionPhasesSerializer(phase, many=True).data
         return None
 
 
@@ -74,9 +74,9 @@ class OrgDetailSerializer(serializers.ModelSerializer):
         exclude = ('datasource', 'createuser', 'createdtime', 'is_deleted', 'deleteduser', 'deletedtime', 'lastmodifyuser', 'lastmodifytime',)
 
     def get_orgtransactionphase(self, obj):
-        usertrader = obj.orgtransactionphase.filter(transactionPhase_orgs__is_deleted=False)
-        if usertrader.exists():
-            return transactionPhasesSerializer(usertrader, many=True).data
+        phase = obj.orgtransactionphase.filter(transactionPhase_orgs__is_deleted=False)
+        if phase.exists():
+            return transactionPhasesSerializer(phase, many=True).data
         return None
 
 

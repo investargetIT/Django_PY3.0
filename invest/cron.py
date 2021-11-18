@@ -3,20 +3,13 @@ import threading
 
 import datetime
 
-from django.db.models import Count
-
-from BD.models import OrgBD
 from BD.views import sendExpiredOrgBDEmail, sendWorkReportMessage
 from dataroom.views import downloadDataroomPDFs
 from emailmanage.views import getAllProjectsNeedToSendMail, sendEmailToUser
 from msg.models import schedule
 from org.views import downloadOrgAttachments
 from proj.views import importDidiRecordCsvFile
-from third.views.huanxin import downloadChatMessages
-from third.views.zoom import refreshAccessToken
-from timeline.models import timelineTransationStatu
-from utils.sendMessage import sendmessage_schedulemsg, sendmessage_timelinealertcycleexpire, \
-    sendmessage_orgBDExpireMessage
+from utils.sendMessage import sendmessage_schedulemsg
 
 
 def task1_loadsendmailproj():
@@ -42,7 +35,6 @@ def task4_sendAllExpiredMsg():
     class task4_Thread(threading.Thread):
         def run(self):
             sendExpiredScheduleMsg()
-            sendExpiredTimelineMsg()
             sendExpiredOrgBDEmail()
     task4_Thread().start()
 
@@ -52,12 +44,6 @@ def task5_downloadOrgAttachments():
         def run(self):
             downloadOrgAttachments()
     task5_Thread().start()
-
-def task6_refreshZoomToken():
-    class task6_Thread(threading.Thread):
-        def run(self):
-            refreshAccessToken()
-    task6_Thread().start()
 
 
 def task7_sendWorkReportMsg():
@@ -100,13 +86,4 @@ def sendExpiredScheduleMsg():
     if schedule_qs.exists():
         for instance in schedule_qs:
             sendmessage_schedulemsg(instance, receiver=instance.createuser,
-                                    types=['app', 'webmsg'])
-def sendExpiredTimelineMsg():
-    timelineTransationStatu_qs = timelineTransationStatu.objects.all().filter(is_deleted=False,isActive=True,
-                                                               inDate__year=datetime.datetime.now().year,
-                                                               inDate__month=datetime.datetime.now().month,
-                                                               inDate__day=datetime.datetime.now().day)
-    if timelineTransationStatu_qs.exists():
-        for instance in timelineTransationStatu_qs:
-            sendmessage_timelinealertcycleexpire(instance, receiver=instance.createuser,
                                     types=['app', 'webmsg'])

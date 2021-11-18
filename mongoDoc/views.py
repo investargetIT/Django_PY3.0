@@ -10,9 +10,9 @@ from django.db import transaction
 from mongoengine import Q
 from rest_framework import viewsets
 from bson.objectid import ObjectId
-from mongoDoc.models import GroupEmailData, IMChatMessages, ProjectData, MergeFinanceData, CompanyCatData, ProjRemark, \
+from mongoDoc.models import GroupEmailData, ProjectData, MergeFinanceData, CompanyCatData, ProjRemark, \
     WXChatdata, ProjectNews, ProjIndustryInfo, CompanySearchName
-from mongoDoc.serializers import GroupEmailDataSerializer, IMChatMessagesSerializer, ProjectDataSerializer, \
+from mongoDoc.serializers import GroupEmailDataSerializer, ProjectDataSerializer, \
     MergeFinanceDataSerializer, CompanyCatDataSerializer, ProjRemarkSerializer, WXChatdataSerializer, \
     ProjectNewsSerializer, ProjIndustryInfoSerializer, GroupEmailListSerializer, CompanySearchNameSerializer
 from utils.customClass import JSONResponse, InvestError, AppEventRateThrottle
@@ -112,7 +112,7 @@ class MergeFinanceDataView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['usersys.as_admin'])
+    @loginTokenIsAvailable()
     def create(self, request, *args, **kwargs):
         try:
             data = request.data
@@ -152,7 +152,7 @@ class MergeFinanceDataView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['usersys.as_admin'])
+    @loginTokenIsAvailable()
     def update(self, request, *args, **kwargs):
         try:
             id = request.GET.get('id')
@@ -219,7 +219,8 @@ class MergeFinanceDataView(viewsets.ModelViewSet):
         return countDic
 
     def eventCountByRound(self):
-        timelist = ['2010','2011','2012','2013','2014','2015','2016','2017','2018','2019','2020']
+        year = datetime.datetime.now().year
+        timelist = [str(i) for i in range(year - 10, year + 1)]
         countList = read_from_cache('countEventByRound')
         if not countList:
             countList = {}
@@ -369,7 +370,7 @@ class ProjectDataView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
-    @loginTokenIsAvailable(['usersys.as_admin'])
+    @loginTokenIsAvailable()
     def create(self, request, *args, **kwargs):
         try:
             data = request.data
@@ -397,7 +398,7 @@ class ProjectDataView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['usersys.as_admin'])
+    @loginTokenIsAvailable()
     def destroy(self, request, *args, **kwargs):
         try:
             data = request.data
@@ -441,7 +442,7 @@ class ProjectIndustryInfoView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['usersys.as_admin'])
+    @loginTokenIsAvailable()
     def create(self, request, *args, **kwargs):
         try:
             data = request.data
@@ -504,7 +505,7 @@ class ProjectNewsView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['usersys.as_admin'])
+    @loginTokenIsAvailable()
     def create(self, request, *args, **kwargs):
         try:
             data = request.data
@@ -549,7 +550,7 @@ class ProjectSearchNameView(viewsets.ModelViewSet):
             if not page_index:
                 page_index = 1
             queryset = self.filterqueryset(request,self.queryset)
-            if request.user.has_perm('usersys.admin_getmongoprojremark'):
+            if request.user.has_perm('usersys.admin_managemongo'):
                 pass
             else:
                 queryset = queryset(searchuser_id=request.user.id)
@@ -613,7 +614,7 @@ class ProjectRemarkView(viewsets.ModelViewSet):
             if not page_index:
                 page_index = 1
             queryset = self.filterqueryset(request,self.queryset)
-            if request.user.has_perm('usersys.admin_getmongoprojremark'):
+            if request.user.has_perm('usersys.admin_managemongo'):
                 queryset = queryset(datasource=request.user.datasource_id)
             else:
                 queryset = queryset(createuser_id=request.user.id)
@@ -680,7 +681,7 @@ class ProjectRemarkView(viewsets.ModelViewSet):
             instance = self.queryset.get(id=ObjectId(id))
             if instance.createuser_id == request.user.id:
                 pass
-            elif request.user.has_perm('usersys.admin_deletemongoprojremark'):
+            elif request.user.has_perm('usersys.admin_managemongo'):
                 pass
             else:
                 raise InvestError(2009, msg='删除项目公司备注信息失败')
@@ -746,7 +747,7 @@ class WXChatDataView(viewsets.ModelViewSet):
                 isShow = True
             else:
                 isShow = False
-                if not request.user.has_perm('usersys.admin_manageWXChatData'):
+                if not request.user.has_perm('usersys.admin_managemongo'):
                     isShow = True
             if not page_size:
                 page_size = 10
@@ -772,7 +773,7 @@ class WXChatDataView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['usersys.admin_manageWXChatData'])
+    @loginTokenIsAvailable(['usersys.admin_managemongo'])
     def update(self, request, *args, **kwargs):
         try:
             id = request.GET.get('id')
@@ -810,54 +811,7 @@ def readSendEmailDataFromMongo():
     return GroupEmailDataSerializer(qs,many=True).data
 
 
-class IMChatMessagesView(viewsets.ModelViewSet):
-    queryset = IMChatMessages.objects.all()
-    serializer_class = IMChatMessagesSerializer
 
-    @loginTokenIsAvailable()
-    def list(self, request, *args, **kwargs):
-        try:
-            chatto = request.GET.get('to')
-            chatfrom = str(request.user.id)
-            page_size = request.GET.get('max_size')
-            timestamp = request.GET.get('timestamp')
-            if not page_size:
-                page_size = 20
-            if not timestamp:
-                timestamp = int(time.time())*1000
-            queryset = self.queryset(timestamp__lt=str(timestamp))
-            sort = request.GET.get('sort')
-            if chatto:
-                queryset = queryset(Q(to=chatto, chatfrom=chatfrom)|Q(to=chatfrom, chatfrom=chatto))
-            else:
-                queryset = queryset(Q(chatfrom=chatfrom) | Q(to=chatfrom))
-            if sort not in ['True', 'true', True, 1, 'Yes', 'yes', 'YES', 'TRUE']:
-                queryset = queryset.order_by('-timestamp',)
-            else:
-                queryset = queryset.order_by('timestamp',)
-            count = queryset.count()
-            queryset = queryset[0:page_size]
-            serializer = self.serializer_class(queryset,many=True)
-            return JSONResponse(SuccessResponse({'count':count,'data':serializer.data}))
-        except InvestError as err:
-            return JSONResponse(InvestErrorResponse(err))
-        except Exception:
-            catchexcption(request)
-            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
-def saveChatMessageDataToMongo(data):
-    queryset = IMChatMessages.objects.all()
-    if queryset(msg_id=data['msg_id']).count() > 0:
-        pass
-    else:
-        serializer = IMChatMessagesSerializer(data=data)
-        try:
-            if serializer.is_valid():
-                serializer.save()
-            else:
-                raise InvestError(4012, msg='保存环信聊天信息失败', detail=serializer.error_messages)
-        except Exception:
-            logexcption()
 
 def saveCompanySearchName(com_name, searchuser_id):
     try:

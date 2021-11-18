@@ -82,28 +82,6 @@ orgbdblack_detail = views.OrgBDBlackView.as_view({
 })
 
 
-meetbd_list = views.MeetingBDView.as_view({
-        'get': 'list',
-        'post': 'create'
-})
-
-meetbd_share = views.MeetingBDView.as_view({
-        'get': 'getShareMeetingBDdetail',
-        'post': 'getShareMeetingBDtoken'
-})
-
-meetbd_detail = views.MeetingBDView.as_view({
-        'get': 'retrieve',
-        'put': 'update',
-        'delete': 'destroy'
-})
-
-deleteAttachment = views.MeetingBDView.as_view({
-        'post': 'deleteAttachment',
-
-})
-
-
 workreport_list = views.WorkReportView.as_view({
         'get': 'list',
         'post': 'create'
@@ -165,6 +143,7 @@ urlpatterns = [
         url(r'^projbd/$', projbd_list, name='projbd_list'),
         url(r'^projbd/comment/$', projdbcomment_list, name='projdbcomment_list'),
         url(r'^projbd/comment/(?P<pk>\d+)/$', projbdcomment_detail, name='projbdcomment_detail'),
+
         url(r'^orgbd/$', orgbd_list, name='orgbd_list'),
         url(r'^orgbd/read/$', orgbd_read, name='orgbd_read'),
         url(r'^orgbdbase/$', orgbd_baselist, name='orgbdbase_list'),
@@ -177,10 +156,6 @@ urlpatterns = [
         url(r'^orgbd/black/(?P<pk>\d+)/$', orgbdblack_detail, name='orgbdblack_detail'),
         url(r'^orgbd/comment/$', orgbdcomment_list, name='orgbdcomment_list'),
         url(r'^orgbd/comment/(?P<pk>\d+)/$', orgbdcomment_detail, name='orgbdcomment_detail'),
-        url(r'^meetbd/$', meetbd_list, name='meetbd_list'),
-        url(r'^meetbd/share/$', meetbd_share, name='meetbd_share'),
-        url(r'^meetbd/(?P<pk>\d+)/$', meetbd_detail, name='meetbd_detail'),
-        url(r'^meetbd/delatt/(?P<pk>\d+)/$', deleteAttachment, name='deleteAttachment'),
 
         url(r'^workreport/$', workreport_list, name='workreport_list'),
         url(r'^workreport/(?P<pk>\d+)/$', workreport_detail, name='workreport_detail'),

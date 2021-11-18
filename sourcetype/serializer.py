@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from sourcetype.models import TransactionType, TransactionPhases, OrgArea, Tag, Industry, \
     CurrencyType, \
-    AuditStatus, ProjectStatus, OrgType, FavoriteType, ClientType, TitleType, Country, \
+    AuditStatus, ProjectStatus, OrgType, ClientType, TitleType, Country, \
     DataSource, TransactionStatus, webmenu, CharacterType, orgtitletable, Service, OrgAttribute, BDStatus, \
     AndroidAppVersion, OrgBdResponse, \
     OrgLevelType, FamiliarLevel, IndustryGroup, DidiOrderType, Education, PerformanceAppraisalLevel, TrainingType, \
@@ -61,13 +61,6 @@ class characterTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = CharacterType
         exclude = ('is_deleted',)
-
-
-class favoriteTypeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = FavoriteType
-        exclude = ('is_deleted',)
-
 
 class clientTypeSerializer(serializers.ModelSerializer):
     class Meta:

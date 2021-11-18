@@ -663,38 +663,30 @@ def getmenulist(user):
     allmenuobj = webmenu.objects.all()
     if user.has_perm('dataroom.onlydataroom') and not user.is_superuser:
         return WebMenuSerializer(allmenuobj.filter(id__in=[6,30]),many=True).data
-    qslist = [1, 6, 7, 8, 10, 11, 14, 15, 16, 18, 20, 21, 24, 25, 26, 30]
-    if user.has_perm('usersys.admin_getuser'):
+    qslist = [1, 6, 7, 8, 10, 14, 15, 16, 21, 24, 26, 28, 30]
+    if user.has_perm('usersys.admin_manageuser'):
         qslist.extend([5])
     if not user.has_perm('usersys.as_investor') or user.is_superuser:
         qslist.extend([27, 28, 33])
     if user.has_perm('usersys.as_trader') and not user.is_superuser:
         qslist.extend([12])
-    if user.has_perm('usersys.as_trader') and user.has_perm('usersys.user_adduser'):
+    if user.has_perm('usersys.as_trader'):
         qslist.extend([34, 35])                        # 周报、OKR
     if user.has_perm('emailmanage.getemailmanage'):
         qslist.extend([3])
-    if user.has_perm('BD.user_getProjectBD') or user.has_perm('BD.manageProjectBD'): # 项目bd管理
+    if user.has_perm('usersys.as_trader') or user.has_perm('BD.manageProjectBD'): # 项目bd管理
         qslist.extend([22, 23])
-    if user.has_perm('BD.user_getOrgBD') or user.has_perm('BD.manageOrgBD'):         # 机构bd管理
-        qslist.extend([2, 23])
-    if user.has_perm('BD.user_getMeetBD') or user.has_perm('BD.manageMeetBD'):         # 会议bd管理
-        qslist.extend([29, 23])
+    if user.has_perm('usersys.as_trader') or user.has_perm('BD.manageOrgBD'):         # 机构bd管理
+        qslist.extend([2, 37, 23])
     if user.has_perm('APILog.manage_userinfolog'):#日志查询
         qslist.extend([9])
-    if user.has_perm('msg.user_onlineTest'):  #在线测试
-        qslist.extend([36])
     if user.is_superuser:
-        qslist.extend([17, 34])
+        qslist.extend([17])
     if user.has_perm('proj.admin_addproj') or user.has_perm('proj.user_addproj'):
         qslist.extend([19])
     if user.has_perm('dataroom.get_companydataroom'):
         qslist.extend([31])
     if user.has_perm('org.export_org'):
-        qslist.extend([28, 32])
-    if user.has_perm('timeline.admin_getline'):
-        qslist.extend([4])
-    if user.has_perm('usersys.getProjReport'):
-        qslist.extend([37])
+        qslist.extend([32])
     qsres = allmenuobj.filter(id__in=removeDuclicates(qslist), is_deleted=False).order_by('index')
     return WebMenuSerializer(qsres,many=True).data

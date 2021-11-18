@@ -40,17 +40,9 @@ class dataroom(MyModel):
     class Meta:
         db_table = 'dataroom'
         permissions = (
-            ('admin_getdataroom','管理员查看dataroom'),
-            ('admin_changedataroom', '管理员修改dataroom里的文件/控制用户可见文件范围'),
-            ('admin_deletedataroom', '管理员删除dataroom'),
-            ('admin_adddataroom', '管理员添加dataroom'),
-            ('admin_closedataroom', '管理员关闭dataroom'),
-            ('downloadDataroom','打包下载dataroom'),
+            ('admin_managedataroom','管理dataroom'),
             ('downloadNoWatermarkFile', '下载无水印文件'),
-            ('user_adddataroomfile', '用户上传dataroom文件'),
-            ('user_deletedataroomfile', '用户删除dataroom文件'),
-
-            ('onlydataroom', '单独查看dataroom权限'),
+            ('onlydataroom', '只看dataroom菜单'),
             ('get_companydataroom', '查看公司dataroom')
         )
 

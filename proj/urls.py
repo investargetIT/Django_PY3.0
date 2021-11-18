@@ -49,12 +49,6 @@ proj_didiRecord = views.ProjDiDiRecordView.as_view({
         'post':'create',
 })
 
-userfavorite_proj = views.ProjectFavoriteView.as_view({
-        'get': 'list',
-        'post': 'create',
-        'delete':'destroy'
-})
-
 getshareprojtoken = views.ProjectView.as_view({
         'get':'getshareprojtoken'
 })
@@ -77,7 +71,6 @@ urlpatterns = [
         url(r'^sendpdf/(?P<pk>\d+)/$', sendWXGroupPdfURI, name='sendWXGroupPdf'),
         url(r'^finance/$', proj_finance, name='proj_finance'),
         url(r'^attachment/$', proj_attachment, name='proj_attachment'),
-        url(r'^favorite/$' , userfavorite_proj,name='user_favoriteproj'),
         url(r'^didi/$', proj_didiRecord, name='proj_didiRecord'),
         url(r'^share/(?P<pk>\d+)/$',getshareprojtoken,name='getshareprojtoken'),
         url(r'^shareproj/$',getshareproj,name='getshareprojdetail'),

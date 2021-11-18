@@ -67,16 +67,7 @@ class organization(MyModel):
     class Meta:
         db_table = "org"
         permissions = (
-            ('admin_addorg','管理员新增机构'),
-            ('admin_changeorg','管理员修改机构'),
-            ('admin_deleteorg','管理员删除机构'),
-            ('admin_getorg','管理员查看机构信息'),
-
-            ('user_addorg', '用户新增机构'),
-            ('user_changeorg', '用户修改机构(obj级别)'),
-            ('user_deleteorg', '用户删除机构(obj级别)'),
-            ('user_getorg', '用户查看机构（obj级别）'),
-
+            ('admin_manageorg','管理机构'),
             ('export_org', '导出机构Excel'),
         )
 
@@ -240,17 +231,7 @@ class orgRemarks(MyModel):
     datasource = MyForeignKey(DataSource, blank=True, null=True, help_text='数据源')
     class Meta:
         db_table = "orgremark"
-        permissions = (
-            ('admin_getorgremark','管理员查看机构备注'),
-            ('admin_changeorgremark', '管理员修改机构备注'),
-            ('admin_addorgremark', '管理员增加机构备注'),
-            ('admin_deleteorgremark', '管理员删除机构备注'),
 
-            ('user_getorgremark', '用户查看机构备注（obj级别）'),
-            ('user_changeorgremark', '用户修改机构备注（obj级别）'),
-            ('user_addorgremark', '用户增加机构备注'),
-            ('user_deleteorgremark','用户删除机构备注（obj级别）'),
-        )
     def save(self, *args, **kwargs):
         self.datasource = self.createuser.datasource
         kwargs['automodifytime'] = False

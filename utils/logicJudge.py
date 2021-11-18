@@ -3,35 +3,41 @@
 
 # 检测检测是否用户对接交易师
 def is_userTrader(trader, investor_id):
-    if trader.trader_relations.all().filter(is_deleted=False, investoruser_id=investor_id).exists():
+    if investor_id and trader.trader_relations.all().filter(is_deleted=False, investoruser_id=investor_id).exists():
         return True
     return False
 
 
 # 检测检测是否交易师名下投资人
 def is_userInvestor(investor, trader_id):
-    if investor.investor_relations.all().filter(is_deleted=False, traderuser_id=trader_id).exists():
+    if trader_id and investor.investor_relations.all().filter(is_deleted=False, traderuser_id=trader_id).exists():
         return True
     return False
 
 
 # 检测是否dataroom交易师
 def is_dataroomTrader(user, dataroom):
-    if dataroom.proj.proj_traders.all().filter(user=user, is_deleted=False).exists():
+    if dataroom.proj and dataroom.proj.proj_traders.all().filter(user=user, is_deleted=False).exists():
         return True
     return False
 
 
 # 检测是否dataroom用户
 def is_dataroomInvestor(user, dataroom_id):
-    if user.user_datarooms.all().filter(dataroom_id=dataroom_id, is_deleted=False).exists():
+    if dataroom_id and user.user_datarooms.all().filter(dataroom_id=dataroom_id, is_deleted=False).exists():
+        return True
+    return False
+
+# 检测是否项目的dataroom用户
+def is_projdataroomInvestor(user, proj_id):
+    if proj_id and user.user_datarooms.all().filter(dataroom__proj_id=proj_id, is_deleted=False).exists():
         return True
     return False
 
 
 # 检测是否项目交易师
 def is_projTrader(user, proj_id):
-    if user.user_projects.all().filter(proj_id=proj_id, is_deleted=False).exists():
+    if proj_id and user.user_projects.all().filter(proj_id=proj_id, is_deleted=False).exists():
         return True
     return False
 
@@ -49,8 +55,40 @@ def is_projBDManager(user_id, projbd):
 
 # 检测是否机构BD交易师
 def is_orgBDTrader(user, orgbd):
-    if orgbd.proj.proj_traders.all().filter(user=user, is_deleted=False).exists():
+    if orgbd.proj and orgbd.proj.proj_traders.all().filter(user=user, is_deleted=False).exists():
         return True
     return False
 
 
+# 检测是否项目的机构看板负责人
+def is_projOrgBDManager(user, proj_id):
+    if proj_id and user.user_orgBDs.all().filter(proj_id=proj_id, is_deleted=False).exists():
+        return True
+    return False
+
+
+# 检测是否机构投资人的交易师
+def is_orgUserTrader(user, org):
+    if user.trader_relations.all().filter(is_deleted=False, investoruser__in=org.org_users.all()).exists():
+        return True
+    return False
+
+
+# 检测是否项目BD同行业组的交易师
+def is_projBDIndGroupTrader(user, projbd):
+    if projbd.indGroup == user.indGroup:
+        return True
+    return False
+
+
+# 检测是否交易师 直接上司
+def is_traderDirectSupervisor(trader, supervisor):
+    if trader.directSupervisor == supervisor:
+        return True
+    return False
+
+# 检测是否交易师 导师
+def is_traderMentor(trader, mentor):
+    if trader.mentor == mentor:
+        return True
+    return False

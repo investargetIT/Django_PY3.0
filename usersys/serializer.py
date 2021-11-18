@@ -10,7 +10,7 @@ from sourcetype.serializer import tagSerializer, countrySerializer, titleTypeSer
     PerformanceAppraisalLevelSerializer, TrainingStatusSerializer, TrainingTypeSerializer, industryGroupSerializer
 from third.views.qiniufile import getUrlWithBucketAndKey
 from utils.util import checkMobileTrue
-from .models import MyUser, UserRelation, UserFriendship, UnreachUser, UserRemarks, userAttachments, userEvents, \
+from .models import MyUser, UserRelation, UnreachUser, UserRemarks, userAttachments, userEvents, \
     UserPerformanceAppraisalRecord, UserPersonnelRelations, UserTrainingRecords, UserMentorTrackingRecords, \
     UserWorkingPositionRecords
 
@@ -214,32 +214,6 @@ class UserRelationCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserRelation
         fields = '__all__'
-
-
-# 用户好友关系基本信息
-class UserFriendshipSerializer(serializers.ModelSerializer):
-    user = UserInfoSerializer()
-    friend = UserInfoSerializer()
-
-    class Meta:
-        model = UserFriendship
-        fields = ('id', 'user', 'friend', 'isaccept', 'datasource')
-        read_only_fields = ('datasource',)
-
-
-# 用户好友关系全部信息
-class UserFriendshipDetailSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UserFriendship
-        fields = '__all__'
-
-
-# 用户好友关系修改信息
-class UserFriendshipUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UserFriendship
-        fields = '__all__'
-        read_only_fields = ('id', 'datasource', 'user', 'friend', 'createdtime', 'createuser', 'is_deleted')
 
 
 # 权限组全部权限信息

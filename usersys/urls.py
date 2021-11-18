@@ -89,11 +89,6 @@ user_events_detail = views.UserEventView.as_view({
         'delete': 'destroy',
 })
 
-
-user_friendship_detail = views.UserFriendshipView.as_view({
-        'delete': 'destroy',
-})
-
 userremark_list = views.UserRemarkView.as_view({
         'get':'list',
         'post':'create',
@@ -206,7 +201,6 @@ urlpatterns = [
     url(r'^relationship/(?P<pk>\d+)/$', detail_relationone, name='user-relationshipone'),
     url(r'^register/$', regist_user),
     url(r'^login/$', views.login),
-    url(r'^friend/(?P<pk>\d+)/$', user_friendship_detail, name='user-friendship-detail'),
     url(r'^group/$', group_list, name='group-list'),
     url(r'^group/(?P<pk>\d+)/$', group_permission, name='group_permission-detail'),
     url(r'^perm/$', permission, name='permission-list'),

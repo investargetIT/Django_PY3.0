@@ -11,33 +11,29 @@ from django.db.models import Q, Count, QuerySet
 from rest_framework import filters, viewsets
 from rest_framework.decorators import api_view, detail_route, list_route
 from APIlog.views import logininlog, apilog
-from BD.serializers import OrgBDBlackCreateSerializer
 from dataroom.models import dataroom
 from org.models import organization
 from sourcetype.views import getmenulist
 from third.models import MobileAuthCode
-from third.views.huanxin import registHuanXinIMWithUser, deleteHuanXinIMWithUser
 from third.views.qiniufile import deleteqiniufile
 from third.views.weixinlogin import get_openid
-from usersys.models import MyUser, UserRelation, userTags, UserFriendship, MyToken, UnreachUser, UserRemarks, \
+from usersys.models import MyUser, UserRelation, userTags, MyToken, UnreachUser, UserRemarks, \
     userAttachments, userEvents, UserContrastThirdAccount, registersourcechoice, UserPerformanceAppraisalRecord, \
     UserPersonnelRelations, UserTrainingRecords, UserMentorTrackingRecords, UserWorkingPositionRecords
 from usersys.serializer import UserSerializer, UserListSerializer, UserRelationSerializer, \
-    CreatUserSerializer, UserCommenSerializer, UserRelationCreateSerializer, UserFriendshipSerializer, \
-    UserFriendshipDetailSerializer, UserFriendshipUpdateSerializer, GroupSerializer, GroupDetailSerializer, \
+    CreatUserSerializer, UserCommenSerializer, UserRelationCreateSerializer, GroupSerializer, GroupDetailSerializer, \
     GroupCreateSerializer, PermissionSerializer, \
     UpdateUserSerializer, UnreachUserSerializer, UserRemarkSerializer, UserRemarkCreateSerializer, \
-    UserListCommenSerializer, UserAttachmentSerializer, UserEventSerializer, UserSimpleSerializer, UserInfoSerializer, \
+    UserListCommenSerializer, UserAttachmentSerializer, UserEventSerializer, UserSimpleSerializer, \
     InvestorUserSerializer, UserPerformanceAppraisalRecordSerializer, UserPerformanceAppraisalRecordCreateSerializer, \
     UserPersonnelRelationsSerializer, UserPersonnelRelationsCreateSerializer, UserTrainingRecordsSerializer, \
     UserTrainingRecordsCreateSerializer, UserMentorTrackingRecordsSerializer, UserMentorTrackingRecordsCreateSerializer, \
     UserWorkingPositionRecordsSerializer, UserWorkingPositionRecordsCreateSerializer
 from sourcetype.models import Tag, DataSource, TagContrastTable
-from utils import perimissionfields
 from utils.customClass import JSONResponse, InvestError, RelationFilter
-from utils.logicJudge import is_userInvestor, is_userTrader, is_dataroomTrader
-from utils.sendMessage import sendmessage_userauditstatuchange, sendmessage_userregister, sendmessage_traderadd, \
-    sendmessage_usermakefriends
+from utils.logicJudge import is_userInvestor, is_userTrader, is_dataroomTrader, is_traderDirectSupervisor, \
+    is_traderMentor
+from utils.sendMessage import sendmessage_userauditstatuchange, sendmessage_userregister, sendmessage_traderadd
 from utils.util import read_from_cache, write_to_cache, loginTokenIsAvailable, \
     catchexcption, cache_delete_key, returnDictChangeToLanguage, returnListChangeToLanguage, SuccessResponse, \
     InvestErrorResponse, ExceptionResponse, add_perm, mySortQuery, checkRequestToken
@@ -51,6 +47,8 @@ class UserFilter(FilterSet):
     indGroup = RelationFilter(filterstr='indGroup', lookup_method='in')
     onjob = RelationFilter(filterstr='onjob')
     title = RelationFilter(filterstr='title', lookup_method='in')
+    directSupervisor = RelationFilter(filterstr='directSupervisor', lookup_method='in')
+    mentor = RelationFilter(filterstr='mentor', lookup_method='in')
     orgarea = RelationFilter(filterstr='orgarea', lookup_method='in')
     tags = RelationFilter(filterstr='tags',lookup_method='in',relationName='user_usertags__is_deleted')
     userstatus = RelationFilter(filterstr='userstatus',lookup_method='in')
@@ -129,7 +127,7 @@ class UserView(viewsets.ModelViewSet):
             page_index = request.GET.get('page_index', 1) #从第一页开始
             lang = request.GET.get('lang', 'cn')
             queryset = self.filter_queryset(self.get_queryset())
-            if request.user.has_perm('usersys.admin_getuser'):
+            if request.user.has_perm('usersys.admin_manageuser'):
                 serializerclass = UserListSerializer
             else:
                 serializerclass = UserListCommenSerializer
@@ -144,20 +142,13 @@ class UserView(viewsets.ModelViewSet):
                 return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
             responselist = []
             for instance in queryset:
-                actionlist = {'get': False, 'change': False, 'delete': False}
-                if request.user.is_anonymous:
-                    pass
-                else:
-                    if request.user.has_perm('usersys.admin_getuser') or request.user.has_perm('usersys.user_getuser', instance):
-                        actionlist['get'] = True
-                    if request.user.has_perm('usersys.admin_changeuser') or request.user.has_perm('usersys.user_changeuser',
-                                                                                             instance):
-                        actionlist['change'] = True
-                    if request.user.has_perm('usersys.admin_deleteuser') or request.user.has_perm('usersys.user_deleteuser',
-                                                                                             instance):
-                        actionlist['delete'] = True
+                actionlist = {'get': True, 'change': False, 'delete': False}
                 if serializerclass != UserListSerializer and request.user.has_perm('usersys.as_trader'):
-                    if (not UserRelation.objects.filter(investoruser=instance, traderuser__onjob=True, is_deleted=False).exists()) and \
+                    if request.user.has_perm('usersys.admin_manageuser') or is_userTrader(request.user, instance.id):
+                        actionlist['change'] = True
+                        actionlist['delete'] = True
+                        instancedata = UserListSerializer(instance).data
+                    elif (not UserRelation.objects.filter(investoruser=instance, traderuser__onjob=True, is_deleted=False).exists()) and \
                             UserRelation.objects.filter(investoruser=instance, is_deleted=False).exists():
                         instancedata = UserListSerializer(instance).data     # 显示
                     else:
@@ -296,7 +287,7 @@ class UserView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
     # 新增用户
-    @loginTokenIsAvailable()
+    @loginTokenIsAvailable(['usersys.admin_manageuser', 'usersys.as_trader'])
     def adduser(self, request, *args, **kwargs):
         data = request.data
         try:
@@ -313,28 +304,18 @@ class UserView(viewsets.ModelViewSet):
                 data.pop('password', None)
                 user.set_password('Aa123456')
                 user.save()
-                keylist = data.keys()
-                if request.user.has_perm('usersys.admin_adduser'):
-                    canNotChangeField = perimissionfields.userpermfield['usersys.admin_adduser']
-                elif request.user.has_perm('usersys.user_adduser'):
-                    canNotChangeField = perimissionfields.userpermfield['usersys.trader_adduser']
-                    groupid = data.get('groups', [])
-                    if len(groupid) == 1:
-                        try:
-                            group = Group.objects.get(id=groupid[0])
-                        except Exception:
-                            catchexcption(request)
-                            raise InvestError(20071, msg='新用户创建失败', detail='用户类型不可用')
-                        if not group.permissions.filter(codename='as_investor').exists():
-                            raise InvestError(2009, msg='新用户创建失败', detail='新增用户非投资人类型')
-                        data['groups'] = [group.id]
-                    else:
-                        raise InvestError(20072, msg='新用户创建失败', detail='新增用户没有分配可用组别')
+                groupid = data.get('groups', [])
+                if len(groupid) == 1:
+                    try:
+                        group = Group.objects.get(id=groupid[0])
+                    except Exception:
+                        catchexcption(request)
+                        raise InvestError(20071, msg='新用户创建失败', detail='用户类型不可用')
+                    if not group.permissions.filter(codename='as_investor').exists():
+                        raise InvestError(2009, msg='新用户创建失败', detail='新增用户非投资人类型')
+                    data['groups'] = [group.id]
                 else:
-                    raise InvestError(2009, msg='新用户创建失败', detail='没有新增权限')
-                cannoteditlist = [key for key in keylist if key in canNotChangeField]
-                if cannoteditlist:
-                    raise InvestError(code=2009, msg='新用户创建失败', detail='没有权限修改%s' % cannoteditlist)
+                    raise InvestError(20072, msg='新用户创建失败', detail='新增用户没有分配可用组别')
                 data['createuser'] = request.user.id
                 data['createdtime'] = datetime.datetime.now()
                 data['datasource'] = request.user.datasource.id
@@ -349,10 +330,6 @@ class UserView(viewsets.ModelViewSet):
                         user.user_usertags.bulk_create(usertaglist)
                 else:
                     raise InvestError(20071, msg='新用户创建失败', detail='参数有误%s' % userserializer.error_messages)
-                if user.createuser:
-                    add_perm('usersys.user_getuser', user.createuser, user)
-                    add_perm('usersys.user_changeuser', user.createuser, user)
-                    add_perm('usersys.user_deleteuser', user.createuser, user)
                 apilog(request, 'MyUser', None, None, datasource=request.user.datasource_id)
                 cache_delete_key(self.redis_key)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(UserSerializer(user).data,lang=lang)))
@@ -395,7 +372,7 @@ class UserView(viewsets.ModelViewSet):
             if request.user == user:
                 userserializer = UserSerializer
             else:
-                if request.user.has_perm('usersys.admin_getuser'):
+                if request.user.has_perm('usersys.admin_manageuser'):
                     userserializer = UserSerializer
                 elif request.user == user.createuser:
                     userserializer = UserSerializer
@@ -436,35 +413,29 @@ class UserView(viewsets.ModelViewSet):
                         user = self.get_object(userid)
                         olduserdata = UserSerializer(user)
                         sendmsg = False
-                        if request.user.has_perm('usersys.admin_changeuser') or request.user == user.createuser:
-                            canNotChangeField = perimissionfields.userpermfield['usersys.admin_changeuser']
-                            groupid = data.pop('groups', [])
-                            if len(groupid) == 1:
+                        groupids = data.pop('groups', [])
+                        if request.user.has_perm('usersys.admin_manageuser') or is_userTrader(request.user, user.id):
+                            if isinstance(groupids, list) and len(groupids) == 1:
                                 try:
-                                    groupinstance = Group.objects.get(id=groupid[0])
+                                    groupinstance = Group.objects.get(id=groupids[0])
                                 except Exception:
                                     raise InvestError(20071, msg='用户信息修改失败', detail='用户类型不可用')
                                 if groupinstance not in user.groups.all():
                                     if user.has_perm('usersys.as_trader'):
-                                        if Permission.objects.get(codename='as_trader', content_type__app_label='usersys') not in groupinstance.permissions.all():
+                                        if Permission.objects.get(codename='as_trader',
+                                                                  content_type__app_label='usersys') not in groupinstance.permissions.all():
                                             if user.trader_relations.all().filter(is_deleted=False).exists():
                                                 raise InvestError(2010, msg='用户信息修改失败', detail='该用户有对接投资人，请先处理')
                                     if user.has_perm('usersys.as_investor'):
-                                        if Permission.objects.get(codename='as_investor', content_type__app_label='usersys') not in groupinstance.permissions.all():
+                                        if Permission.objects.get(codename='as_investor',
+                                                                  content_type__app_label='usersys') not in groupinstance.permissions.all():
                                             if user.investor_relations.all().filter(is_deleted=False).exists():
                                                 raise InvestError(2010, msg='用户信息修改失败', detail='该用户有对接交易师，请先处理')
                                     data['groups'] = [groupinstance.id]
+                        elif request.user == user:
+                            data.pop('userstatus')
                         else:
-                            if request.user == user:
-                                canNotChangeField = perimissionfields.userpermfield['changeself']
-                            elif is_userTrader(request.user, user.id):
-                                canNotChangeField = perimissionfields.userpermfield['usersys.trader_changeuser']
-                            else:
-                                raise InvestError(code=2009, msg='用户信息修改失败')
-                        keylist = data.keys()
-                        cannoteditlist = [key for key in keylist if key in canNotChangeField]
-                        if cannoteditlist:
-                            raise InvestError(code=2009, msg='用户信息修改失败', detail='没有权限修改_%s' % cannoteditlist)
+                            raise InvestError(2009, msg='用户信息修改失败', detail='没有修改权限')
                         data['lastmodifyuser'] = request.user.id
                         data['lastmodifytime'] = datetime.datetime.now()
                         tags = data.pop('tags', None)
@@ -515,19 +486,18 @@ class UserView(viewsets.ModelViewSet):
                     if userid == request.user.id:
                         raise InvestError(20071, msg='用户信息删除失败', detail='不能删除自己')
                     instance = self.get_object(userid)
-                    if request.user.has_perm('usersys.admin_deleteuser') or request.user.has_perm('usersys.user_deleteuser',instance):
+                    if request.user.has_perm('usersys.admin_manageuser') or is_userTrader(request.user, instance.id):
                         pass
                     else:
                         raise InvestError(code=2009, msg='用户信息删除失败')
-                    for link in ['investor_relations', 'trader_relations', 'investor_timelines',
-                                     'trader_timelines', 'usersupport_projs', 'usercreate_OKR', 'usercreate_OKRResult',
+                    for link in ['investor_relations', 'trader_relations', 'usersupport_projs', 'usercreate_OKR', 'usercreate_OKRResult',
                                      'manager_beschedule', 'user_webexUser', 'user_dataroomTemp',
                                      'user_usertags', 'user_remarks', 'userreceive_msgs', 'user_workreport',
                                      'usersend_msgs', 'user_datarooms', 'user_userAttachments', 'user_userEvents',
-                                     'contractors_projBDs', 'user_MeetBDs', 'user_favorite', 'user_sharetoken', 'user_projects',
-                                     'trader_favorite', 'user_MeetBDsharetoken', 'user_beschedule', 'user_orgBDs', 'userPM_projs']:
+                                     'contractors_projBDs', 'user_sharetoken', 'user_projects',
+                                     'user_beschedule', 'user_orgBDs', 'userPM_projs']:
                         if link in ['usersupport_projs', 'investor_relations', 'trader_relations', 'userPM_projs',
-                                    'user_userEvents', 'user_orgBDs', 'user_MeetBDs', 'user_projects', 'user_remarks',
+                                    'user_userEvents', 'user_orgBDs', 'user_projects', 'user_remarks',
                                     'user_userAttachments', 'user_dataroomTemp', 'user_datarooms', 'contractors_projBDs']:
                             manager = getattr(instance, link, None)
                             if not manager:
@@ -562,8 +532,6 @@ class UserView(viewsets.ModelViewSet):
                                     pass
                     cache_delete_key(self.redis_key + '_%s' % instance.id)
                     userlist.append({})
-                    if instance.hasIM:
-                        deleteHuanXinIMWithUser(instance)
                     instance.delete()
                 cache_delete_key(self.redis_key)
                 return JSONResponse(SuccessResponse(returnListChangeToLanguage(userlist,lang)))
@@ -605,7 +573,6 @@ class UserView(viewsets.ModelViewSet):
                 user.set_password(password)
                 user.save(update_fields=['password'])
                 user.user_token.all().update(is_deleted=True)
-                # .filter(created__gte=datetime.datetime.now() - datetime.timedelta(hours=24 * 1))
                 cache_delete_key(self.redis_key + '_%s' % user.id)
                 cache_delete_key(self.redis_key)
                 return JSONResponse(SuccessResponse(password))
@@ -648,10 +615,14 @@ class UserView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
     @detail_route(methods=['get'])
-    @loginTokenIsAvailable(['usersys.admin_changeuser'])
+    @loginTokenIsAvailable()
     def resetpassword(self,request, *args, **kwargs):
         try:
             user = self.get_object()
+            if request.user.has_perm('usersys.admin_manageuser') or is_userTrader(request.user, user.id):
+                pass
+            else:
+                raise InvestError(code=2009, msg='重置密码失败')
             with transaction.atomic():
                 user.set_password('Aa123456')
                 user.save(update_fields=['password'])
@@ -799,7 +770,7 @@ class UnReachUserView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['usersys.admin_adduser','usersys.user_adduser'])
+    @loginTokenIsAvailable(['usersys.admin_manageuser','usersys.as_trader'])
     def create(self, request, *args, **kwargs):
         try:
             data = request.data
@@ -832,10 +803,14 @@ class UnReachUserView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['usersys.admin_changeuser',])
+    @loginTokenIsAvailable()
     def update(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
+            if request.user.has_perm('usersys.admin_manageuser') or request.user == instance.createuser:
+                pass
+            else:
+                raise InvestError(code=2009, msg='修改UnReachUser失败')
             data = request.data
             with transaction.atomic():
                 newinstance = UnreachUserSerializer(instance, data=data)
@@ -850,11 +825,15 @@ class UnReachUserView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['usersys.admin_deleteuser',])
+    @loginTokenIsAvailable()
     def destroy(self, request, *args, **kwargs):
         try:
+            instance = self.get_object()
+            if request.user.has_perm('usersys.admin_manageuser') or request.user == instance.createuser:
+                pass
+            else:
+                raise InvestError(code=2009, msg='修改UnReachUser失败')
             with transaction.atomic():
-                instance = self.get_object()
                 instance.is_deleted = True
                 instance.deletedtime = datetime.datetime.now()
                 instance.deleteduser = request.user
@@ -885,7 +864,7 @@ class UserAttachmentView(viewsets.ModelViewSet):
     filter_class = UserAttachmentFilter
     serializer_class = UserAttachmentSerializer
 
-    @loginTokenIsAvailable(['usersys.user_getuserbase',])
+    @loginTokenIsAvailable()
     def list(self, request, *args, **kwargs):
         try:
             page_size = request.GET.get('page_size', 10)
@@ -909,12 +888,16 @@ class UserAttachmentView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['usersys.user_getuserbase', ])
+    @loginTokenIsAvailable()
     def create(self, request, *args, **kwargs):
         data = request.data
         lang = request.GET.get('lang')
         data['createuser'] = request.user.id
         data['datasource'] = request.user.datasource.id
+        if request.user.has_perm('usersys.admin_manageuser') or is_userTrader(request.user, data['user']):
+            pass
+        else:
+            raise InvestError(code=2009, msg='新增用户附件失败')
         try:
             with transaction.atomic():
                 attachmentserializer = UserAttachmentSerializer(data=data)
@@ -929,31 +912,38 @@ class UserAttachmentView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['usersys.user_getuserbase', ])
+    @loginTokenIsAvailable()
     def update(self, request, *args, **kwargs):
         try:
-            remark = self.get_object()
+            instance = self.get_object()
+            if request.user.has_perm('usersys.admin_manageuser') or is_userTrader(request.user, instance.user.id):
+                pass
+            else:
+                raise InvestError(code=2009, msg='新增用户附件失败')
             lang = request.GET.get('lang')
             data = request.data
             data.pop('createdtime',None)
             with transaction.atomic():
-                serializer = UserAttachmentSerializer(remark, data=data)
+                serializer = UserAttachmentSerializer(instance, data=data)
                 if serializer.is_valid():
-                    newinstance = serializer.save()
+                    serializer.save()
                 else:
                     raise InvestError(20071, msg='修改用户附件失败', detail='%s' % serializer.error_messages)
-                return JSONResponse(
-                    SuccessResponse(returnDictChangeToLanguage(UserAttachmentSerializer(newinstance).data, lang)))
+                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['usersys.user_getuserbase', ])
+    @loginTokenIsAvailable()
     def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
+            if request.user.has_perm('usersys.admin_manageuser') or is_userTrader(request.user, instance.user.id):
+                pass
+            else:
+                raise InvestError(code=2009, msg='新增用户附件失败')
             with transaction.atomic():
                 instance.is_deleted = True
                 deleteqiniufile(instance.bucket, instance.key)
@@ -978,7 +968,7 @@ class UserEventView(viewsets.ModelViewSet):
     filter_fields = ('user',)
     serializer_class = UserEventSerializer
 
-    @loginTokenIsAvailable(['usersys.user_getuserbase', ])
+    @loginTokenIsAvailable()
     def list(self, request, *args, **kwargs):
         try:
             page_size = request.GET.get('page_size', 10)
@@ -1002,14 +992,18 @@ class UserEventView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['usersys.user_getuserbase', ])
+    @loginTokenIsAvailable()
     def create(self, request, *args, **kwargs):
         data = request.data
+        user_id = data.get('user', None)
+        if request.user.has_perm('usersys.admin_manageuser') or is_userTrader(request.user, user_id):
+            pass
+        else:
+            raise InvestError(code=2009, msg='新增用户投资经历失败')
         lang = request.GET.get('lang')
         data['createuser'] = request.user.id
         industrytype = data.get('industrytype', None)
         Pindustrytype = data.get('Pindustrytype', None)
-        user_id = data.get('user', None)
         try:
             with transaction.atomic():
                 insserializer = UserEventSerializer(data=data)
@@ -1036,31 +1030,34 @@ class UserEventView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['usersys.user_getuserbase', ])
+    @loginTokenIsAvailable()
     def update(self, request, *args, **kwargs):
         try:
-            remark = self.get_object()
+            instance = self.get_object()
+            if request.user.has_perm('usersys.admin_manageuser') or is_userTrader(request.user, instance.user.id):
+                pass
+            else:
+                raise InvestError(code=2009, msg='修改用户投资经历失败')
             lang = request.GET.get('lang')
             data = request.data
             industrytype = data.get('industrytype', None)
             Pindustrytype = data.get('Pindustrytype', None)
-            user_id = data.get('user', None)
             with transaction.atomic():
-                serializer = UserEventSerializer(remark, data=data)
+                serializer = UserEventSerializer(instance, data=data)
                 if serializer.is_valid():
                     newinstance = serializer.save()
                     useP = False
                     if industrytype:
                         for tag_id in TagContrastTable.objects.filter(cat_name=industrytype).values_list('tag_id'):
                             useP = True
-                            if not userTags.objects.filter(user_id=user_id, tag_id=tag_id[0], is_deleted=False).exists():
-                                userTags(user_id=user_id, tag_id=tag_id[0]).save()
+                            if not userTags.objects.filter(user=instance.user, tag_id=tag_id[0], is_deleted=False).exists():
+                                userTags(user=instance.user, tag_id=tag_id[0]).save()
                     if not useP:
                         if Pindustrytype:
                             for tag_id in TagContrastTable.objects.filter(cat_name=Pindustrytype).values_list('tag_id'):
-                                if not userTags.objects.filter(user_id=user_id, tag_id=tag_id[0],
+                                if not userTags.objects.filter(user=instance.user, tag_id=tag_id[0],
                                                                is_deleted=False).exists():
-                                    userTags(user_id=user_id, tag_id=tag_id[0]).save()
+                                    userTags(user=instance.user, tag_id=tag_id[0]).save()
                 else:
                     raise InvestError(20071, msg='修改用户投资经历失败', detail='%s' % serializer.error_messages)
                 return JSONResponse(
@@ -1071,11 +1068,15 @@ class UserEventView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['usersys.user_getuserbase', ])
+    @loginTokenIsAvailable()
     def destroy(self, request, *args, **kwargs):
         try:
             lang = request.GET.get('lang')
             instance = self.get_object()
+            if request.user.has_perm('usersys.admin_manageuser') or is_userTrader(request.user, instance.user.id):
+                pass
+            else:
+                raise InvestError(code=2009, msg='删除用户投资经历失败')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
@@ -1126,7 +1127,10 @@ class UserRemarkView(viewsets.ModelViewSet):
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
             queryset = self.filter_queryset(self.get_queryset())
-            if request.user.has_perm('usersys.get_userremark'):
+            user_id = request.GET.get('user', None)
+            if request.user.has_perm('usersys.admin_manageuser'):
+                pass
+            elif user_id and is_userTrader(request.user, user_id):
                 pass
             else:
                 queryset = queryset.filter(createuser_id=request.user.id)
@@ -1153,6 +1157,11 @@ class UserRemarkView(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         try:
             data = request.data
+            user_id = request.GET.get('user')
+            if request.user.has_perm('usersys.admin_manageuser') or is_userTrader(request.user, user_id):
+                pass
+            else:
+                raise InvestError(code=2009, msg='新增用户备注失败')
             lang = request.GET.get('lang')
             if not data.get('createuser'):
                 data['createuser'] = request.user.id
@@ -1174,14 +1183,14 @@ class UserRemarkView(viewsets.ModelViewSet):
     def retrieve(self, request, *args, **kwargs):
         try:
             lang = request.GET.get('lang')
-            remark = self.get_object()
-            if request.user.has_perm('usersys.get_userremark'):
-                remarkserializer = UserRemarkCreateSerializer
-            elif remark.createuser == request.user:
-                remarkserializer = UserRemarkSerializer
+            instance = self.get_object()
+            if request.user.has_perm('usersys.admin_manageuser') or is_userTrader(request.user, instance.user.id):
+                pass
+            elif instance.createuser == request.user:
+                pass
             else:
                 raise InvestError(code=2009, msg='查看该用户备注失败')
-            serializer = remarkserializer(remark)
+            serializer = UserRemarkSerializer(instance)
             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1192,18 +1201,18 @@ class UserRemarkView(viewsets.ModelViewSet):
     @loginTokenIsAvailable()
     def update(self, request, *args, **kwargs):
         try:
-            remark = self.get_object()
+            instance = self.get_object()
             lang = request.GET.get('lang')
-            if request.user.has_perm('usersys.update_userremark'):
+            if request.user.has_perm('usersys.admin_manageuser') or is_userTrader(request.user, instance.user.id):
                 pass
-            elif remark.createuser == request.user:
+            elif instance.createuser == request.user:
                 pass
             else:
                 raise InvestError(code=2009, msg='修改用户备注失败')
             data = request.data
             data['lastmodifyuser'] = request.user.id
             with transaction.atomic():
-                serializer = UserRemarkCreateSerializer(remark, data=data)
+                serializer = UserRemarkCreateSerializer(instance, data=data)
                 if serializer.is_valid():
                     newremark = serializer.save()
                 else:
@@ -1221,7 +1230,7 @@ class UserRemarkView(viewsets.ModelViewSet):
         try:
             lang = request.GET.get('lang')
             instance = self.get_object()
-            if request.user.has_perm('usersys.delete_userremark'):
+            if request.user.has_perm('usersys.admin_manageuser') or is_userTrader(request.user, instance.user.id):
                 pass
             elif instance.createuser == request.user:
                 pass
@@ -1299,12 +1308,12 @@ class UserRelationView(viewsets.ModelViewSet):
             queryset = self.filter_queryset(self.get_queryset())
             if dataroom_id:
                 dataroominstance = dataroom.objects.get(id=dataroom_id, is_deleted=False)
-                if request.user.has_perm('usersys.admin_getuserrelation') or is_dataroomTrader(request.user, dataroominstance):
+                if request.user.has_perm('usersys.admin_manageuserrelation') or is_dataroomTrader(request.user, dataroominstance):
                     queryset = queryset.filter(traderuser__in=dataroominstance.proj.proj_traders.all().filter(is_deleted=False).values_list('user_id'))
                 else:
                     raise InvestError(2009, msg='查询失败', detail='没有权限查看该dataroom承揽承做对接投资人')
             else:
-                if request.user.has_perm('usersys.admin_getuserrelation'):
+                if request.user.has_perm('usersys.admin_manageuserrelation'):
                     pass
                 else:
                     queryset = queryset.filter(Q(traderuser=request.user) | Q(investoruser=request.user))
@@ -1344,7 +1353,7 @@ class UserRelationView(viewsets.ModelViewSet):
                 investoruser = MyUser.objects.get(id=data.get('investoruser', None))
             except MyUser.DoesNotExist:
                 raise InvestError(20071, msg='创建用户交易师关系失败', detail='投资人不存在')
-            if request.user.has_perm('usersys.admin_adduserrelation'):
+            if request.user.has_perm('usersys.admin_manageuserrelation'):
                 pass
             else:
                 if traderuser.id != request.user.id and investoruser.id != request.user.id:
@@ -1360,11 +1369,7 @@ class UserRelationView(viewsets.ModelViewSet):
                 newrelation = UserRelationCreateSerializer(data=data)
                 if newrelation.is_valid():
                     relation = newrelation.save()
-                    add_perm('usersys.user_getuserrelation', relation.traderuser, relation)
-                    add_perm('usersys.user_changeuserrelation', relation.traderuser, relation)
-                    add_perm('usersys.user_deleteuserrelation', relation.traderuser, relation)
-                    sendmessage_traderadd(relation, relation.investoruser, ['app', 'sms', 'webmsg'],
-                                             sender=request.user)
+                    sendmessage_traderadd(relation, relation.investoruser, ['app', 'sms', 'webmsg'], sender=request.user)
                 else:
                     raise InvestError(20071, msg='创建用户交易师关系失败', detail='%s' % newrelation.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(UserRelationSerializer(relation).data,lang)))
@@ -1401,7 +1406,7 @@ class UserRelationView(viewsets.ModelViewSet):
         try:
             userrelation = self.get_object()
             lang = request.GET.get('lang')
-            if request.user.has_perm('usersys.admin_getuserrelation'):
+            if request.user.has_perm('usersys.admin_manageuserrelation'):
                 pass
             elif request.user in [userrelation.traderuser, userrelation.investoruser]:
                 pass
@@ -1426,9 +1431,9 @@ class UserRelationView(viewsets.ModelViewSet):
                 newlist = []
                 for relationdata in relationdatalist:
                     relation = self.get_object(relationdata['id'])
-                    if request.user.has_perm('usersys.admin_changeuserrelation'):
+                    if request.user.has_perm('usersys.admin_manageuserrelation'):
                         pass
-                    elif request.user in [relation.traderuser]:
+                    elif request.user == relation.traderuser:
                         relationdata.pop('relationtype', None)
                     else:
                         raise InvestError(code=2009, msg='修改用户交易师关系失败', detail='没有权限')
@@ -1459,7 +1464,7 @@ class UserRelationView(viewsets.ModelViewSet):
                 for userrelation in relationlist:
                     if request.user == userrelation.traderuser:
                         pass
-                    elif request.user.has_perm('usersys.admin_deleteuserrelation'):
+                    elif request.user.has_perm('usersys.admin_manageuserrelation'):
                         pass
                     else:
                         raise InvestError(code=2009, msg='删除用户交易师关系失败', detail='没有权限')
@@ -1540,6 +1545,10 @@ class UserPersonnelRelationsView(viewsets.ModelViewSet):
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
             queryset = self.filter_queryset(self.get_queryset())
+            if request.user.has_perm('usersys.admin_managepersonnelrelation'):
+                pass
+            else:
+                queryset = queryset.filter(Q(user=request.user) | Q(supervisorOrMentor=request.user)| Q(user__directSupervisor=request.user)| Q(user__mentor=request.user)).distinct()
             try:
                 count = queryset.count()
                 queryset = Paginator(queryset, page_size)
@@ -1573,7 +1582,11 @@ class UserPersonnelRelationsView(viewsets.ModelViewSet):
             lang = request.GET.get('lang')
             data['createuser'] = request.user.id
             data['datasource'] = request.user.datasource.id
-
+            if request.user.has_perm('usersys.admin_managepersonnelrelation'):
+                pass
+            else:
+                if data['supervisorOrMentor'] != request.user.id and data['user'] !=request.user.id:
+                    raise InvestError(2009, msg='创建用户人事关系记录失败', detail='没有给其他人新建的权限')
             with transaction.atomic():
                 instanceSerializer = UserPersonnelRelationsCreateSerializer(data=data)
                 if instanceSerializer.is_valid():
@@ -1594,6 +1607,11 @@ class UserPersonnelRelationsView(viewsets.ModelViewSet):
             data = request.data
             lang = request.GET.get('lang')
             instance = self.get_object()
+            if request.user.has_perm('usersys.admin_managepersonnelrelation'):
+                pass
+            else:
+                if instance.supervisorOrMentor != request.user and instance.user !=request.user:
+                    raise InvestError(2009, msg='修改用户人事关系记录失败', detail='没有给其他人修改的权限')
             with transaction.atomic():
                 newinstanceSeria = UserPersonnelRelationsCreateSerializer(instance, data=data)
                 if newinstanceSeria.is_valid():
@@ -1613,6 +1631,11 @@ class UserPersonnelRelationsView(viewsets.ModelViewSet):
         try:
             lang = request.GET.get('lang')
             instance = self.get_object()
+            if request.user.has_perm('usersys.admin_managepersonnelrelation'):
+                pass
+            else:
+                if instance.supervisorOrMentor != request.user and instance.user !=request.user:
+                    raise InvestError(2009, msg='删除用户人事关系记录失败', detail='没有给其他人删除的权限')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
@@ -1672,6 +1695,10 @@ class UserPerformanceAppraisalRecordView(viewsets.ModelViewSet):
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
             queryset = self.filter_queryset(self.get_queryset())
+            if request.user.has_perm('usersys.admin_managepersonnelrelation'):
+                pass
+            else:
+                queryset = queryset.filter(Q(user=request.user)| Q(user__directSupervisor=request.user) | Q(user__mentor=request.user))
             try:
                 count = queryset.count()
                 queryset = Paginator(queryset, page_size)
@@ -1692,7 +1719,12 @@ class UserPerformanceAppraisalRecordView(viewsets.ModelViewSet):
             lang = request.GET.get('lang')
             data['createuser'] = request.user.id
             data['datasource'] = request.user.datasource.id
-
+            user = MyUser.objects.get(id=data['user'])
+            if request.user.has_perm('usersys.admin_managepersonnelrelation'):
+                pass
+            else:
+                if user != request.user and not is_traderDirectSupervisor(trader=user, supervisor=request.user):
+                    raise InvestError(2009, msg='没有权限给该用户新建绩效考核记录', detail='直接上司有权限给下属员工新建记录')
             with transaction.atomic():
                 instanceSerializer = UserPerformanceAppraisalRecordCreateSerializer(data=data)
                 if instanceSerializer.is_valid():
@@ -1712,6 +1744,11 @@ class UserPerformanceAppraisalRecordView(viewsets.ModelViewSet):
             data = request.data
             lang = request.GET.get('lang')
             instance = self.get_object()
+            if request.user.has_perm('usersys.admin_managepersonnelrelation') or instance.createuser == request.user:
+                pass
+            else:
+                if instance.user != request.user and not is_traderDirectSupervisor(trader=instance.user, supervisor=request.user):
+                    raise InvestError(2009, msg='没有权限编辑该用户绩效考核记录', detail='直接上司有权限给下属员工编辑记录')
             with transaction.atomic():
                 newinstanceSeria = UserPerformanceAppraisalRecordCreateSerializer(instance, data=data)
                 if newinstanceSeria.is_valid():
@@ -1728,8 +1765,12 @@ class UserPerformanceAppraisalRecordView(viewsets.ModelViewSet):
     @loginTokenIsAvailable()
     def destroy(self, request, *args, **kwargs):
         try:
-            lang = request.GET.get('lang')
             instance = self.get_object()
+            if request.user.has_perm('usersys.admin_managepersonnelrelation') or instance.createuser == request.user:
+                pass
+            else:
+                if instance.user != request.user and not is_traderDirectSupervisor(trader=instance.user, supervisor=request.user):
+                    raise InvestError(2009, msg='没有权限给删除该用户绩效考核记录', detail='直接上司有权限删除下属员工记录')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
@@ -1755,10 +1796,10 @@ class UserWorkingPositionRecordsFilter(FilterSet):
 
 class UserWorkingPositionRecordsView(viewsets.ModelViewSet):
     """
-    list:获取用户培训记录
-    create:添加用户培训记录
-    update:修改用户培训记录
-    destroy:删除用户培训记录
+    list:获取用户任职记录
+    create:添加用户任职记录
+    update:修改用户任职记录
+    destroy:删除用户任职记录
     """
     filter_backends = (filters.DjangoFilterBackend, filters.SearchFilter)
     filter_class = UserWorkingPositionRecordsFilter
@@ -1789,6 +1830,10 @@ class UserWorkingPositionRecordsView(viewsets.ModelViewSet):
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
             queryset = self.filter_queryset(self.get_queryset())
+            if request.user.has_perm('usersys.admin_managepersonnelrelation'):
+                pass
+            else:
+                queryset = queryset.filter(Q(user=request.user)| Q(user__directSupervisor=request.user) | Q(user__mentor=request.user))
             sortfield = request.GET.get('sort', 'createdtime')
             desc = request.GET.get('desc', 1)
             queryset = mySortQuery(queryset, sortfield, desc, True)
@@ -1813,12 +1858,17 @@ class UserWorkingPositionRecordsView(viewsets.ModelViewSet):
             lang = request.GET.get('lang')
             data['createuser'] = request.user.id
             data['datasource'] = request.user.datasource.id
+            if request.user.has_perm('usersys.admin_managepersonnelrelation'):
+                pass
+            else:
+                if request.user.id != data['user']:
+                    raise InvestError(2009, msg='没有权限给该用户新建用户任职记录')
             with transaction.atomic():
                 instanceSerializer = UserWorkingPositionRecordsCreateSerializer(data=data)
                 if instanceSerializer.is_valid():
                     instanceSerializer.save()
                 else:
-                    raise InvestError(2029, msg='创建用户培训记录失败', detail='新增失败--%s' % instanceSerializer.errors)
+                    raise InvestError(2029, msg='创建用户任职记录失败', detail='新增失败--%s' % instanceSerializer.errors)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(instanceSerializer.data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1832,12 +1882,17 @@ class UserWorkingPositionRecordsView(viewsets.ModelViewSet):
             data = request.data
             lang = request.GET.get('lang')
             instance = self.get_object()
+            if request.user.has_perm('usersys.admin_managepersonnelrelation'):
+                pass
+            else:
+                if instance.user != request.user:
+                    raise InvestError(2009, msg='没有权限编辑该用户任职记录')
             with transaction.atomic():
                 newinstanceSeria = UserWorkingPositionRecordsCreateSerializer(instance, data=data)
                 if newinstanceSeria.is_valid():
                     newinstanceSeria.save()
                 else:
-                    raise InvestError(2029, msg='修改用户培训记录失败', detail='修改失败——%s' % newinstanceSeria.errors)
+                    raise InvestError(2029, msg='修改用户任职记录失败', detail='修改失败——%s' % newinstanceSeria.errors)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(newinstanceSeria.data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1848,8 +1903,12 @@ class UserWorkingPositionRecordsView(viewsets.ModelViewSet):
     @loginTokenIsAvailable()
     def destroy(self, request, *args, **kwargs):
         try:
-            lang = request.GET.get('lang')
             instance = self.get_object()
+            if request.user.has_perm('usersys.admin_managepersonnelrelation'):
+                pass
+            else:
+                if instance.user != request.user:
+                    raise InvestError(2009, msg='没有权限删除该用户任职记录')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
@@ -1908,6 +1967,10 @@ class UserTrainingRecordsView(viewsets.ModelViewSet):
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
             queryset = self.filter_queryset(self.get_queryset())
+            if request.user.has_perm('usersys.admin_managepersonnelrelation'):
+                pass
+            else:
+                queryset = queryset.filter(Q(user=request.user)| Q(user__directSupervisor=request.user) | Q(user__mentor=request.user))
             sortfield = request.GET.get('sort', 'createdtime')
             desc = request.GET.get('desc', 1)
             queryset = mySortQuery(queryset, sortfield, desc, True)
@@ -1931,6 +1994,11 @@ class UserTrainingRecordsView(viewsets.ModelViewSet):
             lang = request.GET.get('lang')
             data['createuser'] = request.user.id
             data['datasource'] = request.user.datasource.id
+            if request.user.has_perm('usersys.admin_managepersonnelrelation'):
+                pass
+            else:
+                if request.user.id != data['user']:
+                    raise InvestError(2009, msg='没有权限给该用户新建用户培训记录')
             with transaction.atomic():
                 instanceSerializer = UserTrainingRecordsCreateSerializer(data=data)
                 if instanceSerializer.is_valid():
@@ -1950,6 +2018,11 @@ class UserTrainingRecordsView(viewsets.ModelViewSet):
             data = request.data
             lang = request.GET.get('lang')
             instance = self.get_object()
+            if request.user.has_perm('usersys.admin_managepersonnelrelation'):
+                pass
+            else:
+                if instance.user != request.user:
+                    raise InvestError(2009, msg='没有权限编辑该用户培训记录')
             with transaction.atomic():
                 newinstanceSeria = UserTrainingRecordsCreateSerializer(instance, data=data)
                 if newinstanceSeria.is_valid():
@@ -1968,6 +2041,11 @@ class UserTrainingRecordsView(viewsets.ModelViewSet):
         try:
             lang = request.GET.get('lang')
             instance = self.get_object()
+            if request.user.has_perm('usersys.admin_managepersonnelrelation'):
+                pass
+            else:
+                if instance.user != request.user:
+                    raise InvestError(2009, msg='没有权限删除给该用户培训记录')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
@@ -2025,6 +2103,10 @@ class UserMentorTrackingRecordsView(viewsets.ModelViewSet):
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
             queryset = self.filter_queryset(self.get_queryset())
+            if request.user.has_perm('usersys.admin_managepersonnelrelation'):
+                pass
+            else:
+                queryset = queryset.filter(Q(user=request.user)| Q(user__directSupervisor=request.user) | Q(user__mentor=request.user))
             sortfield = request.GET.get('sort', 'createdtime')
             desc = request.GET.get('desc', 1)
             queryset = mySortQuery(queryset, sortfield, desc, True)
@@ -2048,7 +2130,11 @@ class UserMentorTrackingRecordsView(viewsets.ModelViewSet):
             lang = request.GET.get('lang')
             data['createuser'] = request.user.id
             data['datasource'] = request.user.datasource.id
-
+            if request.user.has_perm('usersys.admin_managepersonnelrelation'):
+                pass
+            else:
+                if request.user.id != data['user']:
+                    raise InvestError(2009, msg='没有权限给该用户新建用户导师计划跟踪记录')
             with transaction.atomic():
                 instanceSerializer = UserMentorTrackingRecordsCreateSerializer(data=data)
                 if instanceSerializer.is_valid():
@@ -2068,6 +2154,11 @@ class UserMentorTrackingRecordsView(viewsets.ModelViewSet):
             data = request.data
             lang = request.GET.get('lang')
             instance = self.get_object()
+            if request.user.has_perm('usersys.admin_managepersonnelrelation'):
+                pass
+            else:
+                if instance.user != request.user:
+                    raise InvestError(2009, msg='没有权限编辑该用户培训记录')
             with transaction.atomic():
                 newinstanceSeria = UserMentorTrackingRecordsCreateSerializer(instance, data=data)
                 if newinstanceSeria.is_valid():
@@ -2084,206 +2175,18 @@ class UserMentorTrackingRecordsView(viewsets.ModelViewSet):
     @loginTokenIsAvailable()
     def destroy(self, request, *args, **kwargs):
         try:
-            lang = request.GET.get('lang')
             instance = self.get_object()
+            if request.user.has_perm('usersys.admin_managepersonnelrelation'):
+                pass
+            else:
+                if instance.user != request.user:
+                    raise InvestError(2009, msg='没有权限删除该用户培训记录')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
                 instance.deletedtime = datetime.datetime.now()
                 instance.save()
                 return JSONResponse(SuccessResponse(True))
-        except InvestError as err:
-            return JSONResponse(InvestErrorResponse(err))
-        except Exception:
-            catchexcption(request)
-            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
-
-class UserFriendshipView(viewsets.ModelViewSet):
-    """
-    list:获取用户好友列表
-    create:添加好友 (管理员权限可以直接确认关系，非管理员权限需对方确认)
-    update:同意添加好友、修改查看项目收藏权限
-    destroy:删除好友关系
-    """
-    filter_backends = (filters.DjangoFilterBackend,)
-    filter_fields = ('user', 'friend', 'isaccept')
-    queryset = UserFriendship.objects.filter(is_deleted=False)
-    serializer_class = UserFriendshipDetailSerializer
-
-    def get_queryset(self):
-        assert self.queryset is not None, (
-            "'%s' should either include a `queryset` attribute, "
-            "or override the `get_queryset()` method."
-            % self.__class__.__name__
-        )
-        queryset = self.queryset
-        if isinstance(queryset, QuerySet):
-            if self.request.user.is_authenticated:
-                queryset = queryset.filter(datasource=self.request.user.datasource)
-            else:
-                queryset = queryset.all()
-        else:
-            raise InvestError(code=8890)
-        return queryset
-
-    def get_object(self,pk=None):
-        if pk:
-            try:
-                obj = self.queryset.get(id=pk)
-            except UserFriendship.DoesNotExist:
-                raise InvestError(code=2002, msg='好友不存在', detail='好友关系不存在')
-        else:
-            try:
-                obj = self.queryset.get(id=self.kwargs['pk'])
-            except UserFriendship.DoesNotExist:
-                raise InvestError(code=2002, msg='好友不存在', detail='好友关系不存在')
-        if obj.datasource != self.request.user.datasource:
-            raise InvestError(code=8888, msg='查询好友失败')
-        return obj
-
-    @loginTokenIsAvailable()
-    def list(self, request, *args, **kwargs):
-        try:
-            page_size = request.GET.get('page_size', 10)
-            page_index = request.GET.get('page_index', 1)
-            lang = request.GET.get('lang', 'cn')
-            queryset = self.filter_queryset(self.get_queryset())
-            if request.user.has_perm('usersys.admin_getfriend'):
-                queryset = queryset
-            else:
-                queryset = queryset.filter(Q(user=request.user) | Q(friend=request.user))
-            try:
-                count = queryset.count()
-                queryset = Paginator(queryset, page_size)
-                queryset = queryset.page(page_index)
-            except EmptyPage:
-                return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
-
-            serializer = UserFriendshipSerializer(queryset, many=True)
-            return JSONResponse(SuccessResponse({'count':count,'data':returnListChangeToLanguage(serializer.data,lang)}))
-        except InvestError as err:
-            return JSONResponse(InvestErrorResponse(err))
-        except Exception:
-            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
-    @loginTokenIsAvailable()
-    def create(self, request, *args, **kwargs):
-        try:
-            data = request.data
-            data['createuser'] = request.user.id
-            data['datasource'] = request.user.datasource.id
-            friendlist = data.pop('friend',None)
-            if not friendlist or not isinstance(friendlist,list):
-                raise InvestError(20071, msg='添加好友失败', detail='‘friend’ except a non-empty array')
-            lang = request.GET.get('lang')
-            if request.user.has_perm('usersys.admin_addfriend'):
-                if data.get('user',None) is None:
-                    data['user'] = request.user.id
-            elif request.user.has_perm('usersys.user_addfriend'):
-                data['user'] = request.user.id
-                data['isaccept'] = False
-                data['accepttime'] = None
-            else:
-                raise InvestError(2009, msg='添加好友失败')
-            with transaction.atomic():
-                newfriendlist = []
-                sendmessagelist = []
-                for friendid in friendlist:
-                    data['friend'] = friendid
-                    newfriendship = UserFriendshipDetailSerializer(data=data)
-                    if newfriendship.is_valid():
-                        newfriend = newfriendship.save()
-                    else:
-                        raise InvestError(20071, msg='添加好友失败', detail='%s'%newfriendship.error_messages)
-                    newfriendlist.append(newfriendship.data)
-                    sendmessagelist.append(newfriend)
-                for friendship in sendmessagelist:
-                    sendmessage_usermakefriends(friendship,friendship.friend,['app', 'webmsg', 'sms', 'email'],sender=request.user)
-                return JSONResponse(SuccessResponse(returnListChangeToLanguage(newfriendlist,lang)))
-        except InvestError as err:
-            return JSONResponse(InvestErrorResponse(err))
-        except Exception:
-            catchexcption(request)
-            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
-    @loginTokenIsAvailable()
-    def update(self, request, *args, **kwargs):
-        try:
-            data = request.data
-            lang = request.GET.get('lang')
-            instance = self.get_object()
-            if request.user.has_perm('usersys.admin_changefriend'):
-                canChangeField = ['userallowgetfavoriteproj', 'friendallowgetfavoriteproj', 'isaccept']
-            elif request.user == instance.user:
-                canChangeField = ['userallowgetfavoriteproj']
-            elif request.user == instance.friend:
-                canChangeField = ['friendallowgetfavoriteproj','isaccept']
-            else:
-                raise InvestError(code=2009, msg='修改好友失败')
-            keylist = data.keys()
-            cannoteditlist = [key for key in keylist if key not in canChangeField]
-            if cannoteditlist:
-                raise InvestError(code=2009, msg='修改好友失败', detail='没有权限修改_%s' % cannoteditlist)
-            with transaction.atomic():
-                sendmessage = False
-                if instance.isaccept == False and bool(data.get('isaccept', None)):
-                    sendmessage = True
-                newfriendship = UserFriendshipUpdateSerializer(instance,data=data)
-                if newfriendship.is_valid():
-                    friendship = newfriendship.save()
-                else:
-                    raise InvestError(20071, msg='修改好友失败', detail='%s' % newfriendship.error_messages)
-                if friendship.isaccept and friendship.is_deleted == False:
-                    if not friendship.user.hasIM:
-                        registHuanXinIMWithUser(friendship.user)
-                    if not friendship.friend.hasIM:
-                        registHuanXinIMWithUser(friendship.friend)
-                if sendmessage:
-                    sendmessage_usermakefriends(friendship, friendship.user, ['app', 'webmsg'], sender=request.user)
-                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(UserFriendshipSerializer(friendship).data, lang)))
-        except InvestError as err:
-            return JSONResponse(InvestErrorResponse(err))
-        except Exception:
-            catchexcption(request)
-            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
-    @loginTokenIsAvailable()
-    def destroy(self, request, *args, **kwargs):
-        try:
-            lang = request.GET.get('lang')
-            instance = self.get_object()
-            if request.user.has_perm('usersys.admin_deletefriend'):
-                pass
-            elif request.user == instance.user or request.user == instance.friend:
-                pass
-            else:
-                raise InvestError(code=2009, msg='删除好友失败')
-            with transaction.atomic():
-                instance.is_deleted = True
-                instance.deleteduser = request.user
-                instance.deletedtime = datetime.datetime.now()
-                instance.save()
-                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(UserFriendshipUpdateSerializer(instance).data, lang)))
-        except InvestError as err:
-            return JSONResponse(InvestErrorResponse(err))
-        except Exception:
-            catchexcption(request)
-            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
-    @loginTokenIsAvailable()
-    def checkUserFriendShip(self, request, *args, **kwargs):
-        try:
-            userid = request.data.get('user', None)
-            if not userid:
-                raise InvestError(20071, msg='查询好关系失败', detail='user 不能空')
-            qs = self.get_queryset().filter(
-                Q(user_id=userid, friend_id=request.user.id, is_deleted=False) | Q(friend_id=userid, user_id=request.user.id, is_deleted=False))
-            if qs.exists():
-                res = True
-            else:
-                res = False
-            return JSONResponse(SuccessResponse(res))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
@@ -2342,8 +2245,6 @@ class GroupPermissionView(viewsets.ModelViewSet):
                 queryset = queryset.filter(permissions__codename__in=['as_trader'])
             if grouptype in [u'investor', 'investor']:
                 queryset = queryset.filter(permissions__codename__in=['as_investor'])
-            if grouptype in [u'admin', 'admin']:
-                queryset = queryset.filter(permissions__codename__in=['as_admin'])
             try:
                 count = queryset.count()
                 queryset = Paginator(queryset, page_size)

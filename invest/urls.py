@@ -22,7 +22,6 @@ import mongoDoc.urls
 import org.urls
 import proj.urls
 import usersys.urls
-import timeline.urls
 import third.urls
 import dataroom.urls
 import sourcetype.urls
@@ -40,7 +39,6 @@ urlpatterns += [
     url(r'^user/', include(usersys.urls)),
     url(r'^proj/',include(proj.urls)),
     url(r'^org/',include(org.urls)),
-    url(r'^timeline/',include(timeline.urls)),
     url(r'^dataroom/',include(dataroom.urls)),
     url(r'^service/',include(third.urls)),
     url(r'^source/', include(sourcetype.urls)),

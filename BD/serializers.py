@@ -1,7 +1,7 @@
 from django.db.models import Q
 from rest_framework import serializers
 
-from BD.models import ProjectBDComments, ProjectBD, OrgBDComments, OrgBD, MeetingBD, OrgBDBlack, ProjectBDManagers, \
+from BD.models import ProjectBDComments, ProjectBD, OrgBDComments, OrgBD, OrgBDBlack, ProjectBDManagers, \
     WorkReport, WorkReportProjInfo, OKR, OKRResult, WorkReportMarketMsg
 from org.serializer import OrgCommonSerializer
 from proj.models import project
@@ -43,7 +43,6 @@ class ProjectBDCreateSerializer(serializers.ModelSerializer):
 
 
 class ProjectBDSerializer(serializers.ModelSerializer):
-
     BDComments = serializers.SerializerMethodField()
     location = orgAreaSerializer()
     usertitle = titleTypeSerializer()
@@ -65,7 +64,8 @@ class ProjectBDSerializer(serializers.ModelSerializer):
     def get_BDComments(self, obj):
         user_id = self.context.get('user_id')
         manage = self.context.get('manage')
-        if manage or is_projBDManager(user_id, obj):
+        indGroup_id = self.context.get('indGroup_id')
+        if manage or is_projBDManager(user_id, obj) or (obj.indGroup and obj.indGroup.id == indGroup_id):
             qs = obj.ProjectBD_comments.filter(is_deleted=False).order_by('-createdtime')
             if qs.exists():
                 return ProjectBDCommentsSerializer(qs, many=True).data
@@ -163,30 +163,6 @@ class OrgBDBlackCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrgBDBlack
         fields = '__all__'
-
-
-class MeetingBDCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = MeetingBD
-        fields = '__all__'
-
-
-class MeetingBDSerializer(serializers.ModelSerializer):
-    org = OrgCommonSerializer()
-    proj = ProjSimpleSerializer()
-    usertitle = titleTypeSerializer()
-    manager = UserCommenSerializer()
-    attachmenturl = serializers.SerializerMethodField()
-
-    class Meta:
-        model = MeetingBD
-        exclude = ('deleteduser', 'deletedtime', 'datasource', 'is_deleted', 'createuser')
-
-    def get_attachmenturl(self, obj):
-        if obj.attachmentbucket and obj.attachment:
-            return getUrlWithBucketAndKey(obj.attachmentbucket, obj.attachment)
-        else:
-            return None
 
 
 

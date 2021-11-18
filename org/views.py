@@ -28,6 +28,7 @@ from sourcetype.models import TransactionPhases, TagContrastTable
 from third.views.qiniufile import deleteqiniufile, downloadFileToPath
 from usersys.models import UserRelation
 from utils.customClass import InvestError, JSONResponse, RelationFilter, MySearchFilter
+from utils.logicJudge import is_orgUserTrader
 from utils.somedef import file_iterator
 from utils.util import loginTokenIsAvailable, catchexcption, read_from_cache, write_to_cache, \
     returnListChangeToLanguage, \
@@ -115,10 +116,7 @@ class OrganizationView(viewsets.ModelViewSet):
             if request.user.is_anonymous:
                 serializerclass = OrgCommonSerializer
             else:
-                if request.user.has_perm('org.admin_getorg'):
-                    serializerclass = OrgListSerializer
-                else:
-                    serializerclass = OrgCommonSerializer  # warning
+                serializerclass = OrgListSerializer
             try:
                 count = queryset.count()
                 queryset = Paginator(queryset, page_size)
@@ -134,9 +132,8 @@ class OrganizationView(viewsets.ModelViewSet):
                 else:
                     if instance.orglevel_id == 1 or instance.orglevel_id == 2:
                         user_count = checkOrgUserContactInfoTruth(instance, request.user.datasource)
-                    if request.user.has_perm('org.admin_changeorg') or request.user == instance.createuser:
+                    if request.user.has_perm('org.admin_manageorg') or request.user == instance.createuser:
                         actionlist['change'] = True
-                    if request.user.has_perm('org.admin_deleteorg') or request.user == instance.createuser:
                         actionlist['delete'] = True
                 instancedata = serializerclass(instance).data
                 instancedata['action'] = actionlist
@@ -156,9 +153,7 @@ class OrganizationView(viewsets.ModelViewSet):
         lang = request.GET.get('lang')
         data['createuser'] = request.user.id
         data['datasource'] = request.user.datasource.id
-        if request.user.has_perm('org.admin_addorg'):
-            pass
-        elif request.user.has_perm('org.user_addorg'):
+        if request.user.has_perm('org.admin_manageorg'):
             pass
         else:
             raise InvestError(2009, msg='新增机构失败', detail='没有新增权限')
@@ -192,15 +187,10 @@ class OrganizationView(viewsets.ModelViewSet):
     def retrieve(self, request, *args, **kwargs):
         try:
             org = self.get_object()
-            orgusers = org.org_users.all().filter(is_deleted=False)
             lang = request.GET.get('lang')
-            if request.user.has_perm('org.admin_getorg'):
+            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, org):
                 orgserializer = OrgDetailSerializer
-            elif request.user == org.createuser:
-                orgserializer = OrgDetailSerializer
-            elif request.user.org == org:
-                orgserializer = OrgDetailSerializer
-            elif request.user.trader_relations.all().filter(is_deleted=False, investoruser__in=orgusers).exists():
+            elif request.user == org.createuser or request.user.org == org:
                 orgserializer = OrgDetailSerializer
             else:
                 orgserializer = OrgCommonSerializer
@@ -217,14 +207,10 @@ class OrganizationView(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         data = request.data
         lang = request.GET.get('lang')
-        IPOdate = data.pop('IPOdate', None)
-        if IPOdate not in ['None', None, u'None', 'none']:
-            data['IPOdate'] = datetime.datetime.strptime(IPOdate[0:10], '%Y-%m-%d')
         data['lastmodifyuser'] = request.user.id
-        data['lastmodifytime'] = datetime.datetime.now()
         try:
             org = self.get_object()
-            if request.user.has_perm('org.admin_changeorg'):
+            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, org):
                 pass
             elif request.user == org.createuser:
                 data.pop('orgstatus', None)
@@ -266,7 +252,7 @@ class OrganizationView(viewsets.ModelViewSet):
         try:
             instance = self.get_object()
             lang = request.GET.get('lang')
-            if request.user.has_perm('org.admin_deleteorg'):
+            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, instance):
                 pass
             elif request.user == instance.createuser and instance.orgstatus != 2:
                 pass
@@ -275,8 +261,8 @@ class OrganizationView(viewsets.ModelViewSet):
             with transaction.atomic():
                 for link in ['org_users','org_orgTransactionPhases','org_remarks','org_unreachuser','org_orgBDs','org_orgInvestEvent'
                              'org_orgManageFund','fund_fundManager','org_orgcontact','org_cooperativeRelationship','cooperativeorg_Relationship'
-                             'org_buyout','buyoutorg_buyoutorg','org_OrgBdBlacks','org_meetBDs']:
-                    if link in ['org_users', 'org_orgBDs', 'org_meetBDs']:
+                             'org_buyout','buyoutorg_buyoutorg','org_OrgBdBlacks']:
+                    if link in ['org_users', 'org_orgBDs']:
                         manager = getattr(instance, link, None)
                         if not manager:
                             continue
@@ -378,11 +364,10 @@ class OrgRemarkView(viewsets.ModelViewSet):
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
-            queryset = self.filter_queryset(self.get_queryset())
-            if request.user.has_perm('org.admin_getorgremark'):
-                queryset = queryset.filter(datasource=request.user.datasource)
-            else:
-                queryset = queryset.filter(createuser_id=request.user.id)
+            orgid = request.GET.get('org', None)
+            if not orgid:
+                raise InvestError(20072, msg='获取机构备注失败', detail='机构（org）不能为空')
+            queryset = self.filter_queryset(self.get_queryset()).filter(datasource=request.user.datasource)
             try:
                 count = queryset.count()
                 queryset = Paginator(queryset, page_size)
@@ -401,44 +386,29 @@ class OrgRemarkView(viewsets.ModelViewSet):
         try:
             data = request.data
             lang = request.GET.get('lang')
-            if request.user.has_perm('org.admin_addorgremark'):
-                pass
-            elif request.user.has_perm('org.user_addorgremark'):
-                pass
-            else:
-                raise InvestError(code=2009, msg='获取机构备注失败')
             if not data.get('createuser'):
                 data['createuser'] = request.user.id
             data['datasource'] = request.user.datasource.id
             with transaction.atomic():
                 orgremarkserializer = OrgRemarkDetailSerializer(data=data)
                 if orgremarkserializer.is_valid():
-                    orgremark = orgremarkserializer.save()
+                    orgremarkserializer.save()
                 else:
                     raise InvestError(20071, msg='新增机构备注失败', detail='%s' % orgremarkserializer.error_messages)
-                if orgremark.createuser:
-                    add_perm('org.user_getorgremark', orgremark.createuser, orgremark)
-                    add_perm('org.user_changeorgremark', orgremark.createuser, orgremark)
-                    add_perm('org.user_deleteorgremark', orgremark.createuser, orgremark)
-                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(OrgRemarkDetailSerializer(orgremark).data,lang)))
+                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(orgremarkserializer.data,lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
+
     @loginTokenIsAvailable()
     def retrieve(self, request, *args, **kwargs):
         try:
             lang = request.GET.get('lang')
             orgremark = self.get_object()
-            if request.user.has_perm('org.admin_getorgremark'):
-                orgremarkserializer = OrgRemarkDetailSerializer
-            elif request.user.has_perm('org.user_getorgremark',orgremark):
-                orgremarkserializer = OrgRemarkDetailSerializer
-            else:
-                raise InvestError(code=2009, msg='获取机构备注失败')
-            serializer = orgremarkserializer(orgremark)
+            serializer = OrgRemarkDetailSerializer(orgremark)
             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data,lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -446,41 +416,42 @@ class OrgRemarkView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
+
     @loginTokenIsAvailable()
     def update(self, request, *args, **kwargs):
         try:
-            orgremark = self.get_object()
+            instance = self.get_object()
             lang = request.GET.get('lang')
-            if request.user.has_perm('org.admin_changeorgremark'):
+            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, instance.org):
                 pass
-            elif request.user.has_perm('org.user_changeorgremark', orgremark):
+            elif request.user == instance.createuser:
                 pass
             else:
                 raise InvestError(code=2009, msg='编辑机构备注信息失败')
             data = request.data
             data['lastmodifyuser'] = request.user.id
             with transaction.atomic():
-                orgserializer = OrgRemarkDetailSerializer(orgremark, data=data)
+                orgserializer = OrgRemarkDetailSerializer(instance, data=data)
                 if orgserializer.is_valid():
-                    org = orgserializer.save()
+                    orgserializer.save()
                 else:
                     raise InvestError(20071, msg='编辑机构备注信息失败', detail='%s' % orgserializer.error_messages)
-                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(OrgRemarkDetailSerializer(org).data,lang)))
+                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(orgserializer.data,lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
+
     @loginTokenIsAvailable()
     def destroy(self, request, *args, **kwargs):
         try:
             lang = request.GET.get('lang')
             instance = self.get_object()
-
-            if request.user.has_perm('org.admin_deleteorgremark'):
+            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, instance.org):
                 pass
-            elif request.user.has_perm('org.user_deleteorgremark', instance):
+            elif request.user == instance.createuser:
                 pass
             else:
                 raise InvestError(code=2009, msg='删除机构备注信息失败')
@@ -543,8 +514,6 @@ class OrgContactView(viewsets.ModelViewSet):
             orgid = request.GET.get('org', None)
             if not orgid:
                 raise InvestError(20072, msg='获取机构联系方式失败', detail='机构（org）不能为空')
-            else:
-                orginstace = self.get_org(orgid)
             queryset = self.filter_queryset(self.get_queryset())
             try:
                 count = queryset.count()
@@ -566,9 +535,9 @@ class OrgContactView(viewsets.ModelViewSet):
         orgid = data.get('org',None)
         if orgid:
             org = self.get_org(orgid=orgid)
-            if request.user.has_perm('org.admin_changeorg'):
+            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, org):
                 pass
-            elif request.user == org.createuser:
+            elif request.user.org == org or request.user == org.createuser:
                 pass
             else:
                 raise InvestError(code=2009, msg='新增机构联系方式失败')
@@ -607,9 +576,9 @@ class OrgContactView(viewsets.ModelViewSet):
         try:
             instance = self.get_object()
             lang = request.GET.get('lang')
-            if request.user.has_perm('org.admin_changeorg'):
+            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, instance.org):
                 pass
-            elif request.user == instance.org.createuser:
+            elif request.user == instance.createuser:
                 pass
             else:
                 raise InvestError(code=2009, msg='修改机构联系方式失败')
@@ -633,9 +602,9 @@ class OrgContactView(viewsets.ModelViewSet):
         try:
             lang = request.GET.get('lang')
             instance = self.get_object()
-            if request.user.has_perm('org.admin_changeorg'):
+            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, instance.org):
                 pass
-            elif request.user == instance.org.createuser or request.user == instance.createuser:
+            elif request.user == instance.createuser:
                 pass
             else:
                 raise InvestError(code=2009, msg='删除机构联系方式失败', detail='没有权限')
@@ -708,8 +677,6 @@ class OrgManageFundView(viewsets.ModelViewSet):
             orgid = request.GET.get('org', None)
             if not orgid:
                 raise InvestError(20072, msg='获取机构管理基金失败', detail='机构（org）不能为空')
-            else:
-                orginstace = self.get_org(orgid)
             queryset = self.filter_queryset(self.get_queryset()).order_by('-fundraisedate')
             try:
                 count = queryset.count()
@@ -731,9 +698,9 @@ class OrgManageFundView(viewsets.ModelViewSet):
         orgid = data.get('org',None)
         if orgid:
             org = self.get_org(orgid=orgid)
-            if request.user.has_perm('org.admin_changeorg'):
+            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, org):
                 pass
-            elif request.user == org.createuser:
+            elif request.user.org == org or request.user == org.createuser:
                 pass
             else:
                 raise InvestError(code=2009, msg='新增机构管理基金失败')
@@ -772,9 +739,9 @@ class OrgManageFundView(viewsets.ModelViewSet):
         try:
             instance = self.get_object()
             lang = request.GET.get('lang')
-            if request.user.has_perm('org.admin_changeorg'):
+            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, instance.org):
                 pass
-            elif request.user == instance.org.createuser or request.user == instance.createuser:
+            elif request.user == instance.createuser:
                 pass
             else:
                 raise InvestError(code=2009, msg='修改机构管理基金信息失败')
@@ -798,9 +765,9 @@ class OrgManageFundView(viewsets.ModelViewSet):
         try:
             lang = request.GET.get('lang')
             instance = self.get_object()
-            if request.user.has_perm('org.admin_changeorg'):
+            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, instance.org):
                 pass
-            elif request.userrequest.user == instance.org.createuser or request.user == instance.createuser:
+            elif request.user == instance.createuser:
                 pass
             else:
                 raise InvestError(code=2009, msg='删除机构管理基金信息失败')
@@ -886,9 +853,9 @@ class OrgInvestEventView(viewsets.ModelViewSet):
         orgid = data.get('org',None)
         if orgid:
             org = self.get_org(orgid=orgid)
-            if request.user.has_perm('org.admin_changeorg'):
+            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, org):
                 pass
-            elif request.userrequest.user == org.createuser:
+            elif request.user.org == org or request.user == org.createuser:
                 pass
             else:
                 raise InvestError(code=2009, msg='新增机构投资经历失败')
@@ -940,9 +907,9 @@ class OrgInvestEventView(viewsets.ModelViewSet):
         try:
             instance = self.get_object()
             lang = request.GET.get('lang')
-            if request.user.has_perm('org.admin_changeorg'):
+            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, instance.org):
                 pass
-            elif request.user == instance.org.createuser or request.user == instance.createuser:
+            elif request.user == instance.createuser:
                 pass
             else:
                 raise InvestError(code=2009, msg='修改机构投资经历失败')
@@ -979,9 +946,9 @@ class OrgInvestEventView(viewsets.ModelViewSet):
         try:
             lang = request.GET.get('lang')
             instance = self.get_object()
-            if request.user.has_perm('org.admin_changeorg'):
+            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, instance.org):
                 pass
-            elif request.user == instance.org.createuser or request.user == instance.createuser:
+            elif request.user == instance.createuser:
                 pass
             else:
                 raise InvestError(code=2009, msg='删除机构投资经历失败')
@@ -1044,10 +1011,7 @@ class OrgCooperativeRelationshipView(viewsets.ModelViewSet):
             orgid = request.GET.get('org', None)
             if not orgid:
                 raise InvestError(20072, msg='获取机构合作关系失败', detail='机构不能为空')
-            else:
-                orginstace = self.get_org(orgid)
-            queryset = self.filter_queryset(self.get_queryset()).filter(Q(org=orginstace)).order_by('-investDate')
-            # queryset = self.filter_queryset(self.get_queryset()).filter(Q(org=orginstace)|Q(cooperativeOrg=orginstace)).order_by('-investDate')
+            queryset = self.filter_queryset(self.get_queryset()).order_by('-investDate')
             try:
                 count = queryset.count()
                 queryset = Paginator(queryset, page_size)
@@ -1068,9 +1032,9 @@ class OrgCooperativeRelationshipView(viewsets.ModelViewSet):
         orgid = data.get('org',None)
         if orgid:
             org = self.get_org(orgid=orgid)
-            if request.user.has_perm('org.admin_changeorg'):
+            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, org):
                 pass
-            elif request.user == org.createuser:
+            elif request.user.org == org or request.user == org.createuser:
                 pass
             else:
                 raise InvestError(code=2009, msg='新增机构合作关系失败')
@@ -1109,9 +1073,9 @@ class OrgCooperativeRelationshipView(viewsets.ModelViewSet):
         try:
             instance = self.get_object()
             lang = request.GET.get('lang')
-            if request.user.has_perm('org.admin_changeorg'):
+            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, instance.org):
                 pass
-            elif request.user == instance.org.createuser or request.user == instance.createuser:
+            elif request.user == instance.createuser:
                 pass
             else:
                 raise InvestError(code=2009, msg='修改机构合作关系失败')
@@ -1135,9 +1099,9 @@ class OrgCooperativeRelationshipView(viewsets.ModelViewSet):
         try:
             lang = request.GET.get('lang')
             instance = self.get_object()
-            if request.user.has_perm('org.admin_changeorg'):
+            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, instance.org):
                 pass
-            elif request.user == instance.org.createuser or request.user == instance.createuser:
+            elif request.user == instance.createuser:
                 pass
             else:
                 raise InvestError(code=2009, msg='删除机构合作关系失败')
@@ -1199,8 +1163,6 @@ class OrgBuyoutView(viewsets.ModelViewSet):
             orgid = request.GET.get('org', None)
             if not orgid:
                 raise InvestError(20072, msg='获取机构退出经历失败', detail='机构不能为空')
-            else:
-                orginstace = self.get_org(orgid)
             queryset = self.filter_queryset(self.get_queryset()).order_by('-buyoutDate')
             try:
                 count = queryset.count()
@@ -1219,12 +1181,12 @@ class OrgBuyoutView(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         data = request.data
         lang = request.GET.get('lang')
-        orgid = data.get('org',None)
+        orgid = data.get('org', None)
         if orgid:
             org = self.get_org(orgid=orgid)
-            if request.user.has_perm('org.admin_changeorg'):
+            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, org):
                 pass
-            elif request.user == org.createuser:
+            elif request.user.org == org or request.user == org.createuser:
                 pass
             else:
                 raise InvestError(code=2009, msg='新增机构退出经历失败')
@@ -1263,9 +1225,9 @@ class OrgBuyoutView(viewsets.ModelViewSet):
         try:
             instance = self.get_object()
             lang = request.GET.get('lang')
-            if request.user.has_perm('org.admin_changeorg'):
+            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, instance.org):
                 pass
-            elif request.user == instance.org.createuser or request.user == instance.createuser:
+            elif request.user == instance.createuser:
                 pass
             else:
                 raise InvestError(code=2009, msg='修改机构退出经历失败')
@@ -1289,9 +1251,9 @@ class OrgBuyoutView(viewsets.ModelViewSet):
         try:
             lang = request.GET.get('lang')
             instance = self.get_object()
-            if request.user.has_perm('org.admin_changeorg'):
+            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, instance.org):
                 pass
-            elif request.user == instance.org.createuser or request.user == instance.createuser:
+            elif request.user == instance.createuser:
                 pass
             else:
                 raise InvestError(code=2009, msg='删除机构退出经历失败')
@@ -1402,15 +1364,11 @@ class OrgExportExcelTaskView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable()
+    @loginTokenIsAvailable(['org.export_org',])
     def destroy(self, request, *args, **kwargs):
         try:
             lang = request.GET.get('lang')
             instance = self.get_object()
-            if request.user.has_perm('org.admin_changeorg'):
-                pass
-            else:
-                raise InvestError(code=2009, msg='删除机构导出excel任务失败')
             with transaction.atomic():
                 fullpath = APILOG_PATH['orgExportPath'] + instance.filename
                 if os.path.exists(fullpath):
@@ -1467,7 +1425,7 @@ class OrgAttachmentView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['org.admin_manageorgattachment', ])
+    @loginTokenIsAvailable()
     def create(self, request, *args, **kwargs):
         data = request.data
         lang = request.GET.get('lang')
@@ -1476,7 +1434,7 @@ class OrgAttachmentView(viewsets.ModelViewSet):
             with transaction.atomic():
                 attachmentserializer = self.serializer_class(data=data)
                 if attachmentserializer.is_valid():
-                    instance = attachmentserializer.save()
+                    attachmentserializer.save()
                 else:
                     raise InvestError(20071, msg='新增机构附件失败', detail='%s' %  attachmentserializer.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(attachmentserializer.data, lang)))
@@ -1486,32 +1444,43 @@ class OrgAttachmentView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['org.admin_manageorgattachment', ])
+    @loginTokenIsAvailable()
     def update(self, request, *args, **kwargs):
         try:
-            remark = self.get_object()
+            instance = self.get_object()
+            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, instance.org):
+                pass
+            elif request.user == instance.createuser:
+                pass
+            else:
+                raise InvestError(code=2009, msg='修改机构附件失败', detail='非机构投资人交易师或该条记录创建者')
             lang = request.GET.get('lang')
             data = request.data
-            data.pop('createuser',None)
-            data.pop('createdtime',None)
+            data['createuser'] = request.user.id
             with transaction.atomic():
-                serializer = self.serializer_class(remark, data=data)
+                serializer = self.serializer_class(instance, data=data)
                 if serializer.is_valid():
-                    newinstance = serializer.save()
+                    serializer.save()
                 else:
                     raise InvestError(20071, msg='修改机构附件失败', detail='%s' % serializer.error_messages)
                 return JSONResponse(
-                    SuccessResponse(returnDictChangeToLanguage(self.serializer_class(newinstance).data, lang)))
+                    SuccessResponse(returnDictChangeToLanguage(serializer.data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['org.admin_manageorgattachment', ])
+    @loginTokenIsAvailable()
     def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
+            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, instance.org):
+                pass
+            elif request.user == instance.createuser:
+                pass
+            else:
+                raise InvestError(code=2009, msg='删除机构附件失败', detail='非机构投资人交易师或该条记录创建者')
             with transaction.atomic():
                 instance.is_deleted = True
                 deleteqiniufile(instance.bucket, instance.key)
@@ -1570,7 +1539,7 @@ def makeExportOrgExcel():
                 exporttask.save()
                 try:
                     starUserMobile = True
-                    if exporttask.createuser.has_perm('usersys.admin_getuser'):
+                    if exporttask.createuser.has_perm('usersys.admin_manageuser'):
                         starUserMobile = False
                     taskdatasource = exporttask.createuser.datasource
                     orgidliststr = exporttask.orglist
@@ -1800,10 +1769,10 @@ def fulltextsearch(request):
             org_qs = org_qs.page(page_index)
         except EmptyPage:
             return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
-        if request.user.has_perm('org.admin_getorg'):
-            serializerclass = OrgListSerializer
+        if request.user.is_anonymous:
+            serializerclass = OrgCommonSerializer
         else:
-            serializerclass = OrgCommonSerializer  # warning
+            serializerclass = OrgListSerializer
         responselist = []
         for instance in org_qs:
             actionlist = {'get': True, 'change': False, 'delete': False}
@@ -1813,9 +1782,8 @@ def fulltextsearch(request):
             else:
                 if instance.orglevel_id == 1 or instance.orglevel_id == 2:
                     user_count = checkOrgUserContactInfoTruth(instance, request.user.datasource)
-                if request.user.has_perm('org.admin_changeorg') or request.user == instance.createuser:
+                if request.user.has_perm('org.admin_manageorg') or request.user == instance.createuser:
                     actionlist['change'] = True
-                if request.user.has_perm('org.admin_deleteorg') or request.user == instance.createuser:
                     actionlist['delete'] = True
             instancedata = serializerclass(instance).data
             instancedata['action'] = actionlist

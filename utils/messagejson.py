@@ -65,18 +65,6 @@ MESSAGE_DICT = {
         'messagetype': '5',
     },
 
-
-
-    'timelineauditstatuchange':{
-        'sms_sign': "tNEV93",
-        'email_sign': "LkZix2",
-        'title_cn': "时间轴状态更新",
-        'title_en': "Timeline status updates notification",
-        'content_cn': "您的项目【%s】时间轴状态已更新，点击查看最新状态",
-        'content_en': "Your project 【%s】 has a new status, you can review the update after logging in",
-        'messagetype': '6',
-    },
-
     'dataroomuseradd':{
         'sms_sign': None,
         'email_sign': 'umZlP3',
@@ -95,26 +83,6 @@ MESSAGE_DICT = {
         'content_cn': "【%s】项目已通过终审并在平台发布，可在登录后查看项目进展情况。",
         'content_en': "Project【%s】 has been verified and published on our platform, you can see the progress after logging in.",
         'messagetype': '7',
-    },
-
-    'usermakefriends':{
-        'sms_sign': None,
-        'email_sign': None,
-        'title_cn': "好友申请",
-        'title_en': "A friend application",
-        'content_cn': "您有一个好友添加申请",
-        'content_en': "You have a friend application",
-        'messagetype': '8',
-    },
-
-    'timelinealertcycleexpire':{
-        'sms_sign': None,
-        'email_sign': None,
-        'title_cn': "时间轴到期",
-        'title_en': "Timeline issue",
-        'content_cn': "您有一个项目时间轴提醒今天到期",
-        'content_en': "You have a project timeline to remind issue today",
-        'messagetype': '9',
     },
 
     'schedulemsg':{

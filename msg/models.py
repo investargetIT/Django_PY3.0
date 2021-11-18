@@ -148,31 +148,3 @@ class webexUser(MyModel):
         if self.meetingRole and not self.is_deleted and webexUser.objects.exclude(pk=self.pk).filter(is_deleted=False, meeting=self.meeting, meetingRole=True).exists():
             raise InvestError(20071, msg='只能有一个主持人')
         return super(webexUser, self).save(*args, **kwargs)
-
-
-class InternOnlineTest(MyModel):
-    user = MyForeignKey(MyUser, related_name='user_OnlineTests', blank=True, null=True, on_delete=CASCADE)
-    bucket = models.CharField(max_length=64, blank=True, null=True)
-    key = models.CharField(max_length=128, blank=True, null=True)
-    filename = models.CharField(max_length=128, blank=True, null=True)
-    startTime = models.DateTimeField(blank=True, null=True)
-    endTime = models.DateTimeField(blank=True, null=True)
-    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_OnlineTests',)
-    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_OnlineTests',)
-    datasource = MyForeignKey(DataSource,blank=True,default=1, help_text='数据源')
-
-    class Meta:
-        db_table = "intern_onlinetest"
-        permissions =  (
-            ('user_onlineTest', u'用户在线测试'),
-        )
-
-    def save(self, *args, **kwargs):
-        if not self.is_deleted:
-            if InternOnlineTest.objects.exclude(pk=self.pk).filter(is_deleted=False, user=self.user).exists():
-                raise InvestError(20071, msg='该用户已存在答题记录了')
-            if not self.user:
-                raise InvestError(20072, msg='用户不能为空')
-            if not self.datasource:
-                self.datasource = self.user.datasource
-        super(InternOnlineTest,self).save(*args, **kwargs)
