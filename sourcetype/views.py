@@ -682,8 +682,6 @@ def getmenulist(user):
         qslist.extend([9])
     if user.is_superuser:
         qslist.extend([17])
-    if user.has_perm('proj.admin_addproj') or user.has_perm('proj.user_addproj'):
-        qslist.extend([19])
     if user.has_perm('dataroom.get_companydataroom'):
         qslist.extend([31])
     if user.has_perm('org.export_org'):

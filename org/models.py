@@ -273,9 +273,7 @@ class orgAttachments(MyModel):
 
     class Meta:
         db_table = "org_attachments"
-        permissions = (
-            ('admin_manageorgattachment', '管理机构备注（增删改）'),
-        )
+
 
     def save(self, *args, **kwargs):
         return super(orgAttachments, self).save(*args, **kwargs)
