@@ -34,7 +34,7 @@ from utils.util import loginTokenIsAvailable, catchexcption, read_from_cache, wr
     returnListChangeToLanguage, \
     returnDictChangeToLanguage, SuccessResponse, InvestErrorResponse, ExceptionResponse, setrequestuser, add_perm, \
     cache_delete_key, mySortQuery, checkrequesttoken, logexcption, china_mobile, hongkong_mobile, hongkong_telephone, \
-    checkRequestToken
+    checkRequestToken, checkrequestpagesize
 from django.db import transaction,models
 from django_filters import FilterSet
 
@@ -104,6 +104,8 @@ class OrganizationView(viewsets.ModelViewSet):
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
+            setrequestuser(request)
+            checkrequestpagesize(request)
             queryset = self.filter_queryset(self.get_queryset())
             tags = request.GET.get('tags', None)
             if tags:
@@ -112,7 +114,6 @@ class OrganizationView(viewsets.ModelViewSet):
             sortfield = request.GET.get('sort', 'createdtime')
             desc = request.GET.get('desc', 1)
             queryset = mySortQuery(queryset, sortfield, desc)
-            setrequestuser(request)
             if request.user.is_anonymous:
                 serializerclass = OrgCommonSerializer
             else:
@@ -1731,7 +1732,7 @@ def makeExportOrgExcel():
 
 
 
-#生成上传记录（开始上传）
+# 检索机构
 @api_view(['GET'])
 @checkRequestToken()
 def fulltextsearch(request):

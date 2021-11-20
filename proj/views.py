@@ -36,7 +36,7 @@ from utils.sendMessage import sendmessage_projectpublish
 from utils.util import catchexcption, read_from_cache, write_to_cache, loginTokenIsAvailable, \
     returnListChangeToLanguage, \
     returnDictChangeToLanguage, SuccessResponse, InvestErrorResponse, ExceptionResponse, setrequestuser, \
-    setUserObjectPermission, cache_delete_key, checkrequesttoken, logexcption, mySortQuery
+    setUserObjectPermission, cache_delete_key, checkrequesttoken, logexcption, mySortQuery, checkrequestpagesize
 from utils.customClass import JSONResponse, InvestError, RelationFilter
 from django_filters import FilterSet
 
@@ -139,6 +139,7 @@ class ProjectView(viewsets.ModelViewSet):
             if not skip_count or int(skip_count) < 1:
                 skip_count = 0
             setrequestuser(request)
+            checkrequestpagesize(request)
             queryset = self.filter_queryset(queryset).exclude(id=499)
             if request.GET.get('user') and request.GET.get('usertype'):
                 userlist = request.GET.get('user').split(',')

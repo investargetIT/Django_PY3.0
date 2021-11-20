@@ -20,7 +20,7 @@ REDIS_TIMEOUT = 1 * 24 * 60 * 60
 china_mobile = r'^((13[0-9])|(14[5,7,9])|(15[0-3,5-9])|(166)|(17[0,1,3,5,6,7,8])|(18[0-9])|(19[8,9]))([0-9]{8})$'
 hongkong_mobile = r'^(5|6|8|9)([0-9]{7})$'
 hongkong_telephone = r'^^(2[1-9]|3[1,4-7,9])([0-9]{6})$'
-
+request_max_size = 1000
 def SuccessResponse(data,msg=None):
     response = {'code': 1000, 'errormsg': msg, 'result': data, 'detail': msg}
     return response
@@ -129,6 +129,9 @@ def loginTokenIsAvailable(permissions=None):#判断class级别权限
                     return JSONResponse(InvestErrorResponse(InvestError(3000,msg='token过期')))
                 if token.user.is_deleted:
                     return JSONResponse(InvestErrorResponse(InvestError(3000,msg='用户不存在')))
+                page_size = request.GET.get('page_size')
+                if page_size and int(page_size) > request_max_size:
+                    return JSONResponse(InvestErrorResponse(InvestError(8200, msg='请求数据量超限', detail='请求数据量超限，最多{}'.format(request_max_size))))
                 request.user = token.user
                 user_has_permissions = []
                 if permissions:
@@ -175,6 +178,9 @@ def checkRequestToken():
                             return JSONResponse(InvestErrorResponse(InvestError(3000, msg='用户不存在')))
                         if token.user.userstatus_id == 3:
                             return JSONResponse(InvestErrorResponse(InvestError(3000, msg='用户审核未通过，如有疑问请咨询相关工作人员。')))
+                        page_size = request.GET.get('page_size')
+                        if page_size and int(page_size) > request_max_size:
+                            return JSONResponse(InvestErrorResponse(InvestError(8200, msg='请求数据量超限', detail='请求数据量超限，最多{}'.format(request_max_size))))
                         request.user = token.user
                         return func(request, *args, **kwargs)
                 else:
@@ -183,6 +189,12 @@ def checkRequestToken():
                 return JSONResponse(InvestErrorResponse(InvestError(code=3000,msg=repr(exc))))
         return _token_available
     return token_available
+
+def checkrequestpagesize(request):
+    page_size = request.GET.get('page_size')
+    if page_size and int(page_size) > request_max_size:
+        raise InvestError(8200, msg='请求数据量超限', detail='请求数据量超限，最多{}'.format(request_max_size))
+
 
 
 #验证token有效
