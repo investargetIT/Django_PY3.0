@@ -194,9 +194,9 @@ class UserRemarkSerializer(serializers.ModelSerializer):
 
 
 class UserRemarkSimpleSerializer(serializers.ModelSerializer):
-        class Meta:
-            model = UserRemarks
-            fields = ('id', 'remark', 'createdtime')
+    class Meta:
+        model = UserRemarks
+        fields = ('id', 'remark', 'createdtime')
 
 
 # 投资人交易师关系基本信息

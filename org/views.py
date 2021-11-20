@@ -23,7 +23,7 @@ from org.serializer import OrgCommonSerializer, OrgDetailSerializer, OrgRemarkDe
     OrgContactSerializer, \
     OrgInvestEventSerializer, OrgManageFundSerializer, OrgCooperativeRelationshipSerializer, OrgListSerializer, \
     OrgExportExcelTaskSerializer, \
-    OrgExportExcelTaskDetailSerializer, OrgAttachmentSerializer
+    OrgExportExcelTaskDetailSerializer, OrgAttachmentSerializer, OrgRemarkCreateSerializer
 from sourcetype.models import TransactionPhases, TagContrastTable
 from third.views.qiniufile import deleteqiniufile, downloadFileToPath
 from usersys.models import UserRelation
@@ -330,7 +330,7 @@ class OrgRemarkView(viewsets.ModelViewSet):
     filter_backends = (filters.DjangoFilterBackend,)
     queryset = orgRemarks.objects.filter(is_deleted=False)
     filter_class = orgRemarksFilter
-    serializer_class = OrgRemarkDetailSerializer
+    serializer_class = OrgRemarkCreateSerializer
 
 
     def get_object(self, pk=None):
@@ -390,7 +390,7 @@ class OrgRemarkView(viewsets.ModelViewSet):
                 data['createuser'] = request.user.id
             data['datasource'] = request.user.datasource.id
             with transaction.atomic():
-                orgremarkserializer = OrgRemarkDetailSerializer(data=data)
+                orgremarkserializer = OrgRemarkCreateSerializer(data=data)
                 if orgremarkserializer.is_valid():
                     orgremarkserializer.save()
                 else:
@@ -431,7 +431,7 @@ class OrgRemarkView(viewsets.ModelViewSet):
             data = request.data
             data['lastmodifyuser'] = request.user.id
             with transaction.atomic():
-                orgserializer = OrgRemarkDetailSerializer(instance, data=data)
+                orgserializer = OrgRemarkCreateSerializer(instance, data=data)
                 if orgserializer.is_valid():
                     orgserializer.save()
                 else:
