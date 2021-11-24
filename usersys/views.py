@@ -170,11 +170,15 @@ class UserView(viewsets.ModelViewSet):
             queryset = self.filter_queryset(self.get_queryset())
             familiar = request.GET.get('familiar')
             if familiar:
-                queryset = queryset.filter(investor_relations__familiar__in=familiar.split(','), investor_relations__traderuser=request.user)
-            if request.user.indGroup and request.user.indGroup.shareInvestor:
-                queryset = queryset.filter(investor_relations__traderuser__indGroup=request.user.indGroup, investor_relations__is_deleted=False).distinct()
+                if request.user.indGroup and request.user.indGroup.shareInvestor:
+                    queryset = queryset.filter(investor_relations__traderuser__indGroup=request.user.indGroup, investor_relations__is_deleted=False, investor_relations__familiar__in=familiar.split(',')).distinct()
+                else:
+                    queryset = queryset.filter(investor_relations__traderuser=request.user, investor_relations__is_deleted=False, investor_relations__familiar__in=familiar.split(',')).distinct()
             else:
-                queryset = queryset.filter(investor_relations__traderuser=request.user, investor_relations__is_deleted=False).distinct()
+                if request.user.indGroup and request.user.indGroup.shareInvestor:
+                    queryset = queryset.filter(investor_relations__traderuser__indGroup=request.user.indGroup, investor_relations__is_deleted=False).distinct()
+                else:
+                    queryset = queryset.filter(investor_relations__traderuser=request.user, investor_relations__is_deleted=False).distinct()
             sortfield = request.GET.get('sort', 'createdtime')
             desc = request.GET.get('desc', 0)
             queryset = mySortQuery(queryset, sortfield, desc)
@@ -2423,16 +2427,16 @@ def login(request):
             if datasource.exists():
                 userdatasource = datasource.first()
             else:
-                raise InvestError(code=8888, msg='登录失败')
+                raise InvestError(code=8888, msg='登录失败，未知source')
         else:
-            raise InvestError(code=8888, msg='登录失败')
+            raise InvestError(code=8888, msg='登录失败，未知source')
         if username and password:
             user = auth.authenticate(username=username, password=password, datasource=userdatasource)
             if not user or not clienttype:
                 if not clienttype:
-                    raise InvestError(code=2003, msg='登录失败', detail='登录类型不可用')
+                    raise InvestError(code=2003, msg='登录失败，非法客户端', detail='登录类型不可用')
                 else:
-                    raise InvestError(code=2001, msg='登录失败', detail='密码错误')
+                    raise InvestError(code=2001, msg='登录失败，密码错误', detail='密码错误')
             if wxcode:
                 openid = get_openid(wxcode)
                 if openid:
@@ -2442,7 +2446,7 @@ def login(request):
                         UserContrastThirdAccount(wexinsmallapp=openid, user=user).save()
                     else:
                         if thirdaccount.user.id != user.id:
-                            raise InvestError(2048, msg='登录失败', detail='该微信号已绑定过其他账号')
+                            raise InvestError(2048, msg='登录失败，该微信号已绑定过其他账号', detail='该微信号已绑定过其他账号')
         else:
             user = None
             if wxcode:
@@ -2451,13 +2455,13 @@ def login(request):
                     try:
                         thirdaccount = UserContrastThirdAccount.objects.get(wexinsmallapp=openid)
                     except UserContrastThirdAccount.DoesNotExist:
-                        raise InvestError(2009, msg='登录失败', detail='用户未绑定账号')
+                        raise InvestError(2009, msg='登录失败，用户未绑定账号', detail='用户未绑定账号')
                     else:
                         user = thirdaccount.user
             if not user:
-                raise InvestError(2009, msg='登录失败', detail='小程序快捷登录无效')
+                raise InvestError(2009, msg='登录失败，小程序快捷登录无效', detail='小程序快捷登录无效')
         if user.userstatus_id == 3:
-            raise InvestError(2022, msg='登录失败', detail='用户审核未通过，如有疑问请咨询工作人员。')
+            raise InvestError(2022, msg='登录失败，用户审核未通过，如有疑问请咨询工作人员。', detail='用户审核未通过')
         user.last_login = datetime.datetime.now()
         if not user.is_active:
             user.is_active = True
