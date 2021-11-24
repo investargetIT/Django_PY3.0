@@ -183,11 +183,15 @@ class UserView(viewsets.ModelViewSet):
             queryset = self.filter_queryset(self.get_queryset())
             familiar = request.GET.get('familiar')
             if familiar:
-                queryset = queryset.filter(investor_relations__familiar__in=familiar.split(','), investor_relations__traderuser=request.user)
-            if request.user.indGroup and request.user.indGroup.shareInvestor:
-                queryset = queryset.filter(investor_relations__traderuser__indGroup=request.user.indGroup, investor_relations__is_deleted=False).distinct()
+                if request.user.indGroup and request.user.indGroup.shareInvestor:
+                    queryset = queryset.filter(investor_relations__traderuser__indGroup=request.user.indGroup, investor_relations__is_deleted=False, investor_relations__familiar__in=familiar.split(',')).distinct()
+                else:
+                    queryset = queryset.filter(investor_relations__traderuser=request.user, investor_relations__is_deleted=False, investor_relations__familiar__in=familiar.split(',')).distinct()
             else:
-                queryset = queryset.filter(investor_relations__traderuser=request.user, investor_relations__is_deleted=False).distinct()
+                if request.user.indGroup and request.user.indGroup.shareInvestor:
+                    queryset = queryset.filter(investor_relations__traderuser__indGroup=request.user.indGroup, investor_relations__is_deleted=False).distinct()
+                else:
+                    queryset = queryset.filter(investor_relations__traderuser=request.user, investor_relations__is_deleted=False).distinct()
             sortfield = request.GET.get('sort', 'createdtime')
             desc = request.GET.get('desc', 0)
             queryset = mySortQuery(queryset, sortfield, desc)
