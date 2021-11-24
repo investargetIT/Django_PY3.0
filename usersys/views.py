@@ -127,10 +127,6 @@ class UserView(viewsets.ModelViewSet):
             page_index = request.GET.get('page_index', 1) #从第一页开始
             lang = request.GET.get('lang', 'cn')
             queryset = self.filter_queryset(self.get_queryset())
-            if request.user.has_perm('usersys.admin_manageuser'):
-                serializerclass = UserListSerializer
-            else:
-                serializerclass = UserListCommenSerializer
             sortfield = request.GET.get('sort', 'createdtime')
             desc = request.GET.get('desc', 1)
             queryset = mySortQuery(queryset, sortfield, desc, True)
@@ -143,18 +139,15 @@ class UserView(viewsets.ModelViewSet):
             responselist = []
             for instance in queryset:
                 actionlist = {'get': True, 'change': False, 'delete': False}
-                if serializerclass != UserListSerializer and request.user.has_perm('usersys.as_trader'):
-                    if request.user.has_perm('usersys.admin_manageuser') or is_userTrader(request.user, instance.id):
-                        actionlist['change'] = True
-                        actionlist['delete'] = True
-                        instancedata = UserListSerializer(instance).data
-                    elif (not UserRelation.objects.filter(investoruser=instance, traderuser__onjob=True, is_deleted=False).exists()) and \
-                            UserRelation.objects.filter(investoruser=instance, is_deleted=False).exists():
-                        instancedata = UserListSerializer(instance).data     # 显示
-                    else:
-                        instancedata = UserListCommenSerializer(instance).data  # 隐藏
+                if request.user.has_perm('usersys.admin_manageuser') or is_userTrader(request.user, instance.id):
+                    actionlist['change'] = True
+                    actionlist['delete'] = True
+                    instancedata = UserListSerializer(instance).data
+                elif (not UserRelation.objects.filter(investoruser=instance, traderuser__onjob=True, is_deleted=False).exists()) and \
+                            UserRelation.objects.filter(investoruser=instance, is_deleted=False).exists() and request.user.has_perm('usersys.as_trader'):
+                    instancedata = UserListSerializer(instance).data     # 显示
                 else:
-                    instancedata = serializerclass(instance).data
+                    instancedata = UserListCommenSerializer(instance).data  # 隐藏
                 instancedata['action'] = actionlist
                 responselist.append(instancedata)
             return JSONResponse(
@@ -311,8 +304,11 @@ class UserView(viewsets.ModelViewSet):
                     except Exception:
                         catchexcption(request)
                         raise InvestError(20071, msg='新用户创建失败', detail='用户类型不可用')
-                    if not group.permissions.filter(codename='as_investor').exists():
-                        raise InvestError(2009, msg='新用户创建失败', detail='新增用户非投资人类型')
+                    if request.user.has_perm('usersys.admin_manageuser'):
+                        pass
+                    else:
+                        if not group.permissions.filter(codename='as_investor').exists():
+                            raise InvestError(2009, msg='新用户创建失败', detail='新增用户非投资人类型')
                     data['groups'] = [group.id]
                 else:
                     raise InvestError(20072, msg='新用户创建失败', detail='新增用户没有分配可用组别')
