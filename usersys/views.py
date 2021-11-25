@@ -433,7 +433,7 @@ class UserView(viewsets.ModelViewSet):
                                                 raise InvestError(2010, msg='用户信息修改失败', detail='该用户有对接交易师，请先处理')
                                     data['groups'] = [groupinstance.id]
                         elif request.user == user:
-                            data.pop('userstatus')
+                            data.pop('userstatus', None)
                         else:
                             raise InvestError(2009, msg='用户信息修改失败', detail='没有修改权限')
                         data['lastmodifyuser'] = request.user.id

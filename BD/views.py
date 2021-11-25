@@ -1383,7 +1383,7 @@ class WorkReportView(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         try:
             data = request.data
-            data.pop('user')
+            data.pop('user', None)
             lang = request.GET.get('lang')
             instance = self.get_object()
             if request.user != instance.user and not request.user.is_superuser:

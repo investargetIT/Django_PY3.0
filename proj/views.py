@@ -1140,7 +1140,7 @@ class ProjFinanceView(viewsets.ModelViewSet):
                     newfinances = []
                     for f in financedata:
                         fid = f['id']
-                        f.pop('proj')
+                        f.pop('proj', None)
                         if not isinstance(fid,(int,str)) or not fid:
                             raise InvestError(20072, msg='修改项目财务信息失败', detail='finances[\'id\'] must be a int/str type')
                         projfinance = self.get_object(fid)

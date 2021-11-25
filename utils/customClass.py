@@ -301,7 +301,7 @@ class MyCalendar:
             self.__events__[event_id].event_data[item] = data
 
     def remove_event(self, event_id):
-        self.__events__.pop(event_id)
+        self.__events__.pop(event_id, None)
 
     def get_ics_text(self):
         self.__calendar_text__ = """BEGIN:VCALENDAR\nPRODID:-//Microsoft Corporation//Outlook 10.0 MIMEDIR//EN\nVERSION:2.0\nMETHOD:REQUEST\nBEGIN:VTIMEZONE\nTZID:China Time\nBEGIN:STANDARD\nTZOFFSETFROM:+0800\nTZOFFSETTO:+0800\nTZNAME:Standard Time\nEND:STANDARD\nEND:VTIMEZONE\n"""
