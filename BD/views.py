@@ -646,7 +646,7 @@ class OrgBDView(viewsets.ModelViewSet):
     def countBDResponse(self, request, *args, **kwargs):
         try:
             queryset = self.filter_queryset(self.get_queryset())
-            if request.GET.get('filter'):
+            if request.GET.get('filter') in ['1', 'True', True, 1, 'true']:
                 queryset = queryset.filter(Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(manager=request.user))
             count = queryset.count()
             queryset = queryset.values('response').annotate(count=Count('*'))
