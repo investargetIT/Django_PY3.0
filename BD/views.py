@@ -492,16 +492,16 @@ class OrgBDFilter(MyFilterSet):
 
 class OrgBDView(viewsets.ModelViewSet):
     """
-    countBDProjectOrg:统计机构BD项目机构
-    countBDManager:统计机构BD负责人
-    countBDProject:统计机构BD项目
-    countBDResponse:统计机构BD状态
-    list:获取机构BD
-    create:增加机构BD
-    retrieve:查看机构BD信息
-    readBd:已读回执
-    update:修改机构BD信息
-    destroy:删除机构BD
+    countBDProjectOrg: 统计机构看板项目机构
+    countBDManager: 统计机构看板负责人
+    countBDProject: 统计机构看板项目
+    countBDResponse: 统计机构看板状态 / 传参proj相当于查询项目进度
+    list: 获取机构看板
+    create: 增加机构看板
+    retrieve: 查看机构看板信息
+    readBd: 机构看板已读回执
+    update: 修改机构看板信息
+    destroy: 删除机构看板
     """
     filter_backends = (filters.DjangoFilterBackend,filters.SearchFilter)
     queryset = OrgBD.objects.filter(is_deleted=False)
@@ -646,7 +646,9 @@ class OrgBDView(viewsets.ModelViewSet):
     def countBDResponse(self, request, *args, **kwargs):
         try:
             queryset = self.filter_queryset(self.get_queryset())
-            if not request.user.has_perm('BD.manageOrgBD'):
+            if request.GET.get('all'):
+                pass
+            else:
                 queryset = queryset.filter(Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(manager=request.user))
             count = queryset.count()
             queryset = queryset.values('response').annotate(count=Count('*'))
