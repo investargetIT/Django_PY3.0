@@ -194,7 +194,7 @@ class OrganizationView(viewsets.ModelViewSet):
             elif request.user == org.createuser or request.user.org == org:
                 orgserializer = OrgDetailSerializer
             else:
-                orgserializer = OrgCommonSerializer
+                orgserializer = OrgListSerializer
             serializer = orgserializer(org)
             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data,lang)))
         except InvestError as err:
