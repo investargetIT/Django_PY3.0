@@ -30,7 +30,7 @@ from proj.serializer import ProjSerializer, FinanceSerializer, ProjCreatSerializ
     DiDiRecordSerializer, TaxiRecordCreateSerializer
 from sourcetype.models import Tag, TransactionType, DataSource, Service
 from third.views.qiniufile import deleteqiniufile, qiniuuploadfile
-from utils.logicJudge import is_projTrader, is_projdataroomInvestor, is_projOrgBDManager
+from utils.logicJudge import is_projTrader, is_projdataroomInvestor, is_projOrgBDManager, is_companyDataroomProj
 from utils.somedef import addWaterMark
 from utils.sendMessage import sendmessage_projectpublish
 from utils.util import catchexcption, read_from_cache, write_to_cache, loginTokenIsAvailable, \
@@ -140,7 +140,7 @@ class ProjectView(viewsets.ModelViewSet):
                 skip_count = 0
             setrequestuser(request)
             checkrequestpagesize(request)
-            queryset = self.filter_queryset(queryset).exclude(id=499)
+            queryset = self.filter_queryset(queryset)
             if request.GET.get('user') and request.GET.get('usertype'):
                 userlist = request.GET.get('user').split(',')
                 usertypelist = request.GET.get('usertype').split(',')
@@ -296,6 +296,8 @@ class ProjectView(viewsets.ModelViewSet):
                     if is_projdataroomInvestor(request.user, instance.id):
                         pass
                     elif is_projOrgBDManager(request.user, instance.id):
+                        pass
+                    elif is_companyDataroomProj(instance) and request.user.has_perm('dataroom.get_companydataroom'):
                         pass
                     else:
                         raise InvestError(code=4004, msg='查看项目失败', detail='该项目为隐藏项目，没有权限查看')

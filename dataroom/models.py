@@ -32,7 +32,6 @@ class dataroom(MyModel):
     isClose = models.BooleanField(help_text='是否关闭',blank=True,default=False)
     closeDate = models.DateTimeField(blank=True,null=True,help_text='关闭日期')
     isCompanyFile = models.BooleanField(blank=True, default=False, help_text='公司相关文件')
-    onlyTrader = models.BooleanField(blank=True, default=False, help_text='只有项目交易师可见')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_datarooms')
     createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_datarooms')
     lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_datarooms')

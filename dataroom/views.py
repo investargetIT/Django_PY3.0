@@ -90,7 +90,9 @@ class DataroomView(viewsets.ModelViewSet):
             if request.user.has_perm('dataroom.admin_managedataroom'):
                 queryset = queryset
             elif request.user.has_perm('usersys.as_trader'):
-                queryset = queryset.filter(Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(isCompanyFile=True, onlyTrader=False))
+                queryset = queryset.filter(Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False)
+                                           | Q(isCompanyFile=True, proj__indGroup=request.user.indGroup)
+                                           | Q(isCompanyFile=True, proj__indGroup__isnull=True))
             else:
                 queryset = queryset.filter(dataroom_users__in=request.user.user_datarooms.filter(), dataroom_users__is_deleted=False)
             queryset = self.filter_queryset(queryset).distinct()
@@ -512,7 +514,7 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
             if request.user.has_perm('dataroom.admin_managedataroom') or is_dataroomTrader(request.user, dataroominstance):
                 pass
             elif dataroominstance.isCompanyFile and request.user.has_perm('dataroom.get_companydataroom'):
-                if dataroominstance.onlyTrader and not is_dataroomTrader(request.user, dataroominstance):
+                if dataroominstance.proj.indGroup and  dataroominstance.proj.indGroup != request.user.indGroup:
                     raise InvestError(2009, msg='获取该dataroom文件失败')
             else:
                 raise InvestError(2009, msg='获取该dataroom文件失败')
@@ -537,15 +539,15 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
             if request.user.has_perm('dataroom.admin_managedataroom') or is_dataroomTrader(request.user, dataroominstance):
                 queryset = self.get_queryset()
             elif dataroominstance.isCompanyFile and request.user.has_perm('dataroom.get_companydataroom'):
-                if dataroominstance.onlyTrader and not is_dataroomTrader(request.user, dataroominstance):
-                    raise InvestError(2009)
+                if dataroominstance.proj.indGroup and dataroominstance.proj.indGroup != request.user.indGroup:
+                    raise InvestError(2009, msg='获取dataroom文件路径失败', detail='没有权限查看该dataroom')
                 else:
                     queryset = self.get_queryset()
             elif is_dataroomInvestor(request.user, dataroominstance.id):
                 user_dataroomInstance = dataroom_User_file.objects.filter(user=request.user, dataroom__id=dataroomid).first()
                 queryset = user_dataroomInstance.file_userSeeFile.all().filter(is_deleted=False)
             else:
-                raise InvestError(2009, msg='获取dataroom文件路径失败')
+                raise InvestError(2009, msg='获取dataroom文件路径失败', detail='没有权限查看该dataroom')
             queryset = self.filter_queryset(queryset)
             search = request.GET.get('search', '')
             search_body = {

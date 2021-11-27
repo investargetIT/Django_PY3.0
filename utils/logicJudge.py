@@ -92,3 +92,10 @@ def is_traderMentor(trader, mentor):
     if trader.mentor == mentor:
         return True
     return False
+
+
+# 检测是否公司dataroom的项目
+def is_companyDataroomProj(proj):
+    if proj.proj_datarooms.all().filter(is_deleted=False, isCompanyFile=True).exists():
+        return True
+    return False
