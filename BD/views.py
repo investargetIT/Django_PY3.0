@@ -354,7 +354,7 @@ class ProjectBDCommentsView(viewsets.ModelViewSet):
     filter_backends = (filters.DjangoFilterBackend,)
     queryset = ProjectBDComments.objects.filter(is_deleted=False)
     filter_fields = ('projectBD',)
-    serializer_class = ProjectBDCommentsSerializer
+    serializer_class = ProjectBDCommentsCreateSerializer
 
     def get_queryset(self):
         assert self.queryset is not None, (
@@ -414,10 +414,10 @@ class ProjectBDCommentsView(viewsets.ModelViewSet):
             with transaction.atomic():
                 commentinstance = ProjectBDCommentsCreateSerializer(data=data)
                 if commentinstance.is_valid():
-                    newcommentinstance = commentinstance.save()
+                    commentinstance.save()
                 else:
                     raise InvestError(4009, msg='新增项目BD备注信息失败', detail='创建项目BDcomments失败--%s' % commentinstance.error_messages)
-                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(ProjectBDCommentsSerializer(newcommentinstance).data, lang)))
+                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(commentinstance.data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
@@ -437,11 +437,11 @@ class ProjectBDCommentsView(viewsets.ModelViewSet):
             with transaction.atomic():
                 commentinstance = ProjectBDCommentsCreateSerializer(instance, data=data)
                 if commentinstance.is_valid():
-                    newcommentinstance = commentinstance.save()
+                    commentinstance.save()
                 else:
                     raise InvestError(4009, msg='修改项目BD备注信息失败', detail='修改项目BDcomments失败--%s' % commentinstance.error_messages)
                 return JSONResponse(SuccessResponse(
-                    returnDictChangeToLanguage(ProjectBDCommentsSerializer(newcommentinstance).data, lang)))
+                    returnDictChangeToLanguage(commentinstance.data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:

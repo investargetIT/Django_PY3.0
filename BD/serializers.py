@@ -21,9 +21,20 @@ class ProjectBDCommentsCreateSerializer(serializers.ModelSerializer):
 
 
 class ProjectBDCommentsSerializer(serializers.ModelSerializer):
+    createuserobj = serializers.SerializerMethodField()
+
     class Meta:
         model = ProjectBDComments
-        fields = ('comments', 'id', 'createdtime', 'projectBD', 'createuser')
+        fields = ('comments', 'id', 'createdtime', 'projectBD', 'createuser', 'createuserobj')
+
+    def get_createuserobj(self, obj):
+        if obj.createuser:
+            photourl = None
+            if obj.createuser.photoKey:
+                photourl = getUrlWithBucketAndKey(obj.createuser.photoBucket, obj.createuser.photoKey)
+            return {'id': obj.createuser.id, 'usernameC': obj.createuser.usernameC, 'usernameE': obj.createuser.usernameE, 'photourl': photourl}
+        else:
+            return None
 
 class ProjectBDManagersCreateSerializer(serializers.ModelSerializer):
     class Meta:
