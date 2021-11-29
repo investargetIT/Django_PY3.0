@@ -28,7 +28,7 @@ from usersys.serializer import UserSerializer, UserListSerializer, UserRelationS
     InvestorUserSerializer, UserPerformanceAppraisalRecordSerializer, UserPerformanceAppraisalRecordCreateSerializer, \
     UserPersonnelRelationsSerializer, UserPersonnelRelationsCreateSerializer, UserTrainingRecordsSerializer, \
     UserTrainingRecordsCreateSerializer, UserMentorTrackingRecordsSerializer, UserMentorTrackingRecordsCreateSerializer, \
-    UserWorkingPositionRecordsSerializer, UserWorkingPositionRecordsCreateSerializer
+    UserWorkingPositionRecordsSerializer, UserWorkingPositionRecordsCreateSerializer, UserInfoSerializer
 from sourcetype.models import Tag, DataSource, TagContrastTable
 from utils.customClass import JSONResponse, InvestError, RelationFilter
 from utils.logicJudge import is_userInvestor, is_userTrader, is_dataroomTrader, is_traderDirectSupervisor, \
@@ -65,6 +65,7 @@ class UserView(viewsets.ModelViewSet):
     """
     list:用户列表
     getIndGroupInvestor: 获取行业组共享投资人（非共享状态下仅返回自己对接的投资人）
+    getIndGroupQuitTraderInvestor: 获取行业组交易师已离职的投资人
     create:注册用户
     adduser:新增用户
     retrieve:查看某一用户信息
@@ -194,6 +195,35 @@ class UserView(viewsets.ModelViewSet):
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable(['usersys.admin_manageindgroupinvestor'])
+    def getIndGroupQuitTraderInvestor(self, request, *args, **kwargs):
+        try:
+            page_size = request.GET.get('page_size', 10)
+            page_index = request.GET.get('page_index', 1)
+            lang = request.GET.get('lang', 'cn')
+            sortfield = request.GET.get('sort', 'createdtime')
+            indGroup = request.GET.get('indGroup', request.user.indGroup.id)
+            queryset = self.get_queryset()
+            queryset = queryset.filter(investor_relations__traderuser__indGroup=indGroup, investor_relations__traderuser__onjob=False, investor_relations__is_deleted=False)
+            queryset = queryset.exclude(investor_relations__traderuser__onjob=True, investor_relations__is_deleted=False)
+            desc = request.GET.get('desc', 0)
+            queryset = mySortQuery(queryset, sortfield, desc)
+            try:
+                count = queryset.count()
+                queryset = Paginator(queryset, page_size)
+                queryset = queryset.page(page_index)
+            except EmptyPage:
+                return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
+            serializer = UserInfoSerializer(queryset, many=True)
+            return JSONResponse(
+                SuccessResponse({'count': count, 'data': returnListChangeToLanguage(serializer.data, lang)}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
 
     #注册用户(新注册用户没有交易师)
     def create(self, request, *args, **kwargs):
@@ -1308,12 +1338,12 @@ class UserRelationView(viewsets.ModelViewSet):
             queryset = self.filter_queryset(self.get_queryset())
             if dataroom_id:
                 dataroominstance = dataroom.objects.get(id=dataroom_id, is_deleted=False)
-                if request.user.has_perm('usersys.admin_manageuserrelation') or is_dataroomTrader(request.user, dataroominstance):
+                if request.user.has_perm('usersys.admin_manageuserrelation') or request.user.has_perm('usersys.admin_manageindgroupinvestor') or is_dataroomTrader(request.user, dataroominstance):
                     queryset = queryset.filter(traderuser__in=dataroominstance.proj.proj_traders.all().filter(is_deleted=False).values_list('user_id'))
                 else:
                     raise InvestError(2009, msg='查询失败', detail='没有权限查看该dataroom承揽承做对接投资人')
             else:
-                if request.user.has_perm('usersys.admin_manageuserrelation'):
+                if request.user.has_perm('usersys.admin_manageuserrelation') or request.user.has_perm('usersys.admin_manageindgroupinvestor'):
                     pass
                 else:
                     queryset = queryset.filter(Q(traderuser=request.user) | Q(investoruser=request.user))
@@ -1353,7 +1383,7 @@ class UserRelationView(viewsets.ModelViewSet):
                 investoruser = MyUser.objects.get(id=data.get('investoruser', None))
             except MyUser.DoesNotExist:
                 raise InvestError(20071, msg='创建用户交易师关系失败', detail='投资人不存在')
-            if request.user.has_perm('usersys.admin_manageuserrelation'):
+            if request.user.has_perm('usersys.admin_manageuserrelation') or request.user.has_perm('usersys.admin_manageindgroupinvestor'):
                 pass
             else:
                 if traderuser.id != request.user.id and investoruser.id != request.user.id:
@@ -1406,7 +1436,7 @@ class UserRelationView(viewsets.ModelViewSet):
         try:
             userrelation = self.get_object()
             lang = request.GET.get('lang')
-            if request.user.has_perm('usersys.admin_manageuserrelation'):
+            if request.user.has_perm('usersys.admin_manageuserrelation') or request.user.has_perm('usersys.admin_manageindgroupinvestor'):
                 pass
             elif request.user in [userrelation.traderuser, userrelation.investoruser]:
                 pass
@@ -1431,7 +1461,7 @@ class UserRelationView(viewsets.ModelViewSet):
                 newlist = []
                 for relationdata in relationdatalist:
                     relation = self.get_object(relationdata['id'])
-                    if request.user.has_perm('usersys.admin_manageuserrelation'):
+                    if request.user.has_perm('usersys.admin_manageuserrelation') or request.user.has_perm('usersys.admin_manageindgroupinvestor'):
                         pass
                     elif request.user == relation.traderuser:
                         relationdata.pop('relationtype', None)
@@ -1464,7 +1494,7 @@ class UserRelationView(viewsets.ModelViewSet):
                 for userrelation in relationlist:
                     if request.user == userrelation.traderuser:
                         pass
-                    elif request.user.has_perm('usersys.admin_manageuserrelation'):
+                    elif request.user.has_perm('usersys.admin_manageuserrelation') or request.user.has_perm('usersys.admin_manageindgroupinvestor'):
                         pass
                     else:
                         raise InvestError(code=2009, msg='删除用户交易师关系失败', detail='没有权限')

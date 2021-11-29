@@ -99,6 +99,7 @@ class UserInfoSerializer(serializers.ModelSerializer):
     photourl = serializers.SerializerMethodField()
     mobiletrue = serializers.SerializerMethodField()
     country = countrySerializer()
+    org = OrgCommonSerializer()
 
     class Meta:
         model = MyUser

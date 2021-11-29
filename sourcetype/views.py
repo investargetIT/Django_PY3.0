@@ -688,5 +688,7 @@ def getmenulist(user):
         qslist.extend([32])
     if user.has_perm('usersys.admin_managepersonnelrelation'):
         qslist.extend([38])      # 预留的人事管理菜单
+    if user.has_perm('usersys.admin_manageindgroupinvestor'):    # 管理行业组离职交易师所属投资人
+        qslist.extend([39])
     qsres = allmenuobj.filter(id__in=removeDuclicates(qslist), is_deleted=False).order_by('index')
     return WebMenuSerializer(qsres,many=True).data

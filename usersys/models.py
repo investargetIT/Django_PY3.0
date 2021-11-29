@@ -340,6 +340,8 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
             ('admin_manageuser', u'管理用户数据'),
 
             ('admin_managemongo', u'管理mongo数据'),
+
+            ('admin_manageindgroupinvestor', u'管理行业组投资人交易师关系'),
         )
     def save(self, *args, **kwargs):
         if not self.usercode:

@@ -48,6 +48,10 @@ getUserInvestor = views.UserView.as_view({
         'get': 'getIndGroupInvestor',
 })
 
+getQuitTraderInvestor = views.UserView.as_view({
+        'get': 'getIndGroupQuitTraderInvestor',
+})
+
 
 user_relationshiplist = views.UserRelationView.as_view({
         'get': 'list',
@@ -184,6 +188,7 @@ urlpatterns = [
     url(r'^$', user_list,name='user-list',),
     url(r'^simple$', getuserinfo_simple,name='getuserinfo_simple',),
     url(r'^investor$', getUserInvestor,name='getUserInvestor_indGroup',),
+    url(r'^indgroup/investor$', getQuitTraderInvestor,name='getindgroupQuitTraderInvestor',),
     url(r'^regsource$', getRegistSource, name='getRegistSource', ),
     url(r'^mobile$', getFalseMobile, name='getAvaibleFalseMobileNumber', ),
     url(r'^count$', getUserCount, name='getUserCount', ),
