@@ -203,9 +203,15 @@ class UserView(viewsets.ModelViewSet):
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
             sortfield = request.GET.get('sort', 'createdtime')
-            indGroup = request.GET.get('indGroup', request.user.indGroup.id)
+            indGroup = request.GET.get('indGroup')
             queryset = self.get_queryset()
-            queryset = queryset.filter(investor_relations__traderuser__indGroup=indGroup, investor_relations__traderuser__onjob=False, investor_relations__is_deleted=False)
+            if indGroup:
+                queryset = queryset.filter(investor_relations__traderuser__indGroup=indGroup,
+                                           investor_relations__traderuser__onjob=False,
+                                           investor_relations__is_deleted=False)
+            else:
+                queryset = queryset.filter(investor_relations__traderuser__onjob=False,
+                                           investor_relations__is_deleted=False)
             queryset = queryset.exclude(investor_relations__traderuser__onjob=True, investor_relations__is_deleted=False)
             desc = request.GET.get('desc', 0)
             queryset = mySortQuery(queryset, sortfield, desc)
