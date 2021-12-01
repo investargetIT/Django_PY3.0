@@ -659,6 +659,27 @@ class AndroidAppVersionView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
+class WebmenuView(viewsets.ModelViewSet):
+    """
+        list:获取所有菜单
+    """
+
+    queryset = webmenu.objects.all().filter(is_deleted=False)
+    serializer_class = WebMenuSerializer
+
+    def list(self, request, *args, **kwargs):
+        try:
+            lang = request.GET.get('lang')
+            queryset = self.filter_queryset(self.get_queryset())
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(SuccessResponse(returnListChangeToLanguage(serializer.data,lang)))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+
 def getmenulist(user):
     allmenuobj = webmenu.objects.all()
     if user.has_perm('dataroom.onlydataroom') and not user.is_superuser:
@@ -687,8 +708,10 @@ def getmenulist(user):
     if user.has_perm('org.export_org'):
         qslist.extend([32])
     if user.has_perm('usersys.admin_managepersonnelrelation'):
-        qslist.extend([38])      # 预留的人事管理菜单
-    if user.has_perm('usersys.admin_manageindgroupinvestor'):    # 管理行业组离职交易师所属投资人
-        qslist.extend([39])
+        qslist.extend([38])      # 人事管理菜单
+    if user.has_perm('usersys.admin_manageindgroupinvestor'):
+        qslist.extend([39, 5])        # 管理行业组离职交易师所属投资人
+    if user.has_perm('usersys.manageusermenu'):
+        qslist.extend([40, 5])         # 全库用户管理 菜单
     qsres = allmenuobj.filter(id__in=removeDuclicates(qslist), is_deleted=False).order_by('index')
     return WebMenuSerializer(qsres,many=True).data

@@ -140,6 +140,11 @@ TrainingStatus = views.TrainingStatusView.as_view({
         'get': 'list',
 })
 
+
+Webmenu = views.WebmenuView.as_view({
+        'get': 'list',
+})
+
 AndroidVersion = views.AndroidAppVersionView.as_view({
         'get': 'list',
         'post':'create',
@@ -202,6 +207,8 @@ urlpatterns = [
     url(r'^trainingStatus$', TrainingStatus,name='TrainingStatusSource',),
 
     url(r'^education$', educationType,name='EducationSource',),
+
+    url(r'^webmenu$', Webmenu, name='WebmenuSource', ),
 
     url(r'^palevel$', performanceAppraisalLevelType,name='PerformanceAppraisalLevelSource',),
 
