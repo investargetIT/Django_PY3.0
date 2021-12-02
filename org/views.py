@@ -976,7 +976,7 @@ class OrgCooperativeRelationshipView(viewsets.ModelViewSet):
     """
     filter_backends = (filters.DjangoFilterBackend,)
     queryset = orgCooperativeRelationship.objects.filter(is_deleted=False).filter(org__is_deleted=False, cooperativeOrg__is_deleted=False)
-    filter_fields = ('id','createuser',)
+    filter_fields = ('id', 'createuser', 'org')
     serializer_class = OrgCooperativeRelationshipSerializer
     models = orgCooperativeRelationship
 
