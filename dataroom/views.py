@@ -279,8 +279,8 @@ class DataroomView(viewsets.ModelViewSet):
     def downloadDataroomZip(self, request, *args, **kwargs):
         try:
             userid = request.GET.get('user')
-            dataroominstance = self.get_object()
             request.user = checkrequesttoken(request.GET.get('token',None))
+            dataroominstance = self.get_object()
             ispart = request.GET.get('part')
             nowater = True if request.GET.get('nowater') in ['1', 1, u'1'] else False
             is_adminPerm = True if request.user.has_perm('dataroom.admin_managedataroom') or is_dataroomTrader(request.user, dataroominstance) else False
