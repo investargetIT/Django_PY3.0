@@ -246,7 +246,7 @@ class DataroomView(viewsets.ModelViewSet):
                                                                        dataroomUserfile__user_id=userid)
                         file_qs = dataroomdirectoryorfile.objects.filter(id__in=seefiles.values_list('file_id'))
                     else:
-                        raise InvestError(2009, msg='下载dataroom文件失败', detail='没有相关下载权限')
+                        raise InvestError(2009, msg='下载dataroom文件失败，没有相关下载权限', detail='没有相关下载权限')
             if files:
                 files = files.split(',')
                 file_qs = file_qs.filter(id__in=files)
@@ -254,7 +254,7 @@ class DataroomView(viewsets.ModelViewSet):
             else:
                 path = '%s_%s%s' % (zipfile_prefix, dataroominstance.id, ('_%s' % userid) if userid else '') + '.zip'  # 压缩文件名称
             if not file_qs.exists():
-                raise InvestError(20071, msg='下载dataroom文件失败', detail='没有可见文件')
+                raise InvestError(20071, msg='下载dataroom文件失败，没有用户可见文件', detail='没有可见文件')
             zipfilepath = APILOG_PATH['dataroomFilePath'] + '/' + path  # 压缩文件路径
             direcpath = zipfilepath.replace('.zip', '')  # 文件夹路径
             if os.path.exists(zipfilepath):
@@ -292,8 +292,6 @@ class DataroomView(viewsets.ModelViewSet):
                 zipfile_prefix = 'virtual_dataroom'
             if int(userid) != request.user.id:
                 if not is_adminPerm:
-                    pass
-                else:
                     raise InvestError(2009, msg='下载dataroom文件失败', detail='没有相关下载权限')
             if ispart in ['1', 1, u'1']:
                 path = '%s_%s%s_part' % (zipfile_prefix, dataroominstance.id, ('_%s' % userid) if userid else '') + '.zip'
