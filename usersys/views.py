@@ -212,7 +212,7 @@ class UserView(viewsets.ModelViewSet):
             else:
                 queryset = queryset.filter(investor_relations__traderuser__onjob=False,
                                            investor_relations__is_deleted=False)
-            queryset = queryset.exclude(investor_relations__traderuser__onjob=True, investor_relations__is_deleted=False)
+            queryset = queryset.exclude(investor_relations__traderuser__onjob=True, investor_relations__is_deleted=False).distinct()
             desc = request.GET.get('desc', 0)
             queryset = mySortQuery(queryset, sortfield, desc)
             try:
