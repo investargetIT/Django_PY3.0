@@ -1755,12 +1755,10 @@ class UserPerformanceAppraisalRecordView(viewsets.ModelViewSet):
             lang = request.GET.get('lang')
             data['createuser'] = request.user.id
             data['datasource'] = request.user.datasource.id
-            user = MyUser.objects.get(id=data['user'])
             if request.user.has_perm('usersys.admin_managepersonnelrelation'):
                 pass
             else:
-                if user != request.user and not is_traderDirectSupervisor(trader=user, supervisor=request.user):
-                    raise InvestError(2009, msg='没有权限给该用户新建绩效考核记录', detail='直接上司有权限给下属员工新建记录')
+                raise InvestError(2009, msg='没有权限给该用户新建绩效考核记录', detail='没有权限给员工新建记录')
             with transaction.atomic():
                 instanceSerializer = UserPerformanceAppraisalRecordCreateSerializer(data=data)
                 if instanceSerializer.is_valid():
@@ -1780,11 +1778,10 @@ class UserPerformanceAppraisalRecordView(viewsets.ModelViewSet):
             data = request.data
             lang = request.GET.get('lang')
             instance = self.get_object()
-            if request.user.has_perm('usersys.admin_managepersonnelrelation') or instance.createuser == request.user:
+            if request.user.has_perm('usersys.admin_managepersonnelrelation'):
                 pass
             else:
-                if instance.user != request.user and not is_traderDirectSupervisor(trader=instance.user, supervisor=request.user):
-                    raise InvestError(2009, msg='没有权限编辑该用户绩效考核记录', detail='直接上司有权限给下属员工编辑记录')
+                raise InvestError(2009, msg='没有权限编辑该用户绩效考核记录', detail='没有权限给员工编辑记录')
             with transaction.atomic():
                 newinstanceSeria = UserPerformanceAppraisalRecordCreateSerializer(instance, data=data)
                 if newinstanceSeria.is_valid():
@@ -1802,11 +1799,10 @@ class UserPerformanceAppraisalRecordView(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
-            if request.user.has_perm('usersys.admin_managepersonnelrelation') or instance.createuser == request.user:
+            if request.user.has_perm('usersys.admin_managepersonnelrelation'):
                 pass
             else:
-                if instance.user != request.user and not is_traderDirectSupervisor(trader=instance.user, supervisor=request.user):
-                    raise InvestError(2009, msg='没有权限给删除该用户绩效考核记录', detail='直接上司有权限删除下属员工记录')
+                raise InvestError(2009, msg='没有权限给删除该用户绩效考核记录', detail='没有权限删除员工记录')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
@@ -1897,8 +1893,7 @@ class UserWorkingPositionRecordsView(viewsets.ModelViewSet):
             if request.user.has_perm('usersys.admin_managepersonnelrelation'):
                 pass
             else:
-                if request.user.id != data['user']:
-                    raise InvestError(2009, msg='没有权限给该用户新建用户任职记录')
+                raise InvestError(2009, msg='没有权限给该用户新建用户任职记录')
             with transaction.atomic():
                 instanceSerializer = UserWorkingPositionRecordsCreateSerializer(data=data)
                 if instanceSerializer.is_valid():
@@ -1921,8 +1916,7 @@ class UserWorkingPositionRecordsView(viewsets.ModelViewSet):
             if request.user.has_perm('usersys.admin_managepersonnelrelation'):
                 pass
             else:
-                if instance.user != request.user:
-                    raise InvestError(2009, msg='没有权限编辑该用户任职记录')
+                raise InvestError(2009, msg='没有权限编辑该用户任职记录')
             with transaction.atomic():
                 newinstanceSeria = UserWorkingPositionRecordsCreateSerializer(instance, data=data)
                 if newinstanceSeria.is_valid():
@@ -1943,8 +1937,7 @@ class UserWorkingPositionRecordsView(viewsets.ModelViewSet):
             if request.user.has_perm('usersys.admin_managepersonnelrelation'):
                 pass
             else:
-                if instance.user != request.user:
-                    raise InvestError(2009, msg='没有权限删除该用户任职记录')
+                raise InvestError(2009, msg='没有权限删除该用户任职记录')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
@@ -2033,8 +2026,7 @@ class UserTrainingRecordsView(viewsets.ModelViewSet):
             if request.user.has_perm('usersys.admin_managepersonnelrelation'):
                 pass
             else:
-                if request.user.id != data['user']:
-                    raise InvestError(2009, msg='没有权限给该用户新建用户培训记录')
+                raise InvestError(2009, msg='没有权限给该用户新建用户培训记录')
             with transaction.atomic():
                 instanceSerializer = UserTrainingRecordsCreateSerializer(data=data)
                 if instanceSerializer.is_valid():
@@ -2057,8 +2049,7 @@ class UserTrainingRecordsView(viewsets.ModelViewSet):
             if request.user.has_perm('usersys.admin_managepersonnelrelation'):
                 pass
             else:
-                if instance.user != request.user:
-                    raise InvestError(2009, msg='没有权限编辑该用户培训记录')
+                raise InvestError(2009, msg='没有权限编辑该用户培训记录')
             with transaction.atomic():
                 newinstanceSeria = UserTrainingRecordsCreateSerializer(instance, data=data)
                 if newinstanceSeria.is_valid():
@@ -2080,8 +2071,7 @@ class UserTrainingRecordsView(viewsets.ModelViewSet):
             if request.user.has_perm('usersys.admin_managepersonnelrelation'):
                 pass
             else:
-                if instance.user != request.user:
-                    raise InvestError(2009, msg='没有权限删除给该用户培训记录')
+                raise InvestError(2009, msg='没有权限删除给该用户培训记录')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
