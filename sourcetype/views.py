@@ -684,7 +684,7 @@ def getmenulist(user):
     allmenuobj = webmenu.objects.all()
     if user.has_perm('dataroom.onlydataroom') and not user.is_superuser:
         return WebMenuSerializer(allmenuobj.filter(id__in=[6,30]),many=True).data
-    qslist = [1, 6, 7, 8, 10, 14, 15, 16, 21, 24, 26, 28, 30]
+    qslist = [1, 6, 7, 8, 10, 14, 15, 16, 21, 24, 26, 28, 30, 41]
     if user.has_perm('usersys.admin_manageuser'):
         qslist.extend([5])
     if not user.has_perm('usersys.as_investor') or user.is_superuser:
@@ -707,7 +707,7 @@ def getmenulist(user):
         qslist.extend([31])
     if user.has_perm('org.export_org'):
         qslist.extend([32])
-    if user.has_perm('usersys.as_trader') or user.has_perm('usersys.admin_managepersonnelrelation'):
+    if user.has_perm('usersys.admin_managepersonnelrelation'):
         qslist.extend([38])      # 人事管理菜单
     if user.has_perm('usersys.admin_manageindgroupinvestor'):
         qslist.extend([39, 5])        # 管理行业组离职交易师所属投资人
