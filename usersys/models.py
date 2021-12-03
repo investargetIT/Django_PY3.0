@@ -724,25 +724,21 @@ class UserRelation(MyModel):
             raise InvestError(code=8888,msg='datasource有误')
         if self.datasource !=self.traderuser.datasource or self.datasource != self.investoruser.datasource:
             raise InvestError(code=8888,msg='requestuser.datasource不匹配')
-        if self.traderuser.userstatus_id != 2:
-            raise InvestError(code=2022,msg='交易师尚未审核通过，无法建立联系')
         if not self.is_deleted:
+            if self.traderuser.userstatus_id != 2:
+                raise InvestError(code=2022, msg='交易师尚未审核通过，无法建立联系')
             if self.investoruser.has_perm('usersys.as_investor') and self.traderuser.has_perm('usersys.as_trader'):
                 pass
             else:
                 raise InvestError(2009, msg='身份类型不符合条件')
-        if self.pk:
             userrelation = UserRelation.objects.exclude(pk=self.pk).filter(is_deleted=False,datasource=self.datasource,investoruser=self.investoruser)
-        else:
-            userrelation = UserRelation.objects.filter(is_deleted=False,datasource=self.datasource, investoruser=self.investoruser)
-        if userrelation.exists():
-            if not self.is_deleted:
+            if userrelation.exists():
                 if userrelation.filter(traderuser_id=self.traderuser_id).exists():
                     raise InvestError(code=2012,msg='关系已存在')
                 elif userrelation.filter(relationtype=True).exists() and self.relationtype:
                     self.relationtype = False
-        if self.investoruser.id == self.traderuser.id:
-            raise InvestError(code=2014,msg='投资人和交易师不能是同一个人')
+            if self.investoruser.id == self.traderuser.id:
+                raise InvestError(code=2014,msg='投资人和交易师不能是同一个人')
         super(UserRelation, self).save(*args, **kwargs)
 
     class Meta:
