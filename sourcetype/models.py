@@ -63,13 +63,13 @@ class OrgBdResponse(models.Model):
     机构Bd反馈类型
     '''
     id = models.AutoField(primary_key=True)
-    nameC = models.CharField(max_length=64,blank=True,null=True)
-    nameE = models.CharField(max_length=64, blank=True, null=True)
+    name = models.CharField(max_length=64,blank=True,null=True, help_text='FA')
+    material = models.CharField(max_length=64, blank=True, null=True, help_text='材料')
     sort = models.IntegerField(blank=True, default=1)
     is_deleted = models.BooleanField(blank=True, default=False)
 
     def __str__(self):
-        return self.nameC
+        return self.name
 
 
 
@@ -94,19 +94,6 @@ class FamiliarLevel(models.Model):
     nameC = models.CharField(max_length=64, blank=True, null=True)
     nameE = models.CharField(max_length=64, blank=True, null=True)
     score = models.IntegerField(blank=True, null=True)
-    is_deleted = models.BooleanField(blank=True, default=False)
-
-    def __str__(self):
-        return self.nameC
-
-
-class FavoriteType(models.Model):
-    '''
-    收藏类型
-    '''
-    id = models.AutoField(primary_key=True)
-    nameC = models.CharField(max_length=20,blank=True,null=True)
-    nameE = models.CharField(max_length=128,blank=True,null=True)
     is_deleted = models.BooleanField(blank=True, default=False)
 
     def __str__(self):
@@ -141,7 +128,7 @@ class TitleType(models.Model):
 
 class CharacterType(models.Model):
     '''
-    职位
+    角色
     '''
     id = models.AutoField(primary_key=True)
     characterC = models.CharField(max_length=20,blank=True,null=True)
@@ -151,6 +138,28 @@ class CharacterType(models.Model):
     def __str__(self):
         return self.characterC
 
+
+class TrainingType(models.Model):
+    '''
+    培训方式
+    '''
+    id = models.AutoField(primary_key=True)
+    type = models.CharField(max_length=32, blank=True, null=True)
+    is_deleted = models.BooleanField(blank=True, default=False)
+
+    def __str__(self):
+        return self.type
+
+class TrainingStatus(models.Model):
+    '''
+    培训状态
+    '''
+    id = models.AutoField(primary_key=True)
+    status = models.CharField(max_length=32, blank=True, null=True)
+    is_deleted = models.BooleanField(blank=True, default=False)
+
+    def __str__(self):
+        return self.status
 
 
 
@@ -261,30 +270,27 @@ class OrgArea(models.Model):
             super(OrgArea, self).save(force_insert, force_update, using, update_fields)
 
 
-class School(models.Model):
+class Education(models.Model):
     '''
-    学校
+    学历
     '''
     id = models.AutoField(primary_key=True)
-    nameC = models.TextField(blank=True, default='无')
-    nameE = models.TextField(blank=True, default='none')
+    name = models.TextField(blank=True, default='无')
     is_deleted = models.BooleanField(blank=True, default=False)
 
     def __str__(self):
-        return self.nameC
+        return self.name
 
-
-class Specialty(models.Model):
+class PerformanceAppraisalLevel(models.Model):
     '''
-    专业
+     绩效考核等级
     '''
     id = models.AutoField(primary_key=True)
-    nameC = models.TextField(blank=True, default='无')
-    nameE = models.TextField(blank=True, default='none')
+    name = models.TextField(blank=True, default='无')
     is_deleted = models.BooleanField(blank=True, default=False)
 
     def __str__(self):
-        return self.nameC
+        return self.name
 
 
 class TransactionPhases(models.Model):
@@ -327,6 +333,19 @@ class TransactionType(models.Model):
 
 
 class TransactionStatus(models.Model):
+    '''
+    项目进程（时间轴）状态：11个step
+    '''
+    id = models.AutoField(primary_key=True)
+    nameC = models.CharField(max_length=16,blank=True,null=True)
+    nameE = models.CharField(max_length=32,blank=True,null=True)
+    index = models.PositiveSmallIntegerField(blank=True, default=0)
+    is_deleted = models.BooleanField(blank=True, default=False)
+
+    def __str__(self):
+        return self.nameC
+
+class DidiOrderType(models.Model):
     '''
     项目进程（时间轴）状态：11个step
     '''
@@ -383,6 +402,7 @@ class IndustryGroup(models.Model):
     id = models.AutoField(primary_key=True)
     nameC = models.CharField(max_length=32, blank=True, null=True)
     nameE = models.CharField(max_length=32, blank=True, null=True)
+    manager = models.BigIntegerField(blank=True, null=True)
     shareInvestor = models.BooleanField(blank=True, default=False, help_text='是否共享投资人')
     datasource = MyForeignKey(DataSource, help_text='数据源', blank=True, default=1)
     is_deleted = models.BooleanField(blank=True, default=False)
@@ -390,7 +410,7 @@ class IndustryGroup(models.Model):
 
 class templatesign(models.Model):
     """
-    模板标识sign
+    模板标识sign 没用到 模板存在datasouce里了
     """
     email_sign = models.CharField(max_length=32, blank=True, null=True)
     sms_sign = models.CharField(max_length=32, blank=True, null=True)

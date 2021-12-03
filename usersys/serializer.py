@@ -6,10 +6,13 @@ from rest_framework import serializers
 
 from mongoDoc.models import MergeFinanceData
 from org.serializer import OrgCommonSerializer
-from sourcetype.serializer import tagSerializer, countrySerializer, titleTypeSerializer
+from sourcetype.serializer import tagSerializer, countrySerializer, titleTypeSerializer, \
+    PerformanceAppraisalLevelSerializer, TrainingStatusSerializer, TrainingTypeSerializer, industryGroupSerializer
 from third.views.qiniufile import getUrlWithBucketAndKey
 from utils.util import checkMobileTrue
-from .models import MyUser, UserRelation, UserFriendship, UnreachUser, UserRemarks, userAttachments, userEvents
+from .models import MyUser, UserRelation, UnreachUser, UserRemarks, userAttachments, userEvents, \
+    UserPerformanceAppraisalRecord, UserPersonnelRelations, UserTrainingRecords, UserMentorTrackingRecords, \
+    UserWorkingPositionRecords
 
 
 class UnreachUserSerializer(serializers.ModelSerializer):
@@ -41,7 +44,7 @@ class UserCommenSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = ('id', 'usernameC', 'usernameE', 'tags', 'userstatus', 'photourl', 'title', 'onjob', 'mobile', 'email',
-                  'is_active', 'org')
+                  'is_active', 'org', 'specialtyhobby', 'others', 'school', 'specialty', 'entryTime', 'bornTime', 'isMarried')
         depth = 1
 
     def get_tags(self, obj):
@@ -96,11 +99,12 @@ class UserInfoSerializer(serializers.ModelSerializer):
     photourl = serializers.SerializerMethodField()
     mobiletrue = serializers.SerializerMethodField()
     country = countrySerializer()
+    org = OrgCommonSerializer()
 
     class Meta:
         model = MyUser
         fields = ('usernameC', 'usernameE', 'org', 'department', 'mobile', 'mobileAreaCode', 'mobiletrue', 'email', 'wechat', 'title',
-                  'id', 'tags', 'userstatus', 'photourl', 'is_active', 'orgarea', 'country', 'onjob', 'hasIM', 'last_login')
+                  'id', 'tags', 'userstatus', 'photourl', 'is_active', 'orgarea', 'country', 'onjob', 'hasIM', 'last_login', 'entryTime', 'bornTime', 'isMarried')
         depth = 1
 
     def get_tags(self, obj):
@@ -128,7 +132,7 @@ class InvestorUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = ('usernameC', 'usernameE', 'org', 'department', 'mobile', 'mobileAreaCode', 'mobiletrue', 'email', 'wechat', 'title',
-                  'id', 'tags', 'userstatus', 'photourl', 'is_active', 'orgarea', 'country', 'onjob', 'last_login', 'familiar')
+                  'id', 'tags', 'userstatus', 'photourl', 'is_active', 'orgarea', 'country', 'onjob', 'last_login', 'familiar', 'entryTime', 'bornTime', 'isMarried')
         depth = 1
 
     def get_tags(self, obj):
@@ -191,9 +195,9 @@ class UserRemarkSerializer(serializers.ModelSerializer):
 
 
 class UserRemarkSimpleSerializer(serializers.ModelSerializer):
-        class Meta:
-            model = UserRemarks
-            fields = ('id', 'remark', 'createdtime')
+    class Meta:
+        model = UserRemarks
+        fields = ('id', 'remark', 'createdtime')
 
 
 # 投资人交易师关系基本信息
@@ -213,32 +217,6 @@ class UserRelationCreateSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-# 用户好友关系基本信息
-class UserFriendshipSerializer(serializers.ModelSerializer):
-    user = UserInfoSerializer()
-    friend = UserInfoSerializer()
-
-    class Meta:
-        model = UserFriendship
-        fields = ('id', 'user', 'friend', 'isaccept', 'datasource')
-        read_only_fields = ('datasource',)
-
-
-# 用户好友关系全部信息
-class UserFriendshipDetailSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UserFriendship
-        fields = '__all__'
-
-
-# 用户好友关系修改信息
-class UserFriendshipUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UserFriendship
-        fields = '__all__'
-        read_only_fields = ('id', 'datasource', 'user', 'friend', 'createdtime', 'createuser', 'is_deleted')
-
-
 # 权限组全部权限信息
 class GroupDetailSerializer(serializers.ModelSerializer):
     permissions = PermissionSerializer(many=True)
@@ -247,15 +225,33 @@ class GroupDetailSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'permissions')
 
 
+class UserSimpleSerializer(serializers.ModelSerializer):
+    org = OrgCommonSerializer()
+    photourl = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MyUser
+        fields = ('id', 'usernameC', 'usernameE', 'org', 'photourl')
+
+    def get_photourl(self, obj):
+        if obj.photoKey:
+            return getUrlWithBucketAndKey('image',obj.photoKey)
+        else:
+            return None
+
+
 # 用户全部信息
 class UserSerializer(serializers.ModelSerializer):
     groups = GroupSerializer(MyUser.groups,many=True)
     tags = serializers.SerializerMethodField()
     photourl = serializers.SerializerMethodField()
+    resumeurl = serializers.SerializerMethodField()
+    directSupervisor = UserSimpleSerializer()
+    mentor = UserSimpleSerializer()
 
     class Meta:
         model = MyUser
-        exclude = ('usercode', 'is_staff', 'is_superuser', 'createuser', 'createdtime', 'deletedtime', 'deleteduser',
+        exclude = ('usercode', 'password', 'is_staff', 'is_superuser', 'createuser', 'createdtime', 'deletedtime', 'deleteduser',
                    'is_deleted', 'lastmodifyuser', 'lastmodifytime', 'registersource', 'datasource')
         depth = 1
 
@@ -268,6 +264,12 @@ class UserSerializer(serializers.ModelSerializer):
     def get_photourl(self, obj):
         if obj.photoKey:
             return getUrlWithBucketAndKey('image', obj.photoKey)
+        else:
+            return None
+
+    def get_resumeurl(self, obj):
+        if obj.resumeBucket and obj.resumeKey:
+            return getUrlWithBucketAndKey(obj.resumeBucket, obj.resumeKey)
         else:
             return None
 
@@ -288,14 +290,17 @@ class UpdateUserSerializer(serializers.ModelSerializer):
 # 用户列表显示信息
 class UserListSerializer(serializers.ModelSerializer):
     org = OrgCommonSerializer()
+    indGroup = industryGroupSerializer()
     mobiletrue = serializers.SerializerMethodField()
     trader_relation = serializers.SerializerMethodField()
     photourl = serializers.SerializerMethodField()
+    directSupervisor = UserSimpleSerializer()
+    mentor = UserSimpleSerializer()
 
     class Meta:
         model = MyUser
         fields = ('id','groups','tags','country', 'department', 'usernameC', 'usernameE', 'mobile', 'mobileAreaCode','mobiletrue', 'indGroup',
-                  'email', 'title', 'userstatus', 'org', 'trader_relation', 'photourl','is_active', 'hasIM', 'wechat')
+                  'email', 'title', 'userstatus', 'org', 'trader_relation', 'photourl','is_active', 'hasIM', 'wechat', 'directSupervisor', 'mentor', 'entryTime', 'bornTime', 'isMarried')
 
     def get_mobiletrue(self, obj):
         return checkMobileTrue(obj.mobile, obj.mobileAreaCode)
@@ -313,20 +318,6 @@ class UserListSerializer(serializers.ModelSerializer):
             return None
 
 
-class UserSimpleSerializer(serializers.ModelSerializer):
-    org = OrgCommonSerializer()
-    photourl = serializers.SerializerMethodField()
-
-    class Meta:
-        model = MyUser
-        fields = ('id', 'usernameC', 'usernameE', 'org', 'photourl')
-
-    def get_photourl(self, obj):
-        if obj.photoKey:
-            return getUrlWithBucketAndKey('image',obj.photoKey)
-        else:
-            return None
-
 class UserTraderSimpleSerializer(serializers.ModelSerializer):
     traderuser = UserSimpleSerializer()
 
@@ -338,6 +329,9 @@ class UserTraderSimpleSerializer(serializers.ModelSerializer):
 class UserListCommenSerializer(serializers.ModelSerializer):
     photourl = serializers.SerializerMethodField()
     mobile = serializers.SerializerMethodField()
+    indGroup = industryGroupSerializer()
+    directSupervisor = UserSimpleSerializer()
+    mentor = UserSimpleSerializer()
     email = serializers.SerializerMethodField()
     mobiletrue = serializers.SerializerMethodField()
     org = OrgCommonSerializer()
@@ -345,7 +339,7 @@ class UserListCommenSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = ('id', 'usernameC', 'usernameE', 'tags', 'userstatus', 'photourl', 'title', 'onjob', 'mobile', 'mobileAreaCode',
-                  'mobiletrue', 'email', 'is_active', 'org', 'indGroup')
+                  'mobiletrue', 'email', 'is_active', 'org', 'indGroup', 'entryTime', 'bornTime', 'isMarried', 'directSupervisor', 'mentor')
 
 
     def get_photourl(self, obj):
@@ -378,3 +372,92 @@ class UserListCommenSerializer(serializers.ModelSerializer):
             return center
         else:
             return None
+
+class UserPersonnelRelationsCreateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = UserPersonnelRelations
+        fields = '__all__'
+
+
+class UserPersonnelRelationsSerializer(serializers.ModelSerializer):
+    user = UserSimpleSerializer()
+    supervisorOrMentor = UserSimpleSerializer()
+
+    class Meta:
+        model = UserPersonnelRelations
+        exclude = ('deleteduser', 'datasource', 'is_deleted', 'deletedtime')
+
+
+
+class UserPerformanceAppraisalRecordCreateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = UserPerformanceAppraisalRecord
+        fields = '__all__'
+
+
+class UserPerformanceAppraisalRecordSerializer(serializers.ModelSerializer):
+    user = UserSimpleSerializer()
+    level = PerformanceAppraisalLevelSerializer()
+    performanceTableUrl = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserPerformanceAppraisalRecord
+        exclude = ('deleteduser', 'datasource', 'is_deleted', 'deletedtime')
+
+    def get_performanceTableUrl(self, obj):
+        if obj.performanceTableBucket and obj.performanceTableKey:
+            return getUrlWithBucketAndKey(obj.performanceTableBucket, obj.performanceTableKey)
+        else:
+            return None
+
+
+class UserWorkingPositionRecordsCreateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = UserWorkingPositionRecords
+        fields = '__all__'
+
+
+class UserWorkingPositionRecordsSerializer(serializers.ModelSerializer):
+    user = UserSimpleSerializer()
+    indGroup = industryGroupSerializer()
+    title = titleTypeSerializer()
+
+    class Meta:
+        model = UserWorkingPositionRecords
+        exclude = ('deleteduser', 'datasource', 'is_deleted', 'deletedtime')
+
+
+class UserTrainingRecordsCreateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = UserTrainingRecords
+        fields = '__all__'
+
+
+class UserTrainingRecordsSerializer(serializers.ModelSerializer):
+    user = UserSimpleSerializer()
+    trainingStatus = TrainingStatusSerializer()
+    trainingType = TrainingTypeSerializer()
+
+    class Meta:
+        model = UserTrainingRecords
+        exclude = ('deleteduser', 'datasource', 'is_deleted', 'deletedtime')
+
+class UserMentorTrackingRecordsCreateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = UserMentorTrackingRecords
+        fields = '__all__'
+
+
+class UserMentorTrackingRecordsSerializer(serializers.ModelSerializer):
+    user = UserSimpleSerializer()
+    communicateUser = UserSimpleSerializer()
+
+
+    class Meta:
+        model = UserMentorTrackingRecords
+        exclude = ('deleteduser', 'datasource', 'is_deleted', 'deletedtime')

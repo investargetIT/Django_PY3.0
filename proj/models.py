@@ -10,8 +10,8 @@ from django.db import models
 
 # Create your models here.
 
-from sourcetype.models import FavoriteType, ProjectStatus, CurrencyType, Tag, Country, TransactionType, Industry, \
-    DataSource, CharacterType, Service,   IndustryGroup
+from sourcetype.models import ProjectStatus, CurrencyType, Tag, Country, TransactionType, Industry, \
+    DataSource, CharacterType, Service, IndustryGroup, DidiOrderType
 from usersys.models import MyUser
 
 from utils.customClass import InvestError, MyForeignKey, MyModel
@@ -33,8 +33,7 @@ class project(MyModel):
     p_introducteE = models.TextField(blank=True, null=True, default='project introduction')
     isoverseasproject = models.BooleanField(blank=True,default=True,help_text='是否是海外项目')
     supportUser = MyForeignKey(MyUser,blank=True,null=True,related_name='usersupport_projs',help_text='项目方(上传方)')
-    takeUser = MyForeignKey(MyUser,blank=True,null=True,related_name='usertake_projs',help_text='承揽人')
-    makeUser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermake_projs', help_text='承做人')
+    PM = MyForeignKey(MyUser, blank=True, null=True, related_name='userPM_projs', help_text='项目PM')
     isHidden = models.BooleanField(blank=True,default=False)
     financeAmount = models.BigIntegerField(blank=True,null=True)
     financeAmount_USD = models.BigIntegerField(blank=True,null=True)
@@ -84,21 +83,14 @@ class project(MyModel):
     class Meta:
         db_table = 'project'
         permissions = (
-            ('admin_addproj','管理员上传项目'),
-            ('admin_changeproj', '管理员修改项目'),
-            ('admin_deleteproj', '管理员删除项目'),
-            ('admin_getproj', '管理员查看项目'),
-            ('user_addproj', '用户上传项目'),
-            ('user_changeproj', '用户修改项目(obj级别)'),
-            ('user_deleteproj', '用户删除项目(obj级别)'),
-            ('user_getproj','用户查看项目(obj级别)'),
+            ('admin_manageproj','管理项目'),
             ('get_secretinfo','查看项目保密信息')
         )
     def save(self, *args, **kwargs):
         if not self.datasource or not self.createuser or self.datasource != self.createuser.datasource:
             raise InvestError(code=8888,msg='项目datasource不合法')
         if self.lastProject and (self.lastProject == self.pk or self.lastProject.is_deleted):
-            raise InvestError(2007, msg='关联项目不能为自身或者已删除项目')
+            raise InvestError(20071, msg='关联项目不能为自身或者已删除项目')
         if self.pk:
             if self.is_deleted:
                 rem_perm('proj.user_getproj',self.createuser,self)
@@ -111,7 +103,7 @@ class project(MyModel):
         if self.code is None:
             self.code = 'P' + datetime.datetime.now().strftime('%Y%m%d%H%M%S')
         if not self.is_deleted and self.isHidden and self.isSendEmail:
-            raise InvestError(2007, msg='该项目为隐藏项目， 无法发送群发邮件')
+            raise InvestError(20071, msg='该项目为隐藏项目， 无法发送群发邮件')
         super(project,self).save(*args, **kwargs)
 
     def checkProjInfo(self):
@@ -139,7 +131,7 @@ class projTraders(MyModel):
         if not self.is_deleted:
             traders = projTraders.objects.exclude(pk=self.pk).filter(is_deleted=False, proj=self.proj, user=self.user, type=self.type)
             if traders.exists():
-                raise InvestError(2007, msg='该交易师已存在一条相同记录了')
+                raise InvestError(20071, msg='该交易师已存在一条相同记录了')
         super(projTraders, self).save(*args, **kwargs)
 
 class projServices(MyModel):
@@ -237,35 +229,37 @@ class projectTransactionType(MyModel):
         db_table = "project_TransactionType"
 
 
-#收藏只能 新增/删除/查看/  ，不能修改
-class favoriteProject(MyModel):
-    proj = MyForeignKey(project,related_name='proj_favorite')
-    user = MyForeignKey(MyUser,related_name='user_favorite')
-    trader = MyForeignKey(MyUser,blank=True,null=True,related_name='trader_favorite',help_text='交易师id（用户感兴趣时联系/交易师推荐）')
-    favoritetype = MyForeignKey(FavoriteType,related_name='favoritetype_proj',help_text='收藏类型')
-    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_favoriteproj')
-    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_favoriteproj')
-    datasource = MyForeignKey(DataSource, help_text='数据源')
+class projectDiDiRecord(MyModel):
+    proj = MyForeignKey(project, blank=True, null=True, related_name='project_DiDiRecords')
+    projName = models.TextField(blank=True, null=True, help_text="项目名称")
+    orderNumber = models.CharField(max_length=32, blank=True, help_text='专快订单号')
+    orderDate = models.DateTimeField(blank=True, null=True, help_text='支付时间')
+    orderType = MyForeignKey(DidiOrderType, blank=True, null=True, help_text='用车类型（对应用车权限）')
+    orderPerm = models.CharField(max_length=64, blank=True, null=True, help_text='用车权限')
+    city = models.CharField(max_length=64, blank=True, null=True, help_text='用车城市')
+    startPlace = models.TextField(blank=True, null=True, help_text='实际出发地')
+    endPlace = models.TextField(blank=True, null=True, help_text='实际目的地')
+    money = models.FloatField(blank=True, null=True, help_text='企业实付金额')
+    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_projDiDiRecords')
+    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_projDiDiRecords')
+    datasource = MyForeignKey(DataSource, blank=True, help_text='数据源')
 
-    #只用于create和delete，没有update
-    def save(self, *args, **kwargs):
-        if self.proj.projstatus_id < 4:
-            raise InvestError(5003,msg='项目尚未终审发布')
-        if not self.datasource or self.datasource != self.proj.datasource:
-            raise InvestError(code=8888,msg='项目收藏datasource与项目不符')
-        if not self.pk: #交易师不能自己主动删除推荐，再次推荐同一个项目时删除旧的添加新的(暂定)
-            # deletedata = {'is_deleted':True,'deleteduser':self.createuser.id,'deletedtime':datetime.datetime.now()}
-            favoriteProject.objects.filter(proj=self.proj,user=self.user,trader=self.trader,favoritetype=self.favoritetype,is_deleted=False,
-                                              datasource=self.datasource,createuser=self.createuser).update(is_deleted=True,deleteduser=self.createuser,deletedtime=datetime.datetime.now())
-        super(favoriteProject,self).save(*args, **kwargs)
     class Meta:
-        ordering = ('proj',)
-        db_table = 'project_favorites'
-        permissions = (
-            ('admin_addfavorite', '管理员添加favorite'),
-            ('admin_getfavorite', '管理员查看favorite'),
-            ('admin_deletefavorite','管理员删除favorite'),
-        )
+        db_table = "project_didiRecord"
+
+    def save(self, *args, **kwargs):
+        if self.proj:
+            self.datasource = self.proj.datasource
+        if not self.orderType and self.orderPerm:
+            if DidiOrderType.objects.filter(nameC=self.orderPerm, is_deleted=False).exists():
+                self.orderType = DidiOrderType.objects.filter(nameC=self.orderPerm, is_deleted=False).first()
+        if not self.is_deleted:
+            if projectDiDiRecord.objects.exclude(pk=self.pk).filter(orderNumber=self.orderNumber, is_deleted=False).exists():
+                raise InvestError(4010, msg='订单号已存在')
+            if not self.money or self.money < 0:
+               raise InvestError(20071, msg='实际付款不符合条件')
+        return super(projectDiDiRecord, self).save(*args, **kwargs)
+
 
 
 class ShareToken(models.Model):

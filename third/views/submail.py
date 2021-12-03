@@ -9,39 +9,12 @@ from SUBMAIL_PYTHON_SDK_MAIL_AND_MESSAGE_WITH_ADDRESSBOOK.mail_xsend import MAIL
 from SUBMAIL_PYTHON_SDK_MAIL_AND_MESSAGE_WITH_ADDRESSBOOK.message_xsend import MESSAGEXsend
 from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
+
+from sourcetype.models import DataSource
 from third.models import MobileAuthCode
 from third.thirdconfig import MAIL_CONFIGS, MESSAGE_CONFIGS, INTERNATIONALMESSAGE_CONFIGS, SUBHOOK_KEY
 from utils.customClass import JSONResponse, InvestError
 from utils.util import SuccessResponse, catchexcption, ExceptionResponse, InvestErrorResponse, checkIPAddressCanPass
-
-
-'''
-submail短信验证码模板
-'''
-SMSCODE_projectsign = {
-    '1':{
-        'in':'WzSYg',
-        'out':'sk5Nu3'
-        },
-    '2':{
-        'in':'tybmL4',
-        'out':None
-        },
-    '3':{
-        'in':'l58fI',
-        'out':None
-        },
-    '4':{
-        'in':'hIudP',
-        'out':None
-        },
-    '5':{
-        'in':'cWzJx',
-        'out':None
-        },
-    }
-
-
 
 
 def sendEmailWithAttachmentFile(destination, subject, html, attachmentpath):
@@ -149,24 +122,28 @@ def sendSmscode(request):
             raise InvestError(code=3004)
         mobilecode = MobileAuthCode(mobile=destination)
         mobilecode.save()
+        try:
+            datasource = DataSource.objects.get(id=source)
+        except DataSource.DoesNotExist:
+            raise InvestError(8888, msg='未知来源码，请联系工作人员', detail='datasource不合法')
         varsdict = {'code': mobilecode.code, 'time': '30'}
         if areacode in [u'86', '86', 86, None]:
-            projectsign = SMSCODE_projectsign.get(str(source), {}).get('in')
+            projectsign = datasource.codeTemIn
             if projectsign:
                 response = xsendSms(destination, projectsign, varsdict)
             else:
-                raise InvestError(30011, msg='没有建立相应短信模板')
+                raise InvestError(30011, msg='短信发送失败', detail='没有建立相应短信模板')
         else:
-            projectsign = SMSCODE_projectsign.get(str(source), {}).get('out')
+            projectsign = datasource.codeTemOut
             if projectsign:
                 response = xsendInternationalsms('+%s'%areacode + destination, projectsign, varsdict)
             else:
-                raise InvestError(30012, msg='没有建立相应短信模板')
+                raise InvestError(30012, msg='短信发送失败', detail='没有建立相应短信模板')
         success = response.get('status',None)
         if success:
             response['smstoken'] = mobilecode.token
         else:
-            raise InvestError(code=30011,msg=response)
+            raise InvestError(code=30011,msg='短信发送失败', detail=response)
         return JSONResponse(SuccessResponse(response))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))

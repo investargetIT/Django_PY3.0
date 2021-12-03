@@ -29,16 +29,16 @@ def getcurrencyreat(request):
         tcur = request.GET.get('tcur', None)  # 目标币种
         if not tcur or not scur:
             raise InvestError(20072)
-        response = requests.get('https://api.nowapi.com/?app=finance.rate&scur=%s&tcur=%s&appkey=18220&sign=9b97118c7cf61df11c736c79ce94dcf9' % (scur, tcur)).content
+        response = requests.get('http://op.juhe.cn/onebox/exchange/currency?from={}&to={}&key=92ad022726cff74d15d1d3b761701fa4'.format(scur, tcur)).content
         response = json.loads(response.decode())
         if isinstance(response, dict):
-            success = response.get('success', False)
-            if success in ['1', True]:
+            error_code = response.get('error_code')
+            if error_code == 0:
                 result = response.get('result',{})
             else:
-                raise InvestError(code=2007, msg=response.get('msg',None))
+                raise InvestError(20071,msg=response.get('reason',None))
         else:
-            raise InvestError(code=2007,msg=response)
+            raise InvestError(20071,msg=response)
         return JSONResponse(SuccessResponse(result))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
@@ -55,16 +55,16 @@ def getMobilePhoneAddress(request):
         mobile = request.GET.get('mobile', None)
         if not mobile:
             raise InvestError(20072, msg='手机号码不能为空')
-        response = requests.get('https://api.nowapi.com/?app=phone.get&phone=%s&appkey=18220&sign=9b97118c7cf61df11c736c79ce94dcf9&format=json' % mobile).content
+        response = requests.get('http://apis.juhe.cn/mobile/get?phone={}&dtype=&key=f439062c59bb86db8156446aa9737c72'.format(mobile)).content
         response = json.loads(response.decode())
-        if isinstance(response, dict):
-            success = response.get('success', False)
-            if success in ['1', True]:
+        if isinstance(response,dict):
+            error_code = response.get('error_code')
+            if error_code == 0:
                 result = response.get('result', {})
             else:
-                raise InvestError(code=2007, msg=response.get('msg', None))
+                raise InvestError(20071, msg=response.get('reason', None))
         else:
-            raise InvestError(code=2007,msg=response)
+            raise InvestError(20071,msg=response)
         return JSONResponse(SuccessResponse(result))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
@@ -112,15 +112,15 @@ def fetch_token():
         f = urlopen(req, timeout=10)
         result_str = f.read()
     except URLError as err:
-        raise InvestError(9999, msg='网络错误-%s' % str(err))
+        raise InvestError(9999, msg='网络错误', detail=str(err))
     result_str = result_str.decode()
     result = json.loads(result_str)
     if ('access_token' in result.keys() and 'scope' in result.keys()):
         if not 'brain_all_scope' in result['scope'].split(' '):
-            raise InvestError(20071, msg='获取百度ocr token失败, please ensure has check the ability')
+            raise InvestError(20071, msg='获取百度ocr token失败', detail='please ensure has check the ability')
         return result['access_token']
     else:
-        raise InvestError(20071, msg='获取百度ocr token失败, client_id/client_secret参数错误')
+        raise InvestError(20071, msg='获取百度ocr token失败', detail='client_id/client_secret参数错误')
 
 def ccupload_baidu(request):
     try:
@@ -138,6 +138,7 @@ def ccupload_baidu(request):
         return JSONResponse(InvestErrorResponse(err))
     except Exception:
         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
 
 import qrcode
 

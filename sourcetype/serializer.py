@@ -1,11 +1,12 @@
 from rest_framework import serializers
 
-from sourcetype.models import TransactionType, TransactionPhases, Specialty, School, OrgArea, Tag, Industry, \
+from sourcetype.models import TransactionType, TransactionPhases, OrgArea, Tag, Industry, \
     CurrencyType, \
-    AuditStatus, ProjectStatus, OrgType, FavoriteType, ClientType, TitleType, Country, \
+    AuditStatus, ProjectStatus, OrgType, ClientType, TitleType, Country, \
     DataSource, TransactionStatus, webmenu, CharacterType, orgtitletable, Service, OrgAttribute, BDStatus, \
     AndroidAppVersion, OrgBdResponse, \
-    OrgLevelType, FamiliarLevel, IndustryGroup
+    OrgLevelType, FamiliarLevel, IndustryGroup, DidiOrderType, Education, PerformanceAppraisalLevel, TrainingType, \
+    TrainingStatus
 from third.views.qiniufile import getUrlWithBucketAndKey
 
 
@@ -24,6 +25,11 @@ class ProjectStatusSerializer(serializers.ModelSerializer):
 class OrgBdResponseSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrgBdResponse
+        exclude = ('is_deleted',)
+
+class DidiOrderTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DidiOrderType
         exclude = ('is_deleted',)
 
 
@@ -56,13 +62,6 @@ class characterTypeSerializer(serializers.ModelSerializer):
         model = CharacterType
         exclude = ('is_deleted',)
 
-
-class favoriteTypeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = FavoriteType
-        exclude = ('is_deleted',)
-
-
 class clientTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClientType
@@ -88,13 +87,17 @@ class countrySerializer(serializers.ModelSerializer):
         return getUrlWithBucketAndKey('image', obj.key)
 
 class countryWithContinentSerializer(serializers.ModelSerializer):
-
+    url = serializers.SerializerMethodField()
     parent = countrySerializer()
 
     class Meta:
         model = Country
         exclude = ('is_deleted','datasource')
 
+    def get_url(self, obj):
+        if not obj.key:
+            return None
+        return getUrlWithBucketAndKey('image', obj.key)
 
 class orgAttributeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -152,15 +155,14 @@ class orgAreaSerializer(serializers.ModelSerializer):
         exclude = ('is_deleted',)
 
 
-class schoolSerializer(serializers.ModelSerializer):
+class EducationSerializer(serializers.ModelSerializer):
     class Meta:
-        model = School
+        model = Education
         exclude = ('is_deleted',)
 
-
-class professionSerializer(serializers.ModelSerializer):
+class PerformanceAppraisalLevelSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Specialty
+        model = PerformanceAppraisalLevel
         exclude = ('is_deleted',)
 
 
@@ -198,6 +200,16 @@ class OrgtitletableSerializer(serializers.ModelSerializer):
         model = orgtitletable
         exclude = ('is_deleted',)
         depth = 1
+
+class TrainingTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TrainingType
+        exclude = ('is_deleted',)
+
+class TrainingStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TrainingStatus
+        exclude = ('is_deleted',)
 
 
 class AndroidAppSerializer(serializers.ModelSerializer):

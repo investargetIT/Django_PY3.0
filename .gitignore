@@ -26,8 +26,6 @@ sourcetype/migrations/
 !sourcetype/migrations/__init__.py
 third/migrations/
 !third/migrations/__init__.py
-timeline/migrations/
-!timeline/migrations/__init__.py
 usersys/migrations/
 !usersys/migrations/__init__.py
 BD/migrations/

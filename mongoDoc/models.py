@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 
 import datetime
 from mongoengine import *
-from invest.settings import groupemailMongoTableName, chatMessagegMongoTableName, projectDataMongoTableName, \
+from invest.settings import groupemailMongoTableName, projectDataMongoTableName, \
     mergeandfinanceeventMongoTableName, com_catMongoTableName, projremarkMongoTableName, wxchatdataMongoTableName, \
     projectNewsMongoTableName, projIndustryInfoMongoTableName, companysearchMongoTableName
 from utils.customClass import InvestError
@@ -158,15 +158,7 @@ class GroupEmailData(Document):
             self.savetime = datetime.datetime.now()
         super(GroupEmailData, self).save(force_insert, validate, clean, write_concern, cascade, cascade_kwargs, _refs,
                                       save_condition, signal_kwargs, **kwargs)
-class IMChatMessages(Document):
-    msg_id = StringField()
-    timestamp = StringField()
-    direction = StringField()
-    to = StringField()
-    chatfrom = StringField()
-    chat_type = StringField()
-    payload = DictField()
-    meta = {"collection": chatMessagegMongoTableName}
+
 
 class WXChatdata(Document):
     content = StringField()

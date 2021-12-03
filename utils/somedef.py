@@ -3,6 +3,8 @@ import os
 
 import datetime
 import traceback
+
+import xlrd
 from PIL import Image, ImageDraw, ImageFont
 import random
 
@@ -24,6 +26,7 @@ from pdfminer.converter import PDFPageAggregator
 from PyPDF2 import PdfFileWriter, PdfFileReader
 # 随机颜色1:
 from third.thirdconfig import baiduaip_appid, baiduaip_appkey, baiduaip_secretkey
+from utils.customClass import InvestError
 
 
 def rndColor():
@@ -285,3 +288,27 @@ def file_iterator(fn, chunk_size=512):
             yield c
         else:
             break
+
+
+def open_excel(filename=None, file_contents=None):
+    try:
+        data = xlrd.open_workbook(filename=filename, file_contents=file_contents)
+        return data
+    except Exception as e:
+        raise InvestError(2007, msg='读取文件失败', detail=str(e))
+
+#根据索引获取Excel表格中的数据   参数:file：Excel文件路径     colnameindex：表头列名所在行的索引  ，by_index：表的索引
+def excel_table_byindex(filename=None, file_contents=None, colnameindex=0, by_index=0):
+    data = open_excel(filename, file_contents)
+    table = data.sheets()[by_index]
+    nrows = table.nrows #行数
+    colnames =  table.row_values(colnameindex) #某一行数据
+    res_list =[]
+    for rownum in range(colnameindex + 1, nrows):
+         row = table.row_values(rownum)
+         if row:
+             app = {}
+             for i in range(len(colnames)):
+                app[colnames[i]] = row[i]
+             res_list.append(app)
+    return res_list

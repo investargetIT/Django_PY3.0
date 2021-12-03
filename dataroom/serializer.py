@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from dataroom.models import dataroom, dataroomdirectoryorfile, dataroom_User_file, dataroom_User_template, \
-    dataroomUserSeeFiles, dataroom_user_discuss
+    dataroomUserSeeFiles, dataroom_user_discuss, dataroom_user_readFileRecord
 from proj.serializer import ProjCommonSerializer
 from third.views.qiniufile import getUrlWithBucketAndKey
 from usersys.serializer import UserInfoSerializer, UserSimpleSerializer
@@ -142,4 +142,11 @@ class DataroomUserDiscussSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = dataroom_user_discuss
+        exclude = ('is_deleted', 'deleteduser', 'deletedtime', 'lastmodifyuser', 'lastmodifytime',)
+
+
+class DataroomUserReadFileRecordSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = dataroom_user_readFileRecord
         exclude = ('is_deleted', 'deleteduser', 'deletedtime', 'lastmodifyuser', 'lastmodifytime',)

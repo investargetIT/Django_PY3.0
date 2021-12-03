@@ -2,8 +2,8 @@
 from rest_framework import serializers
 from org.models import organization, orgRemarks, orgTransactionPhase, orgBuyout, orgContact, orgInvestEvent, \
     orgCooperativeRelationship, orgManageFund, orgExportExcelTask, orgAttachments
-from org.search_indexes import orgRemarksIndex
 from sourcetype.serializer import transactionPhasesSerializer
+from third.views.qiniufile import getUrlWithBucketAndKey
 
 
 class OrgCommonSerializer(serializers.ModelSerializer):
@@ -59,9 +59,9 @@ class OrgListSerializer(serializers.ModelSerializer):
         exclude = ('datasource', 'createuser', 'createdtime', 'is_deleted', 'deleteduser', 'deletedtime', 'lastmodifyuser', 'lastmodifytime',)
 
     def get_orgtransactionphase(self, obj):
-        usertrader = obj.orgtransactionphase.filter(transactionPhase_orgs__is_deleted=False)
-        if usertrader.exists():
-            return transactionPhasesSerializer(usertrader, many=True).data
+        phase = obj.orgtransactionphase.filter(transactionPhase_orgs__is_deleted=False)
+        if phase.exists():
+            return transactionPhasesSerializer(phase, many=True).data
         return None
 
 
@@ -74,18 +74,34 @@ class OrgDetailSerializer(serializers.ModelSerializer):
         exclude = ('datasource', 'createuser', 'createdtime', 'is_deleted', 'deleteduser', 'deletedtime', 'lastmodifyuser', 'lastmodifytime',)
 
     def get_orgtransactionphase(self, obj):
-        usertrader = obj.orgtransactionphase.filter(transactionPhase_orgs__is_deleted=False)
-        if usertrader.exists():
-            return transactionPhasesSerializer(usertrader, many=True).data
+        phase = obj.orgtransactionphase.filter(transactionPhase_orgs__is_deleted=False)
+        if phase.exists():
+            return transactionPhasesSerializer(phase, many=True).data
         return None
 
 
-class OrgRemarkDetailSerializer(serializers.ModelSerializer):
+class OrgRemarkCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = orgRemarks
         fields = '__all__'
 
+
+class OrgRemarkDetailSerializer(serializers.ModelSerializer):
+    createuserobj =  serializers.SerializerMethodField()
+
+    class Meta:
+        model = orgRemarks
+        fields = '__all__'
+
+    def get_createuserobj(self, obj):
+        if obj.createuser:
+            photourl = None
+            if obj.createuser.photoKey:
+                photourl = getUrlWithBucketAndKey(obj.createuser.photoBucket, obj.createuser.photoKey)
+            return {'id': obj.createuser.id, 'usernameC': obj.createuser.usernameC, 'usernameE': obj.createuser.usernameE, 'photourl': photourl}
+        else:
+            return None
 
 class OrgBuyoutCreateSerializer(serializers.ModelSerializer):
 

@@ -1,8 +1,9 @@
 from rest_framework import serializers
 
-from proj.models import project, finance, favoriteProject, attachment, projServices, projectIndustries, projTraders
+from proj.models import project, finance, attachment, projServices, projectIndustries, projTraders, \
+    projectDiDiRecord
 from sourcetype.serializer import tagSerializer, transactionTypeSerializer, serviceSerializer, countrySerializer, \
-    industryWithPIndustrySerializer, countryWithContinentSerializer
+    industryWithPIndustrySerializer, countryWithContinentSerializer, DidiOrderTypeSerializer
 from third.views.qiniufile import getUrlWithBucketAndKey
 from usersys.serializer import UserCommenSerializer
 
@@ -101,6 +102,7 @@ class ProjAttachmentSerializer(serializers.ModelSerializer):
 
 class ProjSerializer(serializers.ModelSerializer):
     supportUser = UserCommenSerializer()
+    PM = UserCommenSerializer()
     projTraders = serializers.SerializerMethodField()
     proj_finances = ProjFinanceSerializer(many=True)
     proj_attachment = ProjAttachmentSerializer(many=True)
@@ -120,6 +122,7 @@ class ProjSerializer(serializers.ModelSerializer):
 
 class ProjCommonSerializer(serializers.ModelSerializer):
     supportUser = UserCommenSerializer()
+    PM = UserCommenSerializer()
     country = countrySerializer()
     tags = serializers.SerializerMethodField()
     industries = serializers.SerializerMethodField()
@@ -127,7 +130,7 @@ class ProjCommonSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = project
-        fields = ('id','industries','projtitleC','projtitleE','tags', 'currency', 'financeAmount','financeAmount_USD','country','projstatus','isHidden','supportUser','lastProject','publishDate')
+        fields = ('id','industries','projtitleC','projtitleE','tags', 'currency', 'financeAmount','financeAmount_USD','country','projstatus','isHidden','supportUser', 'PM','lastProject','publishDate','createdtime')
         depth = 1
 
     def get_tags(self, obj):
@@ -149,23 +152,6 @@ class ProjCreatSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class FavoriteCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = favoriteProject
-        fields = '__all__'
-
-
-class FavoriteSerializer(serializers.ModelSerializer):
-    user = UserCommenSerializer()
-    trader = UserCommenSerializer()
-    proj = ProjCommonSerializer()
-
-    class Meta:
-        model = favoriteProject
-        fields = '__all__'
-        # fields = ('id','proj','user','trader','favoritetype')
-        # depth = 1
-
 
 # list
 class ProjListSerializer_admin(serializers.ModelSerializer):
@@ -176,7 +162,7 @@ class ProjListSerializer_admin(serializers.ModelSerializer):
 
     class Meta:
         model = project
-        fields = ('id','industries','projtitleC','projtitleE', 'currency','transactionType','tags','financeAmount','financeAmount_USD','country','projstatus','isHidden','publishDate')
+        fields = ('id','industries','projtitleC','projtitleE', 'currency','transactionType','tags','financeAmount','financeAmount_USD','country','projstatus','isHidden','publishDate','createdtime')
         depth = 1
 
     def get_tags(self, obj):
@@ -228,201 +214,17 @@ class ProjListSerializer_user(serializers.ModelSerializer):
             return transactionTypeSerializer(qs,many=True).data
         return None
 #detail
-class ProjDetailSerializer_admin_withsecretinfo(serializers.ModelSerializer):
-    finance = serializers.SerializerMethodField()
-    attachment = serializers.SerializerMethodField()
+class ProjDetailSerializer_withoutsecretinfo(serializers.ModelSerializer):
     tags = serializers.SerializerMethodField()
     service = serializers.SerializerMethodField()
     industries = serializers.SerializerMethodField()
-    country = countrySerializer()
-    transactionType = serializers.SerializerMethodField()
-    supportUser = UserCommenSerializer()
-    projTraders = serializers.SerializerMethodField()
-    linkpdfurl = serializers.SerializerMethodField()
-    lastProject = ProjSimpleSerializer()
-
-    class Meta:
-        model = project
-        exclude = ('createuser', 'lastmodifyuser', 'deleteduser', 'deletedtime', 'datasource','isSendEmail',)
-        depth = 1
-
-    def get_tags(self, obj):
-        qs = obj.tags.filter(tag_projects__is_deleted=False)
-        if qs.exists():
-            return tagSerializer(qs,many=True).data
-        return None
-
-    def get_projTraders(self, obj):
-        qs = obj.proj_traders.filter(is_deleted=False, user__isnull=False)
-        if qs.exists():
-            return ProjTradersSerializer(qs, many=True).data
-        return None
-
-    def get_service(self, obj):
-        qs = obj.service.filter(service_projects__is_deleted=False)
-        if qs.exists():
-            return serviceSerializer(qs,many=True).data
-        return None
-
-    def get_industries(self, obj):
-        qs = obj.project_industries.filter(is_deleted=False)
-        if qs.exists():
-            return ProjIndustrySerializer(qs,many=True).data
-        return None
-
-    def get_transactionType(self, obj):
-        qs = obj.transactionType.filter(transactionType_projects__is_deleted=False)
-        if qs.exists():
-            return transactionTypeSerializer(qs,many=True).data
-        return None
-
-    def get_finance(self, obj):
-        if obj.financeIsPublic:
-            usertrader = obj.proj_finances.filter(is_deleted=False)
-            if usertrader.exists():
-                return FinanceSerializer(usertrader, many=True).data
-        return None
-
-    def get_attachment(self, obj):
-        usertrader = obj.proj_attachment.filter(is_deleted=False)
-        if usertrader.exists():
-            return ProjAttachmentSerializer(usertrader, many=True).data
-        return None
-
-    def get_linkpdfurl(self, obj):
-        return None
-
-
-class ProjDetailSerializer_user_withsecretinfo(serializers.ModelSerializer):
-    tags = serializers.SerializerMethodField()
-    service = serializers.SerializerMethodField()
-    industries = serializers.SerializerMethodField()
-    country = countrySerializer()
-    transactionType = serializers.SerializerMethodField()
-    finance = serializers.SerializerMethodField()
-    attachment = serializers.SerializerMethodField()
-    supportUser = UserCommenSerializer()
-    projTraders = serializers.SerializerMethodField()
-    linkpdfurl = serializers.SerializerMethodField()
-    lastProject = ProjSimpleSerializer()
-
-    class Meta:
-        model = project
-        exclude = ('createuser', 'lastmodifyuser', 'deleteduser', 'deletedtime', 'datasource','isSendEmail')
-        depth = 1
-
-    def get_tags(self, obj):
-        qs = obj.tags.filter(tag_projects__is_deleted=False)
-        if qs.exists():
-            return tagSerializer(qs,many=True).data
-        return None
-
-    def get_projTraders(self, obj):
-        qs = obj.proj_traders.filter(is_deleted=False, user__isnull=False)
-        if qs.exists():
-            return ProjTradersSerializer(qs, many=True).data
-        return None
-
-    def get_industries(self, obj):
-        qs = obj.project_industries.filter(is_deleted=False)
-        if qs.exists():
-            return ProjIndustrySerializer(qs,many=True).data
-        return None
-
-    def get_transactionType(self, obj):
-        qs = obj.transactionType.filter(transactionType_projects__is_deleted=False)
-        if qs.exists():
-            return transactionTypeSerializer(qs,many=True).data
-        return None
-
-    def get_finance(self, obj):
-        if obj.financeIsPublic:
-            usertrader = obj.proj_finances.filter(is_deleted=False)
-            if usertrader.exists():
-                return FinanceSerializer(usertrader, many=True).data
-        return None
-
-    def get_attachment(self, obj):
-        usertrader = obj.proj_attachment.filter(is_deleted=False)
-        if usertrader.exists():
-            return ProjAttachmentSerializer(usertrader, many=True).data
-        return None
-
-    def get_service(self, obj):
-        qs = obj.service.filter(service_projects__is_deleted=False)
-        if qs.exists():
-            return serviceSerializer(qs,many=True).data
-        return None
-
-    def get_linkpdfurl(self, obj):
-        return None
-
-class ProjDetailSerializer_admin_withoutsecretinfo(serializers.ModelSerializer):
-    tags = serializers.SerializerMethodField()
-    service = serializers.SerializerMethodField()
-    industries = serializers.SerializerMethodField()
-    country = countrySerializer()
-    transactionType = serializers.SerializerMethodField()
-    finance = serializers.SerializerMethodField()
-    attachment = serializers.SerializerMethodField()
-    linkpdfurl = serializers.SerializerMethodField()
-    lastProject = ProjSimpleSerializer()
-
-    class Meta:
-        model = project
-        exclude = ('supportUser', 'phoneNumber', 'email', 'contactPerson','createuser', 'lastmodifyuser', 'deleteduser', 'deletedtime', 'datasource','isSendEmail','realname')
-        depth = 1
-
-    def get_service(self, obj):
-        qs = obj.service.filter(service_projects__is_deleted=False)
-        if qs.exists():
-            return serviceSerializer(qs, many=True).data
-        return None
-
-    def get_tags(self, obj):
-        qs = obj.tags.filter(tag_projects__is_deleted=False)
-        if qs.exists():
-            return tagSerializer(qs,many=True).data
-        return None
-
-    def get_industries(self, obj):
-        qs = obj.project_industries.filter(is_deleted=False)
-        if qs.exists():
-            return ProjIndustrySerializer(qs,many=True).data
-        return None
-
-    def get_transactionType(self, obj):
-        qs = obj.transactionType.filter(transactionType_projects__is_deleted=False)
-        if qs.exists():
-            return transactionTypeSerializer(qs,many=True).data
-        return None
-
-    def get_finance(self, obj):
-        if obj.financeIsPublic:
-            usertrader = obj.proj_finances.filter(is_deleted=False)
-            if usertrader.exists():
-                return FinanceSerializer(usertrader, many=True).data
-        return None
-
-    def get_attachment(self, obj):
-        usertrader = obj.proj_attachment.filter(is_deleted=False)
-        if usertrader.exists():
-            return ProjAttachmentSerializer(usertrader, many=True).data
-        return None
-    def get_linkpdfurl(self, obj):
-        return None
-
-
-class ProjDetailSerializer_user_withoutsecretinfo(serializers.ModelSerializer):
-    tags = serializers.SerializerMethodField()
-    service = serializers.SerializerMethodField()
-    industries = serializers.SerializerMethodField()
-    transactionType = serializers.SerializerMethodField()
-    finance = serializers.SerializerMethodField()
-    attachment = serializers.SerializerMethodField()
     country = countryWithContinentSerializer()
+    transactionType = serializers.SerializerMethodField()
+    finance = serializers.SerializerMethodField()
+    attachment = serializers.SerializerMethodField()
     linkpdfurl = serializers.SerializerMethodField()
     lastProject = ProjSimpleSerializer()
+    PM = UserCommenSerializer()
 
     class Meta:
         model = project
@@ -465,7 +267,6 @@ class ProjDetailSerializer_user_withoutsecretinfo(serializers.ModelSerializer):
         if usertrader.exists():
             return ProjAttachmentSerializer(usertrader, many=True).data
         return None
-
     def get_linkpdfurl(self, obj):
         return None
 
@@ -477,8 +278,9 @@ class ProjDetailSerializer_all(serializers.ModelSerializer):
     transactionType = serializers.SerializerMethodField()
     finance = serializers.SerializerMethodField()
     attachment = serializers.SerializerMethodField()
-    country = countrySerializer()
+    country = countryWithContinentSerializer()
     supportUser = UserCommenSerializer()
+    PM = UserCommenSerializer()
     projTraders = serializers.SerializerMethodField()
     linkpdfurl = serializers.SerializerMethodField()
     lastProject = ProjSimpleSerializer()
@@ -532,3 +334,18 @@ class ProjDetailSerializer_all(serializers.ModelSerializer):
 
     def get_linkpdfurl(self, obj):
         return None
+
+
+class DiDiRecordSerializer(serializers.ModelSerializer):
+    proj = ProjSimpleSerializer()
+    orderType = DidiOrderTypeSerializer()
+    class Meta:
+        model = projectDiDiRecord
+        exclude = ('createuser', 'deleteduser', 'datasource', 'is_deleted', 'deletedtime', 'lastmodifytime')
+
+class TaxiRecordCreateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = projectDiDiRecord
+        fields = '__all__'
+

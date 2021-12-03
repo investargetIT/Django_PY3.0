@@ -52,16 +52,13 @@ class ProjectBD(MyModel):
     class Meta:
         permissions = (
             ('manageProjectBD', '管理员管理项目BD'),
-            ('user_getProjectBD', u'用户查看个人项目BD'),
-            ('user_addProjectBD', u'用户新建个人项目BD'),
-            ('user_manageProjectBD', '用户管理个人项目BD（obj级别）'),
         )
 
     def save(self, *args, **kwargs):
         if self.manager is None:
-            raise InvestError(2007,msg='manager can`t be null')
+            raise InvestError(20071,msg='manager can`t be null')
         if not self.datasource:
-            raise InvestError(2007, msg='datasource can`t be null')
+            raise InvestError(20071, msg='datasource can`t be null')
         if not self.is_deleted:
             if ProjectBD.objects.exclude(pk=self.pk).filter(is_deleted=False, com_name=self.com_name).exists():
                 raise InvestError(50061, msg='同名项目bd已存在')
@@ -89,12 +86,12 @@ class ProjectBDManagers(MyModel):
 
     def save(self, *args, **kwargs):
         if self.projectBD is None:
-            raise InvestError(2007,msg='projectBD can`t be null')
+            raise InvestError(20071,msg='projectBD can`t be null')
         if not self.is_deleted:
             if self.projectBD.manager == self.manager:
-                raise InvestError(2007, msg='主负责人已存在')
+                raise InvestError(20071, msg='主负责人已存在')
             if ProjectBDManagers.objects.exclude(pk=self.pk).filter(is_deleted=False, manager=self.manager, projectBD=self.projectBD).exists():
-                raise InvestError(2007, msg='负责人已存在')
+                raise InvestError(20071, msg='负责人已存在')
         self.datasource = self.projectBD.datasource
         return super(ProjectBDManagers, self).save(*args, **kwargs)
 
@@ -109,7 +106,7 @@ class ProjectBDComments(MyModel):
 
     def save(self, *args, **kwargs):
         if self.projectBD is None:
-            raise InvestError(2007,msg='projectBD can`t be null')
+            raise InvestError(20071,msg='projectBD can`t be null')
         self.datasource = self.projectBD.datasource
         if self.event_date is None:
             self.event_date = datetime.datetime.now()
@@ -125,9 +122,10 @@ class OrgBD(MyModel):
     usermobile = models.CharField(max_length=64,blank=True,null=True,help_text='电话')
     bduser = MyForeignKey(MyUser,blank=True,null=True,help_text='bd对象id')
     manager = MyForeignKey(MyUser,blank=True,null=True,help_text='负责人',related_name='user_orgBDs')
-    isimportant = models.BooleanField(blank=True, default=False, help_text='是否重点BD')
+    isimportant = models.IntegerField(blank=True, default=0, help_text='是否重点BD')
     expirationtime = models.DateTimeField(blank=True,null=True,help_text='BD过期时间')
     response = MyForeignKey(OrgBdResponse, blank=True, null=True, related_name='OrgBD_response')
+    material = models.CharField(max_length=64, blank=True, null=True, help_text='数位表示是否有材料')
     isSolved = models.BooleanField(blank=True, default=False, help_text='BD是否已处理')
     isRead = models.BooleanField(blank=True, default=False, help_text='是否已读')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_OrgBD')
@@ -138,13 +136,12 @@ class OrgBD(MyModel):
     class Meta:
         permissions = (
             ('manageOrgBD', '管理机构BD'),
-            ('user_getOrgBD', u'用户查看个人机构BD'),
-            ('user_addOrgBD', u'用户新建机构BD'),
+
         )
 
     def save(self, *args, **kwargs):
         if self.manager is None:
-            raise InvestError(2007,msg='manager can`t be null')
+            raise InvestError(20071,msg='manager can`t be null')
         if self.bduser:
             self.username = self.bduser.usernameC
             self.usermobile = self.bduser.mobile
@@ -173,6 +170,7 @@ class OrgBD(MyModel):
 class OrgBDComments(MyModel):
     comments = models.TextField(blank=True, default=False, help_text='内容')
     event_date = models.DateTimeField(blank=True, null=True)
+    isPMComment = models.BooleanField(blank=True, default=False, help_text='项目PM')
     orgBD = MyForeignKey(OrgBD,blank=True,null=True,help_text='机构BD',related_name='OrgBD_comments')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_OrgBDComments')
     createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_OrgBDComments')
@@ -209,84 +207,19 @@ class OrgBDBlack(MyModel):
 
     class Meta:
         permissions = (
-            ('manageOrgBDBlack', '管理-机构BD黑名单'),
-            ('getOrgBDBlack', u'查看-机构BD黑名单'),
-            ('addOrgBDBlack', u'新增-机构BD黑名单'),
-            ('delOrgBDBlack', u'删除-机构BD黑名单'),
+
         )
 
     def save(self, *args, **kwargs):
         if self.org is None or self.proj is None:
-            raise InvestError(20071, msg='org/proj can`t be null')
+            raise InvestError(20072, msg='org/proj can`t be null')
         self.datasource = self.createuser.datasource
         if not self.reason:
-            raise InvestError(20071, msg='加入原因 不能为空')
+            raise InvestError(20072, msg='加入原因 不能为空')
         if not self.is_deleted:
             if OrgBDBlack.objects.exclude(pk=self.pk).filter(is_deleted=False, org=self.org, proj=self.proj).exists():
                 raise InvestError(20071, msg='该机构已经在黑名单中了')
         return super(OrgBDBlack, self).save(*args, **kwargs)
-
-
-class MeetingBD(MyModel):
-    org = MyForeignKey(organization, blank=True, null=True, help_text='BD机构', related_name='org_meetBDs')
-    proj = MyForeignKey(project, blank=True, null=True, help_text='项目名称', related_name='proj_meetBDs')
-    usertitle = MyForeignKey(TitleType, blank=True, null=True, help_text='职位')
-    username = models.CharField(max_length=64, blank=True, null=True, help_text='姓名')
-    usermobile = models.CharField(max_length=64, blank=True, null=True, help_text='电话')
-    bduser = MyForeignKey(MyUser, blank=True, null=True, help_text='bd对象id')
-    country = MyForeignKey(Country, blank=True, null=True, help_text='国家')
-    location = MyForeignKey(OrgArea, blank=True, null=True, help_text='地区')
-    address = models.TextField(blank=True, null=True, help_text='会议具体地址')
-    isShow = models.BooleanField(blank=True, default=False, help_text='是否展示给对应用户')
-    manager = MyForeignKey(MyUser, blank=True, null=True, help_text='负责人', related_name='user_MeetBDs')
-    comments = models.TextField(blank=True, null=True, help_text='会议纪要')
-    meet_date = models.DateTimeField(blank=True, null=True, help_text='会议时间')
-    title = models.TextField(blank=True, null=True, help_text='会议标题')
-    attachmentbucket = models.CharField(max_length=16, blank=True, null=True, help_text='附件存储空间')
-    attachment = models.CharField(max_length=64, blank=True, null=True, help_text='会议附件')
-    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_MeetBD')
-    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_MeetBD')
-    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_MeetBD')
-    datasource = MyForeignKey(DataSource, help_text='数据源', blank=True, default=1)
-
-    class Meta:
-        permissions = (
-            ('manageMeetBD', '管理会议BD'),
-            ('user_getMeetBD', u'用户查看个人会议BD'),
-            ('user_addMeetBD', u'用户新建个人会议BD'),
-            ('user_manageMeetBD', '用户管理个人会议BD（obj级别）'),
-        )
-
-    def save(self, *args, **kwargs):
-        if self.manager is None:
-            raise InvestError(2007, msg='manager can`t be null')
-        if not self.manager.onjob and not self.is_deleted:
-            raise InvestError(2024)
-        if self.bduser:
-            self.username = self.bduser.usernameC
-            self.usermobile = self.bduser.mobile
-            self.usertitle = self.bduser.title
-        self.datasource = self.manager.datasource
-        return super(MeetingBD, self).save(*args, **kwargs)
-
-
-class MeetBDShareToken(models.Model):
-    key = models.CharField(max_length=50, primary_key=True,help_text='sharetoken')
-    user = MyForeignKey(MyUser, related_name='user_MeetBDsharetoken',help_text='用户的分享token')
-    meetings = models.TextField(blank=True, null=True, help_text='BD记录的分享token')
-    created = models.DateTimeField(help_text="CreatedTime", auto_now_add=True, blank=True)
-    is_deleted = models.BooleanField(help_text='是否已被删除', blank=True, default=False)
-
-    class Meta:
-        db_table = 'BD_meetingbdsharetoken'
-
-    def save(self, *args, **kwargs):
-        if not self.key:
-            self.key = self.generate_key()
-        return super(MeetBDShareToken, self).save(*args, **kwargs)
-
-    def generate_key(self):
-        return binascii.hexlify(os.urandom(25)).decode()
 
 
 
@@ -335,7 +268,7 @@ class WorkReportMarketMsg(MyModel):
     def save(self, *args, **kwargs):
         if not self.is_deleted:
             if not self.report or not self.marketMsg:
-                raise InvestError(20071, msg='参数不能为空')
+                raise InvestError(20072, msg='参数不能为空')
         return super(WorkReportMarketMsg, self).save(*args, **kwargs)
 
 
@@ -353,14 +286,14 @@ class WorkReportProjInfo(MyModel):
     class Meta:
         db_table = 'user_reportprojinfo'
         permissions = (
-            ('admin_getWorkReport', u'管理员级查看用户工作报表'),
+            ('admin_getWorkReport', u'管理员查看用户工作报表'),
 
         )
 
     def save(self, *args, **kwargs):
         if not self.is_deleted:
             if not self.proj and not self.projTitle:
-                raise InvestError(20071, msg='项目不能为空')
+                raise InvestError(20072, msg='项目不能为空')
             if self.proj:
                 self.projTitle = None
                 filters = Q(proj=self.proj)
@@ -392,16 +325,16 @@ class OKR(MyModel):
             else:
                 filtertype = True
                 if not self.quarter:
-                    raise InvestError(2007, msg='季度日期不能为空')
+                    raise InvestError(20072, msg='季度日期不能为空')
                 else:
                     if self.quarter > 4:
-                        raise InvestError(2007, msg='季度日期不合法')
+                        raise InvestError(20071, msg='季度日期不合法')
             if self.year and self.year > 2100:
-                raise InvestError(2007, msg='年度日期不合法')
+                raise InvestError(20071, msg='年度日期不合法')
             if not self.target:
-                raise InvestError(2007, msg='目标不能为空')
+                raise InvestError(20072, msg='目标不能为空')
             if OKR.objects.exclude(pk=self.pk).filter(is_deleted=False, year=self.year, okrType=filtertype, createuser=self.createuser).exists():
-                raise InvestError(2007, msg='该年度已存在季度/年度OKR')
+                raise InvestError(20071, msg='该年度已存在季度/年度OKR')
         if not self.datasource:
             self.datasource = self.createuser.datasource
         return super(OKR, self).save(*args, **kwargs)
@@ -420,7 +353,7 @@ class OKRResult(MyModel):
     def save(self, *args, **kwargs):
         if not self.is_deleted:
             if not self.okr or self.okr.is_deleted:
-                raise InvestError(2007, msg='okr字段 不能为空')
+                raise InvestError(20072, msg='okr字段 不能为空')
             if OKRResult.objects.exclude(pk=self.pk).filter(is_deleted=False, okr=self.okr, krs=self.krs).exists():
                 raise InvestError(20071, msg='该OKR已存在相同的关键结果')
         self.datasource = self.createuser.datasource

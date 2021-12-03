@@ -22,8 +22,8 @@ from django.db import models
 from django.db.models import Q
 
 from APIlog.models import userinfoupdatelog
-from sourcetype.models import AuditStatus, ClientType, TitleType, School, Specialty, Tag, DataSource, Country, OrgArea, \
-    FamiliarLevel, IndustryGroup
+from sourcetype.models import AuditStatus, ClientType, TitleType, Tag, DataSource, Country, OrgArea, \
+    FamiliarLevel, IndustryGroup, Education, PerformanceAppraisalLevel, TrainingType, TrainingStatus
 from utils.customClass import InvestError, MyForeignKey, MyModel
 from utils.somedef import makeAvatar
 
@@ -296,8 +296,18 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
     gender = models.BooleanField(blank=True, default=False, help_text=('False=男，True=女'))
     onjob = models.BooleanField(blank=True, default=True, help_text='是否在职')
     remark = models.TextField(help_text='用户个人备注',blank=True,null=True)
-    school = MyForeignKey(School,help_text='院校',blank=True,null=True,related_name='school_users')
-    specialty = MyForeignKey(Specialty,help_text='专业',blank=True,null=True,related_name='profession_users')
+    entryTime = models.DateTimeField(blank=True, null=True, help_text='入职时间')
+    bornTime = models.DateTimeField(blank=True, null=True, help_text='出生日期')
+    isMarried = models.BooleanField(blank=True, default=True, help_text='是否已婚')
+    school = models.CharField(max_length=64, blank=True, null=True, help_text='院校')
+    specialty = models.CharField(max_length=64, blank=True, null=True, help_text='专业')
+    education = MyForeignKey(Education, blank=True, null=True, related_name='education_users', help_text='学历')
+    specialtyhobby = models.TextField(help_text='特长爱好', blank=True, null=True)
+    others = models.TextField(help_text='其他', blank=True, null=True)
+    directSupervisor = MyForeignKey('self', blank=True, null=True, related_name='directsupervisor_users', help_text='直接上司')
+    mentor = MyForeignKey('self', blank=True, null=True, related_name='mentor_users', help_text='mentor')
+    resumeBucket = models.CharField(max_length=32, blank=True, null=True, help_text='简历对应七牛Bucket')
+    resumeKey = models.CharField(max_length=128, blank=True, null=True, help_text='简历对应七牛Key')
     targetdemand = models.TextField(help_text='标的需求',blank=True, null=True, default='标的需求')
     mergedynamic = models.TextField(help_text='并购动态', blank=True, null=True, default='并购动态')
     ishasfundorplan = models.TextField(help_text='是否有产业基金或成立计划', blank=True, null=True, default='是否有产业基金或成立计划')
@@ -306,7 +316,7 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
     is_staff = models.BooleanField(help_text='登录admin', default=False, blank=True,)
     hasIM = models.BooleanField(help_text='是否已注册环信聊天账号', default=False, blank=True)
     page = models.SmallIntegerField(blank=True, default=10, null=True, help_text='分页条数')
-    is_active = models.BooleanField(help_text='是否活跃', default=True, blank=True,)
+    is_active = models.BooleanField(help_text='是否活跃', default=False, blank=True,)
     deleteduser = MyForeignKey('self',blank=True,null=True,related_name='userdelete_users')
     createuser = MyForeignKey('self',blank=True,null=True,related_name='usercreate_users')
     datasource = MyForeignKey(DataSource,help_text='数据源',blank=True,null=True)
@@ -326,28 +336,14 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
         permissions = (
             ('as_investor', u'投资人身份类型'),
             ('as_trader', u'交易师身份类型'),
-            ('as_admin', u'管理员身份类型'),
 
-            ('user_adduser', u'用户新增用户'),
-            ('user_deleteuser', u'用户删除用户(obj级别)'),
-            ('user_changeuser', u'用户修改用户(obj级别)'),
-            ('user_getuser', u'用户查看用户(obj级别)'),
-            ('user_getuserbase', u'用户查看用户基本信息'),
+            ('admin_manageuser', u'管理用户数据'),
 
-            ('getProjReport', u'获取项目报表'),
+            ('manageusermenu', u'全库用户管理菜单'),
 
-            ('admin_adduser', u'管理员新增用户'),
-            ('admin_deleteuser', u'管理员删除用户'),
-            ('admin_changeuser', u'管理员修改用户基本信息'),
-            ('admin_getuser', u'管理员查看用户'),
+            ('admin_managemongo', u'管理mongo数据'),
 
-            ('user_addfavorite', '用户主动推荐favorite(obj级别——给交易师的)'),
-            ('user_getfavorite', '用户查看favorite(obj级别——给交易师的)'),
-            ('user_interestproj', '用户主动联系favorite(obj级别——给投资人的)'),
-
-            ('admin_getmongoprojremark', u'管理员查看mongo项目备注'),
-            ('admin_deletemongoprojremark', u'管理员删除mongo项目备注'),
-            ('admin_manageWXChatData', u'管理员管理微信消息'),
+            ('admin_manageindgroupinvestor', u'管理行业组投资人交易师关系'),
         )
     def save(self, *args, **kwargs):
         if not self.usercode:
@@ -356,9 +352,6 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
             raise InvestError(code=8888,msg='datasource有误')
         if self.pk and self.groups.exists() and self.groups.first().datasource != self.datasource:
             raise InvestError(code=8888,msg='group 与 user datasource不同')
-        # if self.country:
-        #     if self.country.datasource != self.datasource:
-        #         raise InvestError(8888)
         try:
             if not self.mobileAreaCode:
                 self.mobileAreaCode = '86'
@@ -369,9 +362,9 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
             if not self.email or not self.mobile:
                 raise InvestError(code=2007)
             if not self.mobile.isdigit():
-                raise InvestError(2007, msg='mobile 必须是纯数字')
+                raise InvestError(20071, msg='mobile 必须是纯数字')
             if not self.mobileAreaCode.isdigit():
-                raise InvestError(2007, msg='mobileAreaCode 必须是纯数字')
+                raise InvestError(20071, msg='mobileAreaCode 必须是纯数字')
             if self.email:
                 filters = Q(email=self.email)
                 if self.mobile:
@@ -395,31 +388,19 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
         if self.pk:
             olduser = MyUser.objects.get(pk=self.pk,datasource=self.datasource)
             if not self.is_deleted:
-                if olduser.org and self.org and olduser.org != self.org:
-                    remove_perm('org.user_getorg',self,olduser.org)
-                    assign_perm('org.user_getorg',self,self.org)
-                elif olduser.org and not self.org:
-                    remove_perm('org.user_getorg', self, olduser.org)
-                elif not olduser.org and self.org:
-                    assign_perm('org.user_getorg', self, self.org)
-                if not olduser.createuser and self.createuser:
-                    assign_perm('usersys.user_deleteuser', self.createuser, self)
                 if olduser.mobile != self.mobile and self.lastmodifyuser:
-                    userinfoupdatelog(user_id=self.pk, user_name=self.usernameC.encode(encoding='utf-8'), type='mobile', before=olduser.mobile,
-                                      after=self.mobile,
-                                      requestuser_id=self.lastmodifyuser_id,
+                    userinfoupdatelog(user_id=self.pk, user_name=self.usernameC.encode(encoding='utf-8'), type='mobile',
+                                      before=olduser.mobile, after=self.mobile, requestuser_id=self.lastmodifyuser_id,
                                       requestuser_name=self.lastmodifyuser.usernameC.encode(encoding='utf-8'),
                                       datasource=self.datasource_id).save()
                 if olduser.wechat != self.wechat and self.lastmodifyuser:
-                    userinfoupdatelog(user_id=self.pk, user_name=self.usernameC.encode(encoding='utf-8'), type='wechat', before=olduser.wechat,
-                                      after=self.wechat,
-                                      requestuser_id=self.lastmodifyuser_id,
+                    userinfoupdatelog(user_id=self.pk, user_name=self.usernameC.encode(encoding='utf-8'), type='wechat',
+                                      before=olduser.wechat, after=self.wechat,  requestuser_id=self.lastmodifyuser_id,
                                       requestuser_name=self.lastmodifyuser.usernameC.encode(encoding='utf-8'),
                                       datasource=self.datasource_id).save()
                 if olduser.email != self.email and self.lastmodifyuser:
-                    userinfoupdatelog(user_id=self.pk, user_name=self.usernameC.encode(encoding='utf-8'), type='email', before=olduser.email,
-                                      after=self.email,
-                                      requestuser_id=self.lastmodifyuser_id,
+                    userinfoupdatelog(user_id=self.pk, user_name=self.usernameC.encode(encoding='utf-8'), type='email',
+                                      before=olduser.email, after=self.email, requestuser_id=self.lastmodifyuser_id,
                                       requestuser_name=self.lastmodifyuser.usernameC.encode(encoding='utf-8'),
                                       datasource=self.datasource_id).save()
                 if olduser.org != self.org and self.lastmodifyuser:
@@ -429,19 +410,14 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
                                       before=oldOrgName, after=newOrgName, requestuser_id=self.lastmodifyuser_id,
                                       requestuser_name=self.lastmodifyuser.usernameC.encode(encoding='utf-8'),
                                       datasource=self.datasource_id).save()
-            else:
-                if olduser.org:
-                    remove_perm('org.user_getorg', self, olduser.org)
-                if olduser.createuser:
-                    remove_perm('usersys.user_getuser', olduser.createuser, self)
-                    remove_perm('usersys.user_changeuser', olduser.createuser, self)
-                    remove_perm('usersys.user_deleteuser', olduser.createuser, self)
 
         if not self.photoKey:
             if self.usernameC:
                 self.photoKey = makeAvatar(self.usernameC[0:1])
         self.exchangeUnreachuserToMyUser()
         super(MyUser,self).save(*args,**kwargs)
+
+
 
     def exchangeUnreachuserToMyUser(self):
         unreachuser_qs = UnreachUser.objects.filter(title=self.title, org=self.org, name=self.usernameC,
@@ -451,6 +427,180 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
             unreachuser.is_deleted = True
             unreachuser.deletedtime = datetime.datetime.now()
             unreachuser.save()
+
+# 人事关系表
+class UserPersonnelRelations(MyModel):
+    id = models.AutoField(primary_key=True)
+    user = MyForeignKey(MyUser, related_name='mentoruser_personnelrelations', blank=True, null=True, on_delete=CASCADE)
+    supervisorOrMentor = MyForeignKey(MyUser, blank=True, null=True, related_name='supervisorOrMentor_personnelrelations', help_text='直接上司')
+    startDate = models.DateTimeField(blank=True, null=True, help_text='开始日期')
+    endDate = models.DateTimeField(blank=True, null=True, help_text='结束日期')
+    type = models.BooleanField(blank=True, default=0, help_text='类型（直接上司/0或mentor/1）')
+    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_personnelrelations')
+    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_personnelrelations')
+    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_personnelrelations')
+    datasource = MyForeignKey(DataSource, help_text='数据源', default=1, blank=True)
+
+    class Meta:
+        db_table = 'user_personnelrelations'
+        permissions = (
+            ('admin_managepersonnelrelation', u'管理人事关系'),
+        )
+    def save(self, *args, **kwargs):
+        if not self.is_deleted:
+            if not self.startDate:
+                raise InvestError(2029, msg='开始时间不能为空，编辑人事记录失败', detail='开始时间不能为空')
+            if not self.endDate:
+                QS = UserPersonnelRelations.objects.exclude(pk=self.pk).filter(is_deleted=False, user=self.user, type=self.type)
+                if QS.filter(endDate=None).exists():
+                    raise InvestError(2029, msg='时间冲突，编辑人事记录失败', detail='结束日期冲突')
+                if QS.filter(endDate__gte=self.startDate).exists():
+                    raise InvestError(2029, msg='时间冲突，编辑人事记录失败', detail='开始日期冲突')
+            else:
+                if self.startDate >= self.endDate:
+                    raise InvestError(2028, msg='时间冲突，编辑人事记录失败', detail='日期不符合实际')
+                QS = UserPersonnelRelations.objects.exclude(pk=self.pk).filter(is_deleted=False, user=self.user, type=self.type)
+                laterMeetingQS = QS.filter(startDate__gte=self.startDate)
+                earlierMeetingQS = QS.filter(startDate__lte=self.startDate)
+                if laterMeetingQS.exists():
+                    laterMeeting = laterMeetingQS.order_by('startDate').first()
+                    if self.endDate > laterMeeting.startDate:
+                        raise InvestError(2028, msg='时间冲突，编辑人事记录失败', detail='已存在开始时间处于本时间段内的记录')
+                if earlierMeetingQS.exists():
+                    earlierMeeting = earlierMeetingQS.order_by('startDate').last()
+                    if earlierMeeting.endDate > self.startDate:
+                        raise InvestError(2028, msg='时间冲突，编辑人事记录失败', detail='已存在结束时间处于本时间段内的记录')
+        if not self.datasource:
+            self.datasource = self.user.datasource
+        super(UserPersonnelRelations, self).save(*args,**kwargs)
+
+# 用户绩效考核记录表
+class UserPerformanceAppraisalRecord(MyModel):
+    id = models.AutoField(primary_key=True)
+    user = MyForeignKey(MyUser, related_name='user_performanceappraisalrecords', blank=True, null=True, on_delete=CASCADE)
+    startDate = models.DateTimeField(blank=True, null=True, help_text='对应开始日期')
+    endDate = models.DateTimeField(blank=True, null=True, help_text='对应结束日期')
+    level = MyForeignKey(PerformanceAppraisalLevel, blank=True, null=True)
+    performanceTableBucket = models.CharField(max_length=32, blank=True, null=True, help_text='绩效考核表对应七牛Bucket')
+    performanceTableKey = models.CharField(max_length=128, blank=True, null=True, help_text='绩效考核表对应七牛Key')
+    detail = models.TextField(blank=True, null=True, help_text='绩效考核具体情况')
+    remark = models.TextField(blank=True, null=True, help_text='备注')
+    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_performanceappraisalrecords')
+    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_performanceappraisalrecords')
+    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_performanceappraisalrecords')
+    datasource = MyForeignKey(DataSource, help_text='数据源', default=1, blank=True)
+
+    class Meta:
+        db_table = 'user_performanceappraisalrecords'
+        ordering = ('user', '-startDate')
+
+    def save(self, *args, **kwargs):
+        if not self.is_deleted:
+            if not self.startDate or not self.endDate:
+                raise InvestError(2027, msg='开始结束时间不能为空，编辑绩效考核记录失败', detail='开始结束时间不能为空')
+            if self.startDate >= self.endDate:
+                raise InvestError(2027, msg='绩效考核时间冲突，编辑绩效考核记录失败', detail='绩效考核日期不符合实际')
+            QS = UserPerformanceAppraisalRecord.objects.exclude(pk=self.pk).filter(is_deleted=False, user=self.user)
+            laterMeetingQS = QS.filter(startDate__gte=self.startDate)
+            earlierMeetingQS = QS.filter(startDate__lte=self.startDate)
+            if laterMeetingQS.exists():
+                laterMeeting = laterMeetingQS.order_by('startDate').first()
+                if self.endDate > laterMeeting.startDate:
+                    raise InvestError(2027, msg='绩效考核时间冲突，编辑绩效考核记录失败', detail='已存在开始时间处于本时间段内的记录')
+            if earlierMeetingQS.exists():
+                earlierMeeting = earlierMeetingQS.order_by('startDate').last()
+                if earlierMeeting.endDate > self.startDate:
+                    raise InvestError(2027, msg='绩效考核时间冲突，编辑绩效考核记录失败', detail='已存在结束时间处于本时间段内的记录')
+        if not self.datasource:
+            self.datasource = self.user.datasource
+        super(UserPerformanceAppraisalRecord, self).save(*args,**kwargs)
+
+# 任职岗位记录表
+class UserWorkingPositionRecords(MyModel):
+    id = models.AutoField(primary_key=True)
+    user = MyForeignKey(MyUser, related_name='user_workingpositions', blank=True, null=True, on_delete=CASCADE)
+    indGroup = MyForeignKey(IndustryGroup, blank=True, help_text='部门')
+    title = MyForeignKey(TitleType, blank=True, help_text='职位')
+    startDate = models.DateTimeField(blank=True, null=True, help_text='开始日期')
+    endDate = models.DateTimeField(blank=True, null=True, help_text='结束日期')
+    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_workingpositions')
+    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_workingpositions')
+    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_workingpositions')
+    datasource = MyForeignKey(DataSource, help_text='数据源', default=1, blank=True)
+
+    class Meta:
+        db_table = 'user_workingpositionrecords'
+
+    def save(self, *args, **kwargs):
+        if not self.is_deleted:
+            if not self.startDate:
+                raise InvestError(2029, msg='任职开始时间不能为空，编辑人事记录失败', detail='任职日期不符合实际')
+            QS = UserWorkingPositionRecords.objects.exclude(pk=self.pk).filter(is_deleted=False, user=self.user)
+            if not self.endDate:
+                if QS.filter(endDate=None).exists():
+                    raise InvestError(2029, msg='任职时间冲突，编辑人事记录失败', detail='任职结束日期冲突')
+                if QS.filter(endDate__gte=self.startDate).exists():
+                    raise InvestError(2029, msg='任职时间冲突，编辑人事记录失败', detail='任职开始日期冲突')
+            else:
+                if self.startDate >= self.endDate:
+                    raise InvestError(2029, msg='任职时间冲突，编辑人事记录失败', detail='任职日期不符合实际')
+                laterMeetingQS = QS.filter(startDate__gte=self.startDate)
+                earlierMeetingQS = QS.filter(startDate__lte=self.startDate)
+                if laterMeetingQS.exists():
+                    laterMeeting = laterMeetingQS.order_by('startDate').first()
+                    if self.endDate > laterMeeting.startDate:
+                        raise InvestError(2029, msg='任职时间冲突，编辑人事记录失败', detail='已存在开始时间处于本时间段内的记录')
+                if earlierMeetingQS.exists():
+                    earlierMeeting = earlierMeetingQS.order_by('startDate').last()
+                    if earlierMeeting.endDate > self.startDate:
+                        raise InvestError(2029, msg='任职时间冲突，编辑人事记录失败', detail='已存在结束时间处于本时间段内的记录')
+        if not self.datasource:
+            self.datasource = self.user.datasource
+        super(UserWorkingPositionRecords, self).save(*args,**kwargs)
+
+
+# 用户培训记录表
+class UserTrainingRecords(MyModel):
+    user = MyForeignKey(MyUser, related_name='user_trainingrecords', blank=True, null=True, on_delete=CASCADE)
+    trainingDate = models.DateTimeField(blank=True, null=True, help_text='培训日期')
+    trainingType = MyForeignKey(TrainingType, blank=True, help_text='培训形式')
+    trainingContent = models.TextField(blank=True, null=True, help_text='培训内容')
+    trainingStatus = MyForeignKey(TrainingStatus, blank=True, help_text='培训状态')
+    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_trainingrecords')
+    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_trainingrecords')
+    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_trainingrecords')
+    datasource = MyForeignKey(DataSource, help_text='数据源', default=1, blank=True)
+
+    class Meta:
+        db_table = 'user_trainingrecords'
+        ordering = ('user', '-trainingDate')
+
+    def save(self, *args, **kwargs):
+        if not self.datasource:
+            self.datasource = self.user.datasource
+        super(UserTrainingRecords, self).save(*args, **kwargs)
+
+#入职后导师计划跟踪记录表
+class UserMentorTrackingRecords(MyModel):
+    user = MyForeignKey(MyUser, related_name='user_mentortrackingrecords', blank=True, on_delete=CASCADE)
+    communicateDate = models.DateTimeField(blank=True, null=True, help_text='沟通日期')
+    communicateUser = MyForeignKey(MyUser, related_name='mentor_usertrackingrecords', blank=True, on_delete=CASCADE, help_text='沟通人')
+    communicateType = models.TextField(blank=True, null=True, help_text='沟通方式')
+    communicateContent = models.TextField(blank=True, null=True, help_text='沟通主要内容')
+    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_mentortrackingrecords')
+    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_mentortrackingrecords')
+    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_mentortrackingrecords')
+    datasource = MyForeignKey(DataSource, help_text='数据源', default=1, blank=True)
+
+    class Meta:
+        db_table = 'user_mentortrackingrecords'
+        ordering = ('user', '-communicateDate')
+
+    def save(self, *args, **kwargs):
+        if not self.datasource:
+            self.datasource = self.user.datasource
+        super(UserMentorTrackingRecords, self).save(*args, **kwargs)
+
 
 class UserRemarks(MyModel):
     id = models.AutoField(primary_key=True)
@@ -464,9 +614,7 @@ class UserRemarks(MyModel):
     class Meta:
         db_table = 'user_remarks'
         permissions = (
-            ('get_userremark', u'查看所有用户备注'),
-            ('update_userremark', u'修改所有用户备注'),
-            ('delete_userremark', u'删除所有用户备注'),
+
         )
 
 
@@ -595,66 +743,12 @@ class UserRelation(MyModel):
                     self.relationtype = False
         if self.investoruser.id == self.traderuser.id:
             raise InvestError(code=2014,msg='投资人和交易师不能是同一个人')
-        if self.pk:
-            if self.is_deleted:
-                remove_perm('usersys.user_getuser', self.traderuser, self.investoruser)
-                remove_perm('usersys.user_changeuser', self.traderuser, self.investoruser)
-                remove_perm('usersys.user_deleteuser', self.traderuser, self.investoruser)
-
-                remove_perm('usersys.user_getuserrelation', self.traderuser, self)
-                remove_perm('usersys.user_changeuserrelation', self.traderuser, self)
-                remove_perm('usersys.user_deleteuserrelation', self.traderuser, self)
-
-                remove_perm('usersys.user_addfavorite', self.traderuser, self.investoruser)
-                remove_perm('usersys.user_getfavorite', self.traderuser, self.investoruser)
-                remove_perm('usersys.user_interestproj', self.investoruser, self.traderuser)
-            else:
-                oldrela = UserRelation.objects.get(pk=self.pk)
-                if oldrela.traderuser != self.traderuser or oldrela.investoruser != self.investoruser:
-                    remove_perm('usersys.user_getuser', oldrela.traderuser, oldrela.investoruser)
-                    remove_perm('usersys.user_changeuser', oldrela.traderuser, oldrela.investoruser)
-                    remove_perm('usersys.user_deleteuser', oldrela.traderuser, oldrela.investoruser)
-
-                    remove_perm('usersys.user_getuserrelation', oldrela.traderuser, self)
-                    remove_perm('usersys.user_changeuserrelation', oldrela.traderuser, self)
-                    remove_perm('usersys.user_deleteuserrelation', oldrela.traderuser, self)
-
-                    remove_perm('usersys.user_addfavorite', self.traderuser, self.investoruser)
-                    remove_perm('usersys.user_getfavorite', self.traderuser, self.investoruser)
-                    remove_perm('usersys.user_interestproj', self.investoruser, self.traderuser)
-
-                    assign_perm('usersys.user_getuser', self.traderuser, self.investoruser)
-                    assign_perm('usersys.user_changeuser', self.traderuser, self.investoruser)
-                    assign_perm('usersys.user_deleteuser', self.traderuser, self.investoruser)
-
-                    assign_perm('usersys.user_getuserrelation', self.traderuser, self)
-                    assign_perm('usersys.user_changeuserrelation', self.traderuser, self)
-                    assign_perm('usersys.user_deleteuserrelation', self.traderuser, self)
-
-                    assign_perm('usersys.user_addfavorite', self.traderuser, self.investoruser)
-                    assign_perm('usersys.user_getfavorite', self.traderuser, self.investoruser)
-                    assign_perm('usersys.user_interestproj', self.investoruser, self.traderuser)
-        else:
-            assign_perm('usersys.user_getuser', self.traderuser, self.investoruser)
-            assign_perm('usersys.user_changeuser', self.traderuser, self.investoruser)
-            assign_perm('usersys.user_deleteuser', self.traderuser, self.investoruser)
-
-            assign_perm('usersys.user_addfavorite', self.traderuser, self.investoruser)
-            assign_perm('usersys.user_getfavorite', self.traderuser, self.investoruser)
-            assign_perm('usersys.user_interestproj', self.investoruser, self.traderuser)
         super(UserRelation, self).save(*args, **kwargs)
+
     class Meta:
         db_table = "user_relation"
         permissions =  (
-            ('admin_adduserrelation', u'管理员建立用户联系'),
-            ('admin_changeuserrelation', u'管理员修改用户联系'),
-            ('admin_deleteuserrelation', u'管理员删除用户联系'),
-            ('admin_getuserrelation', u'管理员查看用户联系'),
-
-
-            ('user_changeuserrelation', u'用户改用户联系（obj级别）'),
-            ('user_deleteuserrelation', u'用户删除用户联系（obj级别）'),
-            ('user_getuserrelation', u'用户查看用户联系（obj级别）'),
+            ('admin_manageuserrelation', u'管理投资人交易师关系'),
 
         )
 
@@ -664,52 +758,3 @@ class UserContrastThirdAccount(MyModel):
 
     class Meta:
         db_table = "user_contrastaccount"
-
-class UserFriendship(MyModel):
-    id = models.AutoField(primary_key=True)
-    user = MyForeignKey(MyUser,related_name='user_friends',help_text='发起人',on_delete=CASCADE)
-    friend = MyForeignKey(MyUser,related_name='friend_users',help_text='接收人',on_delete=CASCADE)
-    isaccept = models.BooleanField(blank=True,default=False)
-    accepttime = models.DateTimeField(blank=True,null=True)
-    userallowgetfavoriteproj = models.BooleanField(blank=True,default=True,help_text='发起人允许好友查看自己的项目收藏')
-    friendallowgetfavoriteproj = models.BooleanField(blank=True, default=True,help_text='接收人允许好友查看自己的项目收藏')
-    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_userfriends',)
-    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_userfriends',)
-    datasource = MyForeignKey(DataSource,blank=True,default=1, help_text='数据源')
-
-    class Meta:
-        db_table = "user_friendship"
-        permissions =  (
-            ('admin_addfriend', u'管理员建立用户好友关系'),
-            ('admin_changefriend', u'管理员修改用户好友关系'),
-            ('admin_deletefriend', u'管理员删除用户好友关系'),
-            ('admin_getfriend', u'管理员查看用户好友关系'),
-
-            ('user_addfriend', u'用户主动建立用户好友关系（未审核用户不要给）'),
-        )
-
-    def save(self, *args, **kwargs):
-        if not self.datasource:
-            raise InvestError(code=8888,msg='datasource有误')
-        if self.datasource != self.user.datasource or self.datasource != self.friend.datasource:
-            raise InvestError(code=8888,msg='user.datasource不匹配')
-        if self.user == self.friend:
-            raise InvestError(2016)
-        if not self.accepttime and self.isaccept:
-            self.accepttime = datetime.datetime.now()
-        if not self.pk:
-            if UserFriendship.objects.filter(Q(user=self.user,friend=self.friend,is_deleted=False) | Q(friend=self.user,user=self.friend,is_deleted=False)).exists():
-                raise InvestError(2017)
-        if self.pk:
-            if self.isaccept is False:
-                self.is_deleted = True
-        if self.is_deleted is False:
-            if self.isaccept and self.friendallowgetfavoriteproj:
-                assign_perm('usersys.user_getfavorite', self.user, self.friend)
-            else:
-                remove_perm('usersys.user_getfavorite', self.user, self.friend)
-            if self.isaccept and self.userallowgetfavoriteproj:
-                assign_perm('usersys.user_getfavorite', self.friend, self.user)
-            else:
-                remove_perm('usersys.user_getfavorite', self.friend, self.user)
-        super(UserFriendship,self).save(*args, **kwargs)

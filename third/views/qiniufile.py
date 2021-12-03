@@ -222,6 +222,7 @@ def downloadFileToPath(key,bucket,path):
         with open(path, "wb") as code:
             code.write(r.content)
     except Exception:
+        logexcption(msg='download error')
         return None
     else:
         return path
@@ -238,7 +239,7 @@ def convertAndUploadOffice(inputpath, outputpath, bucket_name, bucket_key):
         def run(self):
             try:
                 import subprocess
-                subprocess.check_output(['unoconv', '-f', 'pdf', inputpath])  # 执行完毕程序才会往下进行
+                subprocess.check_output(['unoconv', '-f', 'pdf', inputpath])  #执行完毕程序才会往下进行
             except ImportError:
                 logexcption(msg='引入模块失败')
             except Exception:

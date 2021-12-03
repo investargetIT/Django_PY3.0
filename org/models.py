@@ -67,23 +67,14 @@ class organization(MyModel):
     class Meta:
         db_table = "org"
         permissions = (
-            ('admin_addorg','管理员新增机构'),
-            ('admin_changeorg','管理员修改机构'),
-            ('admin_deleteorg','管理员删除机构'),
-            ('admin_getorg','管理员查看机构信息'),
-
-            ('user_addorg', '用户新增机构'),
-            ('user_changeorg', '用户修改机构(obj级别)'),
-            ('user_deleteorg', '用户删除机构(obj级别)'),
-            ('user_getorg', '用户查看机构（obj级别）'),
-
+            ('admin_manageorg','管理机构'),
             ('export_org', '导出机构Excel'),
         )
 
 
     def save(self, *args, **kwargs):
         if not self.orgnameC and not self.orgnameE:
-            raise InvestError(2007,msg='机构名称不能为空')
+            raise InvestError(20072,msg='机构名称不能为空')
         if self.orgnameC and not self.orgnameE:
             self.orgnameE = self.orgnameC
         if self.orgnameE and not self.orgnameC:
@@ -92,19 +83,14 @@ class organization(MyModel):
             self.orgfullname = self.orgnameC
         if self.mobileCode:
             if not self.mobileCode.isdigit():
-                raise InvestError(2007, msg='区号 必须是纯数字')
+                raise InvestError(20071, msg='区号 必须是纯数字')
         if self.mobileAreaCode:
             if not self.mobileAreaCode.isdigit():
-                raise InvestError(2007, msg='国家号 必须是纯数字')
+                raise InvestError(20071, msg='国家号 必须是纯数字')
         if self.pk:
-            oldorg = organization.objects.get(pk=self.pk)
             if self.orgfullname:
                 if organization.objects.exclude(pk=self.pk).filter(is_deleted=False,orgfullname=self.orgfullname).exists():
-                    raise InvestError(code=5001,msg='同名机构已存在,无法修改')
-            if self.is_deleted and oldorg.createuser:
-                remove_perm('org.user_getorg', oldorg.createuser, self)
-                remove_perm('org.user_changeorg', oldorg.createuser, self)
-                remove_perm('org.user_deleteorg', oldorg.createuser, self)
+                    raise InvestError(code=5001,msg='同名机构已存在, 无法修改')
         else:
             if self.orgfullname:
                 if organization.objects.filter(is_deleted=False,orgfullname=self.orgfullname).exists():
@@ -151,7 +137,7 @@ class orgContact(MyModel):
 
     def save(self,  *args, **kwargs):
         if not self.org:
-            raise InvestError(code=2007,msg='机构不能为空')
+            raise InvestError(20072,msg='机构不能为空')
         super(orgContact,self).save(*args, **kwargs)
 
 
@@ -170,7 +156,7 @@ class orgManageFund(MyModel):
 
     def save(self,  *args, **kwargs):
         if not self.org or not self.fund:
-            raise InvestError(code=2007,msg='机构/基金不能为空')
+            raise InvestError(20072,msg='机构/基金不能为空')
         super(orgManageFund,self).save(*args, **kwargs)
 
 
@@ -192,7 +178,7 @@ class orgInvestEvent(MyModel):
 
     def save(self,  *args, **kwargs):
         if not self.org or not self.comshortname:
-            raise InvestError(code=2007,msg='机构/企业不能为空')
+            raise InvestError(20072,msg='机构/企业不能为空')
         if self.pk:
             if orgInvestEvent.objects.exclude(pk=self.pk).filter(is_deleted=False,comshortname=self.comshortname,investDate=self.investDate, org=self.org).exists():
                 raise InvestError(code=5007,msg='相同投资事件已存在，无法修改')
@@ -215,7 +201,7 @@ class orgCooperativeRelationship(MyModel):
 
     def save(self,  *args, **kwargs):
         if not self.org or not self.cooperativeOrg or not self.comshortname:
-            raise InvestError(code=2007, msg='机构/合作机构/企业不能为空')
+            raise InvestError(20072, msg='机构/合作机构/企业不能为空')
         super(orgCooperativeRelationship,self).save(*args, **kwargs)
 
 
@@ -232,7 +218,7 @@ class orgBuyout(MyModel):
         db_table = "org_buyout"
     def save(self, *args, **kwargs):
         if not self.org:
-            raise InvestError(code=2007, msg='机构不能为空')
+            raise InvestError(20072, msg='机构不能为空')
         super(orgBuyout,self).save(*args, **kwargs)
 
 class orgRemarks(MyModel):
@@ -245,17 +231,7 @@ class orgRemarks(MyModel):
     datasource = MyForeignKey(DataSource, blank=True, null=True, help_text='数据源')
     class Meta:
         db_table = "orgremark"
-        permissions = (
-            ('admin_getorgremark','管理员查看机构备注'),
-            ('admin_changeorgremark', '管理员修改机构备注'),
-            ('admin_addorgremark', '管理员增加机构备注'),
-            ('admin_deleteorgremark', '管理员删除机构备注'),
 
-            ('user_getorgremark', '用户查看机构备注（obj级别）'),
-            ('user_changeorgremark', '用户修改机构备注（obj级别）'),
-            ('user_addorgremark', '用户增加机构备注'),
-            ('user_deleteorgremark','用户删除机构备注（obj级别）'),
-        )
     def save(self, *args, **kwargs):
         self.datasource = self.createuser.datasource
         kwargs['automodifytime'] = False
@@ -279,9 +255,9 @@ class orgExportExcelTask(MyModel):
 
     def save(self,  *args, **kwargs):
         if not self.orglist or not self.filename:
-            raise InvestError(code=2007, msg='orglist, filename 不能为空')
+            raise InvestError(20072, msg='机构列表, 文件名称 不能为空')
         if '/' in self.filename or u'/' in self.filename:
-            raise InvestError(code=2007, msg='filename 不能包含\'/\'')
+            raise InvestError(20071, msg='filename 不能包含\'/\'')
         super(orgExportExcelTask, self).save(*args, **kwargs)
 
 
@@ -297,13 +273,6 @@ class orgAttachments(MyModel):
 
     class Meta:
         db_table = "org_attachments"
-        permissions = (
-            ('admin_manageorgattachment', '管理机构备注（增删改）'),
-        )
 
     def save(self, *args, **kwargs):
         return super(orgAttachments, self).save(*args, **kwargs)
-
-
-
-

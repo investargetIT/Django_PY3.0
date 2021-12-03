@@ -51,17 +51,6 @@ webexuser_detail = views.WebEXUserView.as_view({
         'delete': 'destroy',
 })
 
-InternOnlineTest_list = views.InternOnlineTestView.as_view({
-        'get': 'list',
-        'post': 'create',
-})
-
-InternOnlineTest_detail = views.InternOnlineTestView.as_view({
-        'get': 'retrieve',
-        'put': 'update',
-        'delete': 'destroy',
-})
-
 
 webexAPI_list = views.WebEXMeetingView.as_view({
         'post': 'getWebExMeetingListAPI',
@@ -81,6 +70,4 @@ urlpatterns = [
         url(r'^webex/user/$', webexuser_list, name='webexuser-list'),
         url(r'^webex/user/(?P<pk>\d+)/$', webexuser_detail, name='webexuser-detail'),
         url(r'^icsmail$', views.sendIcsFileEmail, name='sendIcsFileEmail'),
-        url(r'^internTest/$', InternOnlineTest_list, name='InternOnlineTest-list'),
-        url(r'^internTest/(?P<pk>\d+)/$', InternOnlineTest_detail, name='InternOnlineTest-detail'),
 ]

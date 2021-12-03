@@ -1,39 +1,35 @@
 #coding=utf8
-
-import traceback
+import threading, traceback, datetime, json
 from django.core.paginator import Paginator, EmptyPage
 from django.db import transaction
 from django.db.models import QuerySet, Q, Count, Max
 from django.shortcuts import render_to_response
 from django_filters import FilterSet
-import datetime
-import json
 from django.core.serializers.json import DjangoJSONEncoder
-from elasticsearch import Elasticsearch
 from rest_framework import filters, viewsets
-from BD.models import ProjectBD, ProjectBDComments, OrgBDComments, OrgBD, MeetingBD, MeetBDShareToken, OrgBDBlack, \
+from rest_framework.decorators import api_view
+
+from BD.models import ProjectBD, ProjectBDComments, OrgBDComments, OrgBD, OrgBDBlack, \
     ProjectBDManagers, WorkReport, WorkReportProjInfo, OKR, OKRResult, WorkReportMarketMsg
 from BD.serializers import ProjectBDSerializer, ProjectBDCreateSerializer, ProjectBDCommentsCreateSerializer, \
     ProjectBDCommentsSerializer, OrgBDCommentsSerializer, OrgBDCommentsCreateSerializer, OrgBDCreateSerializer, \
-    OrgBDSerializer, MeetingBDSerializer, MeetingBDCreateSerializer, OrgBDBlackSerializer, OrgBDBlackCreateSerializer, \
+    OrgBDSerializer,  OrgBDBlackSerializer, OrgBDBlackCreateSerializer, \
     ProjectBDManagersCreateSerializer, WorkReportCreateSerializer, WorkReportSerializer, \
     WorkReportProjInfoCreateSerializer, WorkReportProjInfoSerializer, OKRSerializer, OKRCreateSerializer, \
     OKRResultCreateSerializer, OKRResultSerializer, orgBDProjSerializer, WorkReportMarketMsgCreateSerializer, \
     WorkReportMarketMsgSerializer
-from invest.settings import cli_domain, HAYSTACK_CONNECTIONS
+from invest.settings import cli_domain
 from msg.views import deleteMessage
-from proj.models import project
-from proj.views import isProjectTrader
-from third.views.qiniufile import deleteqiniufile
-from timeline.models import timeline
-from timeline.models import timelineremark
+from org.models import organization
 from usersys.models import MyUser
 from utils.customClass import RelationFilter, InvestError, JSONResponse, MyFilterSet, MySearchFilter
+from utils.logicJudge import is_projBDManager, is_projTrader, is_orgBDTrader
 from utils.sendMessage import sendmessage_orgBDMessage, sendmessage_orgBDExpireMessage, sendmessage_workReportDonotWrite
-from utils.somedef import getEsScrollResult
+from utils.somedef import getEsScrollResult, excel_table_byindex
 from utils.util import loginTokenIsAvailable, SuccessResponse, InvestErrorResponse, ExceptionResponse, \
     returnListChangeToLanguage, catchexcption, returnDictChangeToLanguage, mySortQuery, add_perm, rem_perm, \
-    read_from_cache, write_to_cache, cache_delete_key, logexcption, cache_delete_patternKey, checkSessionToken
+    read_from_cache, write_to_cache, cache_delete_key, logexcption, cache_delete_patternKey, checkSessionToken, \
+    checkRequestToken
 
 
 class ProjectBDFilter(FilterSet):
@@ -99,12 +95,8 @@ class ProjectBDView(viewsets.ModelViewSet):
             if request.GET.get('manager'):
                 manager_list = request.GET['manager'].split(',')
                 queryset = queryset.filter(Q(manager__in=manager_list) | Q(ProjectBD_managers__manager__in=manager_list, ProjectBD_managers__is_deleted=False) | Q(contractors__in=manager_list))
-            if request.user.has_perm('BD.manageProjectBD') and request.user.has_perm('usersys.as_trader'):
-                pass
-            elif request.user.has_perm('BD.user_getProjectBD'):
-                queryset = queryset.filter(Q(manager=request.user) | Q(createuser=request.user) | Q(contractors=request.user) | Q(ProjectBD_managers__manager=request.user, ProjectBD_managers__is_deleted=False)).distinct()
-            else:
-                raise InvestError(2009)
+            if not request.user.has_perm('BD.manageProjectBD'):
+                queryset = queryset.filter(Q(createuser=request.user) | Q(indGroup=request.user.indGroup, indGroup__isnull=False) | Q(manager=request.user) | Q(contractors=request.user) | Q(ProjectBD_managers__manager=request.user, ProjectBD_managers__is_deleted=False)).distinct()
             sortfield = request.GET.get('sort', 'lastmodifytime')
             desc = request.GET.get('desc', 1)
             if desc in ('1', u'1', 1):
@@ -116,7 +108,8 @@ class ProjectBDView(viewsets.ModelViewSet):
                 queryset = queryset.page(page_index)
             except EmptyPage:
                 return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
-            serializer = ProjectBDSerializer(queryset, many=True, context={'user_id': request.user.id, 'manage': request.user.has_perm('BD.manageProjectBD')})
+            indGroup_id = request.user.indGroup.id if request.user.indGroup else None
+            serializer = ProjectBDSerializer(queryset, many=True, context={'user_id': request.user.id, 'manage': request.user.has_perm('BD.manageProjectBD'), 'indGroup_id':indGroup_id})
             return JSONResponse(SuccessResponse({'count': count, 'data': returnListChangeToLanguage(serializer.data, lang)}))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -127,7 +120,7 @@ class ProjectBDView(viewsets.ModelViewSet):
     def countBd(self, request, *args, **kwargs):
         try:
             queryset = self.filter_queryset(self.get_queryset())
-            if request.user.has_perm('BD.manageProjectBD') and request.user.has_perm('usersys.as_trader'):
+            if request.user.has_perm('BD.manageProjectBD'):
                 if request.GET.get('manager'):
                     manager_list = request.GET['manager'].split(',')
                     allQueryset = queryset.filter(Q(manager__in=manager_list) | Q(ProjectBD_managers__manager__in=manager_list, ProjectBD_managers__is_deleted=False) | Q(contractors__in=manager_list)).distinct()
@@ -139,13 +132,11 @@ class ProjectBDView(viewsets.ModelViewSet):
                     manager_qs = queryset
                     relateManager_qs = ProjectBDManagers.objects.filter(is_deleted=False, projectBD__in=queryset.values_list('id'))
                     contractor_qs = queryset
-            elif request.user.has_perm('BD.user_getProjectBD'):
-                allQueryset = queryset.filter(Q(manager_id=request.user.id) | Q(contractors_id=request.user.id) | Q(ProjectBD_managers__manager_id=request.user.id, ProjectBD_managers__is_deleted=False)).distinct()
+            else:
+                allQueryset = queryset.filter(Q(createuser=request.user.indGroup) | Q(indGroup=request.user.indGroup, indGroup__isnull=False) | Q(manager_id=request.user.id) | Q(contractors_id=request.user.id) | Q(ProjectBD_managers__manager_id=request.user.id, ProjectBD_managers__is_deleted=False)).distinct()
                 relateManager_qs = ProjectBDManagers.objects.filter(is_deleted=False, projectBD__in=queryset.values_list('id'), manager_id=request.user.id)
                 manager_qs = queryset.filter(manager_id=request.user.id).distinct()
                 contractor_qs = queryset.filter(contractors_id=request.user.id).distinct()
-            else:
-                raise InvestError(2009)
             count = allQueryset.count()
             countlist, relateCountlist, contractorsCountlist = [], [], []
             counts = manager_qs.values_list('manager').annotate(Count('manager'))
@@ -175,20 +166,16 @@ class ProjectBDView(viewsets.ModelViewSet):
             data['datasource'] = request.user.datasource.id
             data['manager'] = relateManagers.pop(0) if relateManagers else request.user.id
             data['contractors'] = data['contractors'] if data.get('contractors') else request.user.id
-            if request.user.has_perm('BD.manageProjectBD'):
-                pass
-            elif request.user.has_perm('BD.user_addProjectBD'):
+            if request.user.has_perm('BD.manageProjectBD') or request.user.has_perm('usersys.as_trader'):
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='新增项目BD信息失败')
             with transaction.atomic():
                 projectBD = ProjectBDCreateSerializer(data=data)
                 if projectBD.is_valid():
                     newprojectBD = projectBD.save()
-                    if newprojectBD.manager:
-                        add_perm('BD.user_manageProjectBD', newprojectBD.manager, newprojectBD)
                 else:
-                    raise InvestError(4009,msg='项目BD创建失败——%s'%projectBD.errors)
+                    raise InvestError(4009, msg='新增项目BD信息失败', detail='项目BD创建失败——%s'%projectBD.error_messages)
                 if isinstance(relateManagers, list):
                     for relate_manager in relateManagers:
                         instance = ProjectBDManagersCreateSerializer(data={'projectBD': newprojectBD.id, 'manager':relate_manager, 'createuser':request.user.id})
@@ -211,14 +198,14 @@ class ProjectBDView(viewsets.ModelViewSet):
         try:
             lang = request.GET.get('lang')
             instance = self.get_object()
-            if request.user.has_perm('BD.manageProjectBD'):
+            if request.user.has_perm('BD.manageProjectBD') or is_projBDManager(request.user.id, instance):
                 pass
-            elif request.user in [instance.manager, instance.contractors, instance.createuser]:
+            elif request.user == instance.createuser:
                 pass
-            elif instance.ProjectBD_managers.filter(manager=request.user, is_deleted=False).exists():
+            elif request.user.indGroup and request.user.indGroup == instance.indGroup:
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='查看项目BD信息失败')
             serializer = self.serializer_class(instance)
             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data, lang)))
         except InvestError as err:
@@ -234,20 +221,18 @@ class ProjectBDView(viewsets.ModelViewSet):
             lang = request.GET.get('lang')
             instance = self.get_object()
             data.pop('datasource', None)
-            if request.user.has_perm('BD.manageProjectBD'):
+            if request.user.has_perm('BD.manageProjectBD') or is_projBDManager(request.user.id, instance):
                 pass
-            elif request.user in [instance.manager, instance.contractors, instance.createuser]:
-                pass
-            elif instance.ProjectBD_managers.filter(manager=request.user, is_deleted=False).exists():
+            elif request.user == instance.createuser:
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='修改项目BD信息失败')
             with transaction.atomic():
                 projectBD = ProjectBDCreateSerializer(instance,data=data)
                 if projectBD.is_valid():
                     newprojectBD = projectBD.save()
                 else:
-                    raise InvestError(4009, msg='项目BD修改失败——%s' % projectBD.errors)
+                    raise InvestError(4009, msg='修改项目BD信息失败', detail='项目BD修改失败——%s' % projectBD.errors)
                 return JSONResponse(
                     SuccessResponse(returnDictChangeToLanguage(ProjectBDSerializer(newprojectBD).data, lang)))
         except InvestError as err:
@@ -261,14 +246,12 @@ class ProjectBDView(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
-            if request.user.has_perm('BD.manageProjectBD'):
+            if request.user.has_perm('BD.manageProjectBD') or is_projBDManager(request.user.id, instance):
                 pass
-            elif request.user in [instance.manager, instance.contractors, instance.createuser]:
-                pass
-            elif instance.ProjectBD_managers.filter(manager=request.user, is_deleted=False).exists():
+            elif request.user == instance.createuser:
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='删除项目BD信息失败')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
@@ -305,7 +288,7 @@ class ProjectBDManagersView(viewsets.ModelViewSet):
         try:
             obj = queryset.get(id=self.kwargs[lookup_url_kwarg])
         except ProjectBDManagers.DoesNotExist:
-            raise InvestError(code=8892)
+            raise InvestError(code=8892, msg='获取项目BD负责人信息失败', detail='负责人不存在')
         return obj
 
 
@@ -314,12 +297,12 @@ class ProjectBDManagersView(viewsets.ModelViewSet):
         try:
             data = request.data
             projBDinstance = ProjectBD.objects.get(id=data['projectBD'], is_deleted=False)
-            if request.user.has_perm('BD.manageProjectBD'):
+            if request.user.has_perm('BD.manageProjectBD') or is_projBDManager(request.user.id, projBDinstance):
                 pass
             elif request.user == projBDinstance.createuser:
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='新增项目BD负责人失败')
             lang = request.GET.get('lang')
             data['createuser'] = request.user.id
             data['datasource'] = request.user.datasource.id
@@ -328,7 +311,7 @@ class ProjectBDManagersView(viewsets.ModelViewSet):
                 if instance.is_valid():
                     instance.save()
                 else:
-                    raise InvestError(4009, msg='创建项目BDcomments失败--%s' % instance.error_messages)
+                    raise InvestError(4009, msg='新增项目BD负责人失败', detail='新增项目bd负责人失败-%s' % instance.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(instance.data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -341,14 +324,14 @@ class ProjectBDManagersView(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
-            if request.user.has_perm('BD.manageProjectBD'):
+            if request.user.has_perm('BD.manageProjectBD') or is_projBDManager(request.user.id, instance.projectBD):
                 pass
             elif request.user == instance.projectBD.createuser:
                 pass
             elif request.user == instance.createuser:
                 pass
             else:
-                raise InvestError(2009, msg='没有相关删除权限')
+                raise InvestError(2009, msg='删除项目BD负责人失败')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
@@ -371,7 +354,7 @@ class ProjectBDCommentsView(viewsets.ModelViewSet):
     filter_backends = (filters.DjangoFilterBackend,)
     queryset = ProjectBDComments.objects.filter(is_deleted=False)
     filter_fields = ('projectBD',)
-    serializer_class = ProjectBDCommentsSerializer
+    serializer_class = ProjectBDCommentsCreateSerializer
 
     def get_queryset(self):
         assert self.queryset is not None, (
@@ -396,12 +379,11 @@ class ProjectBDCommentsView(viewsets.ModelViewSet):
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
             queryset = self.filter_queryset(self.get_queryset())
-            if request.user.has_perm('BD.manageProjectBD'):
-                pass
-            elif request.user.has_perm('BD.user_getProjectBD'):
-                queryset = queryset.filter(Q(projectBD__in=request.user.user_projBDs.all()) | Q(projectBD__in=request.user.contractors_projBDs.all())| Q(projectBD__in=request.user.managers_ProjectBD.filter(is_deleted=False).values_list('projectBD', flat=True)))
-            else:
-                raise InvestError(2009)
+            if not request.user.has_perm('BD.manageProjectBD'):
+                queryset = queryset.filter(Q(projectBD__indGroup=request.user.indGroup, projectBD__indGroup__isnull=False) | Q(projectBD__createuser=request.user)
+                                           | Q(projectBD__in=request.user.user_projBDs.all())
+                                           | Q(projectBD__in=request.user.contractors_projBDs.all())
+                                           | Q(projectBD__in=request.user.managers_ProjectBD.filter(is_deleted=False).values_list('projectBD', flat=True))).distinct()
             queryset = queryset.order_by('-createdtime')
             try:
                 count = queryset.count()
@@ -422,24 +404,20 @@ class ProjectBDCommentsView(viewsets.ModelViewSet):
         try:
             data = request.data
             bdinstance = ProjectBD.objects.get(id=int(data['projectBD']))
-            if request.user.has_perm('BD.manageProjectBD'):
-                pass
-            elif request.user in [bdinstance.manager, bdinstance.contractors, bdinstance.createuser]:
-                pass
-            elif bdinstance.ProjectBD_managers.filter(manager=request.user, is_deleted=False).exists():
+            if request.user.has_perm('BD.manageProjectBD') or request.user == bdinstance.createuser or is_projBDManager(request.user.id, bdinstance):
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='新增项目BD备注信息失败')
             lang = request.GET.get('lang')
             data['createuser'] = request.user.id
             data['datasource'] = request.user.datasource.id
             with transaction.atomic():
                 commentinstance = ProjectBDCommentsCreateSerializer(data=data)
                 if commentinstance.is_valid():
-                    newcommentinstance = commentinstance.save()
+                    commentinstance.save()
                 else:
-                    raise InvestError(4009, msg='创建项目BDcomments失败--%s' % commentinstance.error_messages)
-                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(ProjectBDCommentsSerializer(newcommentinstance).data, lang)))
+                    raise InvestError(4009, msg='新增项目BD备注信息失败', detail='创建项目BDcomments失败--%s' % commentinstance.error_messages)
+                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(commentinstance.data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
@@ -450,24 +428,20 @@ class ProjectBDCommentsView(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
-            if request.user.has_perm('BD.manageProjectBD'):
-                pass
-            elif request.user in [instance.createuser, instance.projectBD.manager, instance.projectBD.contractors]:
-                pass
-            elif instance.projectBD.ProjectBD_managers.filter(manager=request.user, is_deleted=False).exists():
+            if request.user.has_perm('BD.manageProjectBD') or request.user == instance.projectBD.createuser or is_projBDManager(request.user.id, instance.projectBD):
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='修改项目BD备注信息失败')
             lang = request.GET.get('lang')
             data = request.data
             with transaction.atomic():
                 commentinstance = ProjectBDCommentsCreateSerializer(instance, data=data)
                 if commentinstance.is_valid():
-                    newcommentinstance = commentinstance.save()
+                    commentinstance.save()
                 else:
-                    raise InvestError(4009, msg='修改项目BDcomments失败--%s' % commentinstance.error_messages)
+                    raise InvestError(4009, msg='修改项目BD备注信息失败', detail='修改项目BDcomments失败--%s' % commentinstance.error_messages)
                 return JSONResponse(SuccessResponse(
-                    returnDictChangeToLanguage(ProjectBDCommentsSerializer(newcommentinstance).data, lang)))
+                    returnDictChangeToLanguage(commentinstance.data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
@@ -480,14 +454,10 @@ class ProjectBDCommentsView(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
-            if request.user.has_perm('BD.manageProjectBD'):
-                pass
-            elif request.user in [instance.createuser, instance.projectBD.manager, instance.projectBD.contractors]:
-                pass
-            elif instance.projectBD.ProjectBD_managers.filter(manager=request.user, is_deleted=False).exists():
+            if request.user.has_perm('BD.manageProjectBD') or request.user == instance.projectBD.createuser or is_projBDManager(request.user.id, instance.projectBD):
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='删除项目BD备注记录失败')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
@@ -510,7 +480,7 @@ class OrgBDFilter(MyFilterSet):
     bduser = RelationFilter(filterstr='bduser', lookup_method='in')
     isSolved = RelationFilter(filterstr='isSolved')
     isRead = RelationFilter(filterstr='isRead')
-    isimportant = RelationFilter(filterstr='isimportant')
+    isimportant = RelationFilter(filterstr='isimportant', lookup_method='in')
     stime = RelationFilter(filterstr='createdtime', lookup_method='gte')
     etime = RelationFilter(filterstr='createdtime', lookup_method='lt')
     stimeM = RelationFilter(filterstr='lastmodifytime', lookup_method='gte')
@@ -522,16 +492,16 @@ class OrgBDFilter(MyFilterSet):
 
 class OrgBDView(viewsets.ModelViewSet):
     """
-    countBDProjectOrg:统计机构BD项目机构
-    countBDManager:统计机构BD负责人
-    countBDProject:统计机构BD项目
-    countBDResponse:统计机构BD状态
-    list:获取机构BD
-    create:增加机构BD
-    retrieve:查看机构BD信息
-    readBd:已读回执
-    update:修改机构BD信息
-    destroy:删除机构BD
+    countBDProjectOrg: 统计机构看板项目机构
+    countBDManager: 统计机构看板负责人
+    countBDProject: 统计机构看板项目
+    countBDResponse: 统计机构看板状态 / 传参proj相当于查询项目进度
+    list: 获取机构看板
+    create: 增加机构看板
+    retrieve: 查看机构看板信息
+    readBd: 机构看板已读回执
+    update: 修改机构看板信息
+    destroy: 删除机构看板
     """
     filter_backends = (filters.DjangoFilterBackend, MySearchFilter)
     queryset = OrgBD.objects.filter(is_deleted=False)
@@ -563,21 +533,24 @@ class OrgBDView(viewsets.ModelViewSet):
         try:
             obj = self.queryset.get(id=self.kwargs['pk'])
         except OrgBD.DoesNotExist:
-            raise InvestError(code=5008)
+            raise InvestError(code=5008, msg='获取机构BD信息失败', detail='BD记录不存在')
         if obj.datasource != self.request.user.datasource:
-            raise InvestError(code=8888)
+            raise InvestError(code=8888, msg='获取机构BD信息失败')
         return obj
 
-    @loginTokenIsAvailable(['BD.manageOrgBD', 'BD.user_getOrgBD'])
+    @loginTokenIsAvailable()
     def countBDProjectOrg(self, request, *args, **kwargs):
         try:
             queryset = self.filter_queryset(self.get_queryset())
+            if not request.user.has_perm('BD.manageOrgBD'):
+                queryset = queryset.filter(Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(manager=request.user))
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
-            sortfield = request.GET.get('sort', 'orgimportant')
+            sort = request.GET.get('sort', 'isimportant')
+            sortfield = 'sortfield'
             if request.GET.get('desc', 1) in ('1', u'1', 1):
-                sortfield = '-' + sortfield
-            queryset = queryset.annotate(orgimportant=Max('isimportant')).values('org','proj','orgimportant').annotate(orgcount=Count('org'),projcount=Count('proj')).order_by(sortfield)
+                sortfield = '-sortfield'
+            queryset = queryset.annotate(sortfield=Max(sort)).values('org','proj','sortfield').annotate(orgcount=Count('org'),projcount=Count('proj')).order_by(sortfield)
             try:
                 count = queryset.count()
                 queryset = Paginator(queryset, page_size)
@@ -591,10 +564,12 @@ class OrgBDView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['BD.manageOrgBD', 'BD.user_getOrgBD'])
+    @loginTokenIsAvailable()
     def countBDProject(self, request, *args, **kwargs):
         try:
             queryset = self.filter_queryset(self.get_queryset())
+            if not request.user.has_perm('BD.manageOrgBD'):
+                queryset = queryset.filter(Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(manager=request.user))
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
@@ -627,6 +602,8 @@ class OrgBDView(viewsets.ModelViewSet):
             response = read_from_cache(cachekey)
             if response:
                 return JSONResponse(SuccessResponse(response))
+            if not request.user.has_perm('BD.manageOrgBD'):
+                queryset = queryset.filter(Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(manager=request.user))
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
@@ -650,10 +627,12 @@ class OrgBDView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['BD.manageOrgBD', 'BD.user_getOrgBD'])
+    @loginTokenIsAvailable()
     def countBDManager(self, request, *args, **kwargs):
         try:
             queryset = self.filter_queryset(self.get_queryset())
+            if not request.user.has_perm('BD.manageOrgBD'):
+                queryset = queryset.filter(Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(manager=request.user))
             count = queryset.count()
             queryset = queryset.values_list('manager').annotate(count=Count('manager'))
             serializer = json.dumps(list(queryset), cls=DjangoJSONEncoder)
@@ -663,10 +642,12 @@ class OrgBDView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['BD.manageOrgBD', 'BD.user_getOrgBD'])
+    @loginTokenIsAvailable()
     def countBDResponse(self, request, *args, **kwargs):
         try:
             queryset = self.filter_queryset(self.get_queryset())
+            if request.GET.get('filter') in ['1', 'True', True, 1, 'true']:
+                queryset = queryset.filter(Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(manager=request.user))
             count = queryset.count()
             queryset = queryset.values('response').annotate(count=Count('*'))
             serializer = json.dumps(list(queryset), cls=DjangoJSONEncoder)
@@ -689,18 +670,12 @@ class OrgBDView(viewsets.ModelViewSet):
                 pass
             else:
                 proj = data.get('proj', None)
-                if proj:
-                    projinstance = project.objects.get(id=proj, is_deleted=False, datasource=request.user.datasource)
-                    if request.user.has_perm('BD.user_addOrgBD'):
-                        pass
-                    elif projinstance.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
-                        pass
-                    else:
-                        raise InvestError(2009)
+                if proj and is_projTrader(request.user, proj):
+                    pass
                 else:
-                    raise InvestError(2009)
+                    raise InvestError(2009, msg='新增机构BD记录失败')
             if self.checkOrgIsInBlackList(data['org'], data['proj']):
-                raise InvestError(2007, msg='该机构在黑名单中，无法新增机构BD')
+                raise InvestError(20071, msg='新增机构BD记录失败', detail='该机构在黑名单中，无法新增机构BD')
             with transaction.atomic():
                 orgBD = OrgBDCreateSerializer(data=data)
                 if orgBD.is_valid():
@@ -712,7 +687,7 @@ class OrgBDView(viewsets.ModelViewSet):
                                                         createdtime__day=today.day, manager_id=neworgBD.manager, proj=neworgBD.proj)) == 1:
                                 sendmessage_orgBDMessage(neworgBD, receiver=neworgBD.manager, types=['app', 'webmsg', 'sms'], sender=request.user)
                 else:
-                    raise InvestError(5004,msg='机构BD创建失败——%s'%orgBD.error_messages)
+                    raise InvestError(5004, msg='新增机构BD记录失败', detail='机构BD创建失败——%s'%orgBD.error_messages)
                 if comments:
                     data['orgBD'] = neworgBD.id
                     commentinstance = OrgBDCommentsCreateSerializer(data=data)
@@ -734,19 +709,19 @@ class OrgBDView(viewsets.ModelViewSet):
             else:
                 return False
         else:
-            raise InvestError(2007, msg='org/proj 不能是空' )
+            raise InvestError(20071, msg='检测机构BD黑名单失败', detail='org/proj 不能是空' )
 
     @loginTokenIsAvailable()
     def retrieve(self, request, *args, **kwargs):
         try:
             lang = request.GET.get('lang')
             instance = self.get_object()
-            if request.user.has_perm('BD.manageOrgBD'):
+            if request.user.has_perm('BD.manageOrgBD') or is_orgBDTrader(request.user, instance):
                 pass
-            elif request.user in [instance.createuser, instance.manager]:
+            elif request.user == instance.manager:
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='查看该机构BD记录失败')
             serializer = self.serializer_class(instance, context={'user_id': request.user.id})
             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data, lang)))
         except InvestError as err:
@@ -782,30 +757,17 @@ class OrgBDView(viewsets.ModelViewSet):
             instance = self.get_object()
             oldmanager = instance.manager
             data.pop('datasource', None)
-            remark = data.get('remark', None)
-            if request.user.has_perm('BD.manageOrgBD'):
+            if request.user.has_perm('BD.manageOrgBD') or is_orgBDTrader(request.user, instance):
                 pass
-            elif request.user in [instance.createuser, instance.manager]:
+            elif request.user == instance.manager:
                 pass
-            elif instance.proj:
-                if instance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
-                    pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='修改机构BD记录失败')
             with transaction.atomic():
                 orgBD = OrgBDCreateSerializer(instance,data=data)
                 if orgBD.is_valid():
                     neworgBD = orgBD.save()
                     cache_delete_patternKey(key='/bd/orgbd*')
-                    if remark and remark.strip() != '' and neworgBD.response_id not in [4, 5, 6, None] and neworgBD.bduser and neworgBD.proj:
-                        try:
-                            timeline_qs = timeline.objects.filter(is_deleted=0, investor=neworgBD.bduser,
-                                                                  proj=neworgBD.proj, trader=neworgBD.manager)
-                            if timeline_qs.exists():
-                                timelineremark(timeline=timeline_qs.first(), remark=remark,
-                                               createuser=neworgBD.createuser, datasource=neworgBD.datasource).save()
-                        except Exception:
-                            logexcption(msg='同步备注失败，OrgBD_id-%s ' % neworgBD.id)
                     oldmanager_id = data.get('manager', None)
                     if oldmanager_id and oldmanager_id != oldmanager.id:
                         if request.user != neworgBD.manager:
@@ -815,7 +777,7 @@ class OrgBDView(viewsets.ModelViewSet):
                                 sendmessage_orgBDMessage(neworgBD, receiver=neworgBD.manager,
                                                          types=['app', 'webmsg', 'sms'], sender=request.user)
                 else:
-                    raise InvestError(5004, msg='机构BD修改失败——%s' % orgBD.error_messages)
+                    raise InvestError(5004, msg='修改机构BD记录失败', detail='机构BD修改失败——%s' % orgBD.error_messages)
                 cache_delete_key(self.redis_key)
                 return JSONResponse(
                     SuccessResponse(returnDictChangeToLanguage(OrgBDSerializer(neworgBD, context={'user_id': request.user.id}).data, lang)))
@@ -830,12 +792,10 @@ class OrgBDView(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
-            if request.user.has_perm('BD.manageOrgBD'):
-                pass
-            elif request.user in [instance.createuser, instance.manager]:
+            if request.user.has_perm('BD.manageOrgBD') or is_orgBDTrader(request.user, instance):
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='删除机构BD记录失败')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
@@ -900,10 +860,10 @@ class OrgBDBlackView(viewsets.ModelViewSet):
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
             queryset = self.filter_queryset(self.get_queryset())
-            if request.user.has_perm('BD.manageOrgBDBlack') or request.user.has_perm('BD.getOrgBDBlack'):
+            if request.user.has_perm('BD.manageOrgBD'):
                 queryset = queryset
             else:
-                queryset = queryset.filter(Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False))
+                queryset = queryset.filter(Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(createuser=request.user))
             try:
                 count = queryset.count()
                 queryset = Paginator(queryset, page_size)
@@ -928,21 +888,20 @@ class OrgBDBlackView(viewsets.ModelViewSet):
             data['datasource'] = request.user.datasource.id
             projid = data.get('proj', None)
             if projid:
-                projinstance = project.objects.get(id=projid, is_deleted=False, datasource=request.user.datasource)
-                if request.user.has_perm('BD.manageOrgBDBlack') or request.user.has_perm('BD.addOrgBDBlack'):
+                if request.user.has_perm('BD.manageOrgBD'):
                     pass
-                elif projinstance.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+                elif is_projTrader(request.user, projid):
                     pass
                 else:
-                    raise InvestError(2009)
+                    raise InvestError(2009, msg='增加机构BD黑名单机构失败')
             else:
-                raise InvestError(2007, msg='项目/机构不能为空')
+                raise InvestError(20072, msg='增加机构BD黑名单机构失败', detail='项目/机构不能为空')
             with transaction.atomic():
                 instanceSerializer = OrgBDBlackCreateSerializer(data=data)
                 if instanceSerializer.is_valid():
                     instance = instanceSerializer.save()
                 else:
-                    raise InvestError(5004, msg='新增机构BD黑名单失败--%s' % instanceSerializer.error_messages)
+                    raise InvestError(5004, msg='增加机构BD黑名单机构失败', detail='新增失败--%s' % instanceSerializer.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(OrgBDBlackSerializer(instance).data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -959,17 +918,18 @@ class OrgBDBlackView(viewsets.ModelViewSet):
             data.pop('proj', None)
             lang = request.GET.get('lang')
             instance = self.get_object()
-            projinstance = instance.proj
-            if request.user.has_perm('BD.manageOrgBDBlack') or projinstance.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            if request.user.has_perm('BD.manageOrgBD'):
+                pass
+            elif is_projTrader(request.user, instance.proj.id):
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='修改该机构加入机构BD黑名单原因失败')
             with transaction.atomic():
                 newinstanceSeria = OrgBDBlackCreateSerializer(instance, data=data)
                 if newinstanceSeria.is_valid():
                     newinstance = newinstanceSeria.save()
                 else:
-                    raise InvestError(2009, msg='机构BD黑名单加入原因修改失败——%s' % newinstanceSeria.errors)
+                    raise InvestError(20071, msg='修改该机构加入机构BD黑名单原因失败', detail='机构BD黑名单加入原因修改失败——%s' % newinstanceSeria.errors)
                 return JSONResponse(
                     SuccessResponse(returnDictChangeToLanguage(OrgBDBlackSerializer(newinstance).data, lang)))
         except InvestError as err:
@@ -982,13 +942,12 @@ class OrgBDBlackView(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
-            projinstance = instance.proj
-            if request.user.has_perm('BD.manageOrgBDBlack') or request.user.has_perm('BD.delOrgBDBlack'):
+            if request.user.has_perm('BD.manageOrgBD'):
                 pass
-            elif projinstance.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            elif is_projTrader(request.user, instance.proj.id):
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='删除机构BD黑名单机构失败')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
@@ -1003,6 +962,7 @@ class OrgBDBlackView(viewsets.ModelViewSet):
 
 class OrgBDCommentsFilter(FilterSet):
     orgBD = RelationFilter(filterstr='orgBD',lookup_method='in')
+    isPMComment = RelationFilter(filterstr='isPMComment',lookup_method='in')
     stime = RelationFilter(filterstr='createdtime', lookup_method='gte')
     etime = RelationFilter(filterstr='createdtime', lookup_method='lt')
     stimeM = RelationFilter(filterstr='lastmodifytime', lookup_method='gte')
@@ -1047,12 +1007,8 @@ class OrgBDCommentsView(viewsets.ModelViewSet):
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
             queryset = self.filter_queryset(self.get_queryset())
-            if request.user.has_perm('BD.manageOrgBD'):
-                pass
-            elif request.user.has_perm('BD.user_getOrgBD'):
-                queryset = queryset.filter(Q(orgBD__createuser=request.user) | Q(orgBD__in=request.user.user_orgBDs.all()) | Q(orgBD__proj__in=request.user.usertake_projs.all()) | Q(orgBD__proj__in=request.user.usermake_projs.all()))
-            else:
-                raise InvestError(2009)
+            if not request.user.has_perm('BD.manageOrgBD'):
+                queryset = queryset.filter(Q(createuser=request.user) | Q(orgBD__manager=request.user) | Q(orgBD__proj__proj_traders=request.user))
             try:
                 count = queryset.count()
                 queryset = Paginator(queryset, page_size)
@@ -1073,15 +1029,12 @@ class OrgBDCommentsView(viewsets.ModelViewSet):
         try:
             data = request.data
             bdinstance = OrgBD.objects.get(id=int(data['orgBD']))
-            if request.user.has_perm('BD.manageOrgBD'):
+            if request.user.has_perm('BD.manageOrgBD') or is_orgBDTrader(request.user, bdinstance):
                 pass
-            elif request.user in [bdinstance.createuser, bdinstance.manager]:
+            elif request.user == bdinstance.manager:
                 pass
-            elif bdinstance.proj:
-                if bdinstance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
-                    pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='新增该机构BD备注失败')
             lang = request.GET.get('lang')
             data['createuser'] = request.user.id
             data['datasource'] = request.user.datasource.id
@@ -1091,7 +1044,7 @@ class OrgBDCommentsView(viewsets.ModelViewSet):
                     newcommentinstance = commentinstance.save()
                     cache_delete_patternKey(key='/bd/orgbd*')
                 else:
-                    raise InvestError(5004, msg='创建机构BDcomments失败--%s' % commentinstance.error_messages)
+                    raise InvestError(5004, msg='新增该机构BD备注失败', detail='创建机构BDcomments失败--%s' % commentinstance.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(OrgBDCommentsSerializer(newcommentinstance).data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1104,12 +1057,12 @@ class OrgBDCommentsView(viewsets.ModelViewSet):
         try:
             instance = self.get_object()
             data = request.data
-            if request.user.has_perm('BD.manageOrgBD'):
+            if request.user.has_perm('BD.manageOrgBD') or is_orgBDTrader(request.user, instance.orgBD):
                 pass
             elif request.user in [instance.createuser, instance.orgBD.manager]:
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='修改该机构BD备注失败')
             lang = request.GET.get('lang')
             with transaction.atomic():
                 commentinstance = OrgBDCommentsCreateSerializer(instance, data=data)
@@ -1117,7 +1070,7 @@ class OrgBDCommentsView(viewsets.ModelViewSet):
                     newcommentinstance = commentinstance.save()
                     cache_delete_patternKey(key='/bd/orgbd*')
                 else:
-                    raise InvestError(5004, msg='修改机构BDcomments失败--%s' % commentinstance.error_messages)
+                    raise InvestError(5004, msg='修改该机构BD备注失败', detail='修改机构BDcomments失败--%s' % commentinstance.error_messages)
                 return JSONResponse(
                     SuccessResponse(returnDictChangeToLanguage(OrgBDCommentsSerializer(newcommentinstance).data, lang)))
         except InvestError as err:
@@ -1130,12 +1083,12 @@ class OrgBDCommentsView(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
-            if request.user.has_perm('BD.manageOrgBD'):
+            if request.user.has_perm('BD.manageOrgBD') or is_orgBDTrader(request.user, instance.orgBD):
                 pass
-            elif request.user.id == instance.createuser_id:
+            elif request.user in [instance.createuser, instance.orgBD.manager]:
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='删除该机构BD备注失败')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
@@ -1149,268 +1102,114 @@ class OrgBDCommentsView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-class MeetBDFilter(FilterSet):
-    username = RelationFilter(filterstr='username', lookup_method='icontains')
-    usermobile = RelationFilter(filterstr='usermobile', lookup_method='contains')
-    manager = RelationFilter(filterstr='manager', lookup_method='in')
-    org = RelationFilter(filterstr='org', lookup_method='in')
-    proj = RelationFilter(filterstr='proj', lookup_method='in')
-    bduser = RelationFilter(filterstr='bduser', lookup_method='in')
-    country = RelationFilter(filterstr='country', lookup_method='in')
-
-    class Meta:
-        model = MeetingBD
-        fields = ('username', 'usermobile', 'manager', 'org', 'proj', 'bduser', 'country')
 
 
-class MeetingBDView(viewsets.ModelViewSet):
-    """
-    list:获取会议BD
-    create:增加会议BD
-    retrieve:查看会议BD信息
-    update:修改会议BD信息
-    destroy:删除会议BD
-    getShareMeetingBDdetail:根据sharetoken获取会议BD
-    getShareMeetingBDtoken:获取会议BD分享sharetoken
-    """
-    filter_backends = (filters.DjangoFilterBackend, MySearchFilter)
-    queryset = MeetingBD.objects.filter(is_deleted=False)
-    filter_class = MeetBDFilter
-    search_fields = ('proj__projtitleC', 'username','manager__usernameC')
-    serializer_class = MeetingBDSerializer
-
-    def get_queryset(self):
-        assert self.queryset is not None, (
-            "'%s' should either include a `queryset` attribute, "
-            "or override the `get_queryset()` method."
-            % self.__class__.__name__
-        )
-        queryset = self.queryset
-        if isinstance(queryset, QuerySet):
-            if self.request.user.is_authenticated:
-                queryset = queryset.filter(datasource_id=self.request.user.datasource_id)
-            else:
-                queryset = queryset
-        else:
-            raise InvestError(code=8890)
-        return queryset
+def saveOrgBdAndRemark(proj_id, org, manager, isimportant, createuser, bduser=None, remark=None):
+    try:
+        bdinstance = OrgBD()
+        bdinstance.proj_id = proj_id
+        bdinstance.org = org
+        bdinstance.manager = manager
+        bdinstance.isimportant = isimportant
+        bdinstance.bduser = bduser
+        bdinstance.createuser = createuser
+        bdinstance.save()
+        if remark:
+            commentinstance = OrgBDComments()
+            commentinstance.orgBD = bdinstance
+            commentinstance.comments = remark
+            commentinstance.save()
+    except Exception as err:
+        logexcption(str(err))
 
 
-    @loginTokenIsAvailable()
-    def list(self, request, *args, **kwargs):
-        try:
-            page_size = request.GET.get('page_size', 10)
-            page_index = request.GET.get('page_index', 1)
-            lang = request.GET.get('lang', 'cn')
-            queryset = self.filter_queryset(self.get_queryset())
-            if request.user.has_perm('BD.manageMeetBD'):
-                pass
-            elif request.user.has_perm('BD.user_getMeetBD'):
-                queryset = queryset.filter(Q(manager=request.user) | Q(createuser=request.user) | Q(proj__in=request.user.usertake_projs.all()) | Q(proj__in=request.user.usermake_projs.all()))
-            else:
-                raise InvestError(2009)
-            sortfield = request.GET.get('sort', 'createdtime')
-            desc = request.GET.get('desc', 1)
-            queryset = mySortQuery(queryset, sortfield, desc)
+def importOrgBD(xls_datas, proj_id, createuser):
+    try:
+        orgs, users= {}, {}
+        has_perm = False
+        if createuser.has_perm('BD.manageOrgBD'):
+            has_perm = True
+        for row in xls_datas:
             try:
-                count = queryset.count()
-                queryset = Paginator(queryset, page_size)
-                queryset = queryset.page(page_index)
-            except EmptyPage:
-                return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
-            serializer = MeetingBDSerializer(queryset, many=True)
-            return JSONResponse(SuccessResponse({'count':count,'data':returnListChangeToLanguage(serializer.data,lang)}))
-        except InvestError as err:
-            return JSONResponse(InvestErrorResponse(err))
-        except Exception:
-            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
-
-    @loginTokenIsAvailable()
-    def create(self, request, *args, **kwargs):
-        try:
-            data = request.data
-            lang = request.GET.get('lang')
-            data['createuser'] = request.user.id
-            data['datasource'] = request.user.datasource.id
-            if request.user.has_perm('BD.manageMeetBD'):
-                pass
-            else:
-                proj = data.get('proj', None)
-                if proj:
-                    projinstance = project.objects.get(id=proj, is_deleted=False, datasource=request.user.datasource)
-                    if request.user.has_perm('BD.user_addMeetBD'):
-                        pass
-                    elif projinstance.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
-                        pass
-                    else:
-                        raise InvestError(2009)
+                orgfullname = row['机构全称']
+                if orgs.get(orgfullname):
+                    org = orgs[orgfullname]
                 else:
-                    raise InvestError(2009)
-            with transaction.atomic():
-                meetBD = MeetingBDCreateSerializer(data=data)
-                if meetBD.is_valid():
-                    newMeetBD = meetBD.save()
-                    if newMeetBD.manager:
-                        add_perm('BD.user_manageMeetBD', newMeetBD.manager, newMeetBD)
+                    org = organization.objects.get(is_deleted=False, orgfullname=orgfullname)
+                    orgs[orgfullname] = org
+                if has_perm or is_projTrader(createuser, proj_id):
+                    pass      # 有权限，通过
                 else:
-                    raise InvestError(5005,msg='会议BD创建失败——%s'%meetBD.error_messages)
-                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(MeetingBDSerializer(newMeetBD).data,lang)))
-        except InvestError as err:
-            return JSONResponse(InvestErrorResponse(err))
-        except Exception:
-            catchexcption(request)
-            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
-    @loginTokenIsAvailable()
-    def retrieve(self, request, *args, **kwargs):
-        try:
-            lang = request.GET.get('lang')
-            instance = self.get_object()
-            if request.user.has_perm('BD.manageMeetBD'):
-                pass
-            elif request.user.has_perm('BD.user_manageMeetBD', instance):
-                pass
-            elif request.user.has_perm('BD.user_getMeetBD'):
-                if not instance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
-                    raise InvestError(2009)
-            else:
-                raise InvestError(2009)
-            serializer = self.serializer_class(instance)
-            return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data, lang)))
-        except InvestError as err:
-            return JSONResponse(InvestErrorResponse(err))
-        except Exception:
-            catchexcption(request)
-            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
-    @loginTokenIsAvailable()
-    def update(self, request, *args, **kwargs):
-        try:
-            data = request.data
-            data.pop('datasource', None)
-            lang = request.GET.get('lang')
-            instance = self.get_object()
-            oldmanager = instance.manager
-            if request.user.has_perm('BD.manageMeetBD'):
-                pass
-            elif request.user.has_perm('BD.user_manageMeetBD', instance):
-                # data = {'comments': data.get('comments', instance.comments),
-                #         'attachment': data.get('attachment', instance.attachment),
-                #         'attachmentbucket': data.get('attachmentbucket', instance.attachmentbucket),}
-                pass
-            elif instance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
-                pass
-            else:
-                raise InvestError(2009)
-            with transaction.atomic():
-                meetBD = MeetingBDCreateSerializer(instance,data=data)
-                if meetBD.is_valid():
-                    newMeetBD = meetBD.save()
-                    oldmanager_id = data.get('manager', None)
-                    if oldmanager_id and oldmanager_id != oldmanager.id:
-                        add_perm('BD.user_manageMeetBD', newMeetBD.manager, newMeetBD)
-                        rem_perm('BD.user_manageMeetBD', oldmanager, newMeetBD)
+                    continue  # 没有权限，跳过
+                if OrgBDBlack.objects.filter(is_deleted=False, org=org, proj_id=proj_id).exists():
+                    continue  # 黑名单机构，跳过
+                usermobile = row['联系人手机号码']
+                if usermobile:
+                    usermobile = str(usermobile).split('.')[0]
+                useremail = row['联系人邮箱']
+                if usermobile and useremail:   # 手机邮箱都存在
+                    try:                       # 先尝试用手机查询用户
+                        bduser = MyUser.objects.get(mobile=usermobile, is_deleted=False, datasource=createuser.datasource)
+                    except MyUser.DoesNotExist:    # 手机查询未找到用户
+                        try:                       # 再尝试用邮箱查询用户
+                            bduser = MyUser.objects.get(is_deleted=False, email=useremail, datasource=createuser.datasource)
+                        except MyUser.DoesNotExist:    # 邮箱查询也未找到用户
+                            user = MyUser(email=useremail, mobile=usermobile, usernameC=row['联系人'], userstatus_id=2, datasource=createuser.datasource)
+                            user.set_password('Aa123456')  # 创建新用户
+                            user.save()
+                            bduser = user
+                elif usermobile or useremail:   # 只存在手机或者邮箱
+                    bduser = None
+                    if usermobile:
+                        try:
+                            bduser = MyUser.objects.get(is_deleted=False, mobile=usermobile)
+                        except MyUser.DoesNotExist:
+                            continue     # 查询不到用户 跳过
+                    if useremail:
+                        try:
+                            bduser = MyUser.objects.get(is_deleted=False, email=useremail)
+                        except MyUser.DoesNotExist:
+                            continue     # 查询不到用户 跳过
+                    if bduser and row['联系人'] and bduser.usernameC != row['联系人']:
+                        continue     # 查到的用户与输入的姓名不匹配，跳过
                 else:
-                    raise InvestError(5005, msg='会议BD修改失败——%s' % meetBD.error_messages)
-                return JSONResponse(
-                    SuccessResponse(returnDictChangeToLanguage(MeetingBDSerializer(newMeetBD).data, lang)))
-        except InvestError as err:
-            return JSONResponse(InvestErrorResponse(err))
-        except Exception:
-            catchexcption(request)
-            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
-    @loginTokenIsAvailable()
-    def deleteAttachment(self, request, *args, **kwargs):
-        try:
-            lang = request.GET.get('lang')
-            instance = self.get_object()
-            if request.user.has_perm('BD.manageMeetBD'):
-                pass
-            elif request.user.has_perm('BD.user_manageMeetBD', instance):
-                pass
-            elif instance.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
-                pass
-            else:
-                raise InvestError(2009)
-            with transaction.atomic():
-                bucket = instance.attachmentbucket
-                key = instance.attachment
-                deleteqiniufile(bucket, key)
-                instance.attachmentbucket = None
-                instance.attachment = None
-                instance.save()
-                return JSONResponse(
-                    SuccessResponse(returnDictChangeToLanguage(MeetingBDSerializer(instance).data, lang)))
-        except InvestError as err:
-            return JSONResponse(InvestErrorResponse(err))
-        except Exception:
-            catchexcption(request)
-            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
-    @loginTokenIsAvailable(['BD.manageMeetBD',])
-    def destroy(self, request, *args, **kwargs):
-        try:
-            with transaction.atomic():
-                instance = self.get_object()
-                bucket = instance.attachmentbucket
-                key = instance.attachment
-                deleteqiniufile(bucket, key)
-                instance.is_deleted = True
-                instance.deleteduser = request.user
-                instance.deletedtime = datetime.datetime.now()
-                instance.save()
-            return JSONResponse(SuccessResponse({'isDeleted': True,}))
-        except InvestError as err:
-            return JSONResponse(InvestErrorResponse(err))
-        except Exception:
-            catchexcption(request)
-            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
-
-    @loginTokenIsAvailable()
-    def getShareMeetingBDtoken(self, request, *args, **kwargs):
-        try:
-            data = request.data
-            meetinglist = data.get('meetings', None)
-            if not isinstance(meetinglist, (list, tuple)):
-                raise InvestError(2007, msg='except string list')
-            meetings = ','.join(map(str, meetinglist))
-            with transaction.atomic():
-                sharetokenset = MeetBDShareToken.objects.filter(user=request.user, meetings=meetings)
-                if sharetokenset.exists():
-                    sharetoken = sharetokenset.last()
+                    bduser = None    # 未输入手机或者邮箱，按照无用户创建
+                managermobile = row['负责人手机号码']
+                if managermobile:
+                    managermobile = str(managermobile).split('.')[0]
+                if users.get(managermobile):
+                    manager = users[managermobile]
                 else:
-                    sharetoken = MeetBDShareToken(user=request.user, meetings=meetings)
-                    sharetoken.save()
-                return JSONResponse(SuccessResponse(sharetoken.key))
-        except InvestError as err:
-            return JSONResponse(InvestErrorResponse(err))
-        except Exception:
-            catchexcption(request)
-            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+                    manager = MyUser.objects.get(is_deleted=False, mobile=managermobile, datasource=createuser.datasource)
+                    users[managermobile] = manager
+                level = {'低': 0, '中': 1, '高': 2, '': 0}
+                isimportant = level[row['机构优先级']] if row['机构优先级'] else 0
+                remark = row['机构反馈'] if row['机构反馈'] else None
+                saveOrgBdAndRemark(proj_id, org, manager, isimportant, createuser, bduser, remark)
+            except Exception as err:
+                logexcption(str(err))     # 解析单行数据失败，跳过该行
+    except Exception:
+        logexcption()
 
-    def getShareMeetingBDdetail(self, request, *args, **kwargs):
-        try:
-            lang = request.GET.get('lang')
-            tokenkey = request.GET.get('token')
-            if tokenkey:
-                token = MeetBDShareToken.objects.filter(key=tokenkey)
-                if token.exists():
-                    meetingstr = token.first().meetings
-                    meetinglist = meetingstr.split(',')
-                else:
-                    raise InvestError(2009,msg='token无效')
-            else:
-                raise InvestError(2009, msg='token无效')
-            serializer = MeetingBDSerializer(self.get_queryset().filter(id__in=meetinglist).order_by('-meet_date'), many=True)
-            return JSONResponse(SuccessResponse(returnListChangeToLanguage(serializer.data,lang)))
-        except InvestError as err:
-            return JSONResponse(InvestErrorResponse(err))
-        except Exception:
-            catchexcption(request)
-            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+@api_view(['POST'])
+@checkRequestToken()
+def importOrgBDWithXlsfile(request):
+    try:
+        proj_id = request.data['proj']
+        uploaddata = request.FILES.get('file')
+        uploaddata.open()
+        r = uploaddata.read()
+        uploaddata.close()
+        xls_datas = excel_table_byindex(file_contents=r)
+        # importOrgBD(xls_datas)
+        t = threading.Thread(target=importOrgBD, args=(xls_datas, proj_id, request.user))
+        t.start()  # 启动线程，即让线程开始执行
+        return JSONResponse(SuccessResponse({'isStart': True}))
+    except InvestError as err:
+        return JSONResponse(InvestErrorResponse(err))
+    except Exception:
+        catchexcption(request)
+        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
 
@@ -1501,17 +1300,17 @@ class WorkReportView(viewsets.ModelViewSet):
             search = request.GET.get('search')
             if search:
                 search_body = {
-                    "_source": ["id", "report"],
-                    "query": {
-                        "bool": {
-                            "must": {"match_phrase": {"marketMsg": search}},
-                            "should": [
-                                {"match_phrase": {"django_ct": "BD.WorkReport"}},
-                                {"match_phrase": {"django_ct": "BD.WorkReportMarketMsg"}}
-                            ]
-                        }
-                    }
-                }
+                                    "_source": ["id", "report"],
+                                    "query": {
+                                        "bool": {
+                                            "must": {"match_phrase": {"marketMsg": search}},
+                                            "should": [
+                                                    {"match_phrase": {"django_ct": "BD.WorkReport"}},
+                                                    {"match_phrase": {"django_ct": "BD.WorkReportMarketMsg"}}
+                                            ]
+                                        }
+                                    }
+                                }
                 results = getEsScrollResult(search_body)
                 searchIds = set()
                 for source in results:
@@ -1538,15 +1337,15 @@ class WorkReportView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
-    @loginTokenIsAvailable()
+    @loginTokenIsAvailable(['usersys.as_trader'])
     def create(self, request, *args, **kwargs):
         try:
             data = request.data
             lang = request.GET.get('lang')
             if not data.get('user'):
-                raise InvestError(2007, msg='user 不能为空')
+                raise InvestError(20072, msg='新增用户工作周报失败', detail='用户不能为空')
             if data['user'] != request.user.id and not request.user.is_superuser:
-                raise InvestError(2009, msg='没有权限给别人建立工作报表')
+                raise InvestError(2009, msg='新增用户工作周报失败', detail='没有权限给别人建立工作报表')
             data['createuser'] = request.user.id
             data['datasource'] = request.user.datasource.id
             with transaction.atomic():
@@ -1554,7 +1353,7 @@ class WorkReportView(viewsets.ModelViewSet):
                 if instanceSerializer.is_valid():
                     instance = instanceSerializer.save()
                 else:
-                    raise InvestError(20071, msg='新增用户工作报表失败--%s' % instanceSerializer.errors)
+                    raise InvestError(20071, msg='新增用户工作周报失败', detail='新增用户工作报表失败--%s' % instanceSerializer.errors)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(self.serializer_class(instance).data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1570,7 +1369,7 @@ class WorkReportView(viewsets.ModelViewSet):
             if request.user.has_perm('BD.admin_getWorkReport') or request.user == instance.user:
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='查看用户工作周报失败')
             serializer = self.serializer_class(instance)
             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data, lang)))
         except InvestError as err:
@@ -1584,17 +1383,17 @@ class WorkReportView(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         try:
             data = request.data
-            data.pop('user')
+            data.pop('user', None)
             lang = request.GET.get('lang')
             instance = self.get_object()
             if request.user != instance.user and not request.user.is_superuser:
-                raise InvestError(2009, msg='没有权限修改该工作报表')
+                raise InvestError(2009, msg='修改用户工作周报失败', detail='没有权限修改该工作报表')
             with transaction.atomic():
                 newinstanceSeria = WorkReportCreateSerializer(instance, data=data)
                 if newinstanceSeria.is_valid():
                     newinstance = newinstanceSeria.save()
                 else:
-                    raise InvestError(2009, msg='用户工作报表修改失败——%s' % newinstanceSeria.errors)
+                    raise InvestError(20071, msg='修改用户工作周报失败', detail='用户工作报表修改失败——%s' % newinstanceSeria.errors)
                 return JSONResponse(
                     SuccessResponse(returnDictChangeToLanguage(self.serializer_class(newinstance).data, lang)))
         except InvestError as err:
@@ -1608,7 +1407,7 @@ class WorkReportView(viewsets.ModelViewSet):
         try:
             instance = self.get_object()
             if request.user != instance.user and not request.user.is_superuser:
-                raise InvestError(2009, msg='没有权限修改该工作报表')
+                raise InvestError(2009, msg='删除用户工作周报失败', detail='没有权限删除该工作报表')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
@@ -1694,13 +1493,13 @@ class WorkReportMarketMsgView(viewsets.ModelViewSet):
             data['datasource'] = request.user.datasource.id
             reportInstance = WorkReport.objects.get(id=data['report'])
             if request.user != reportInstance.user and not request.user.is_superuser:
-                raise InvestError(2009, msg='没有权限增加项目计划')
+                raise InvestError(2009, msg='新增用户工作周报市场信息失败', detail='没有权限增加市场信息')
             with transaction.atomic():
                 instanceSerializer = WorkReportMarketMsgCreateSerializer(data=data)
                 if instanceSerializer.is_valid():
                     instance = instanceSerializer.save()
                 else:
-                    raise InvestError(20071, msg='新增用户工作报表项目计划失败--%s' % instanceSerializer.error_messages)
+                    raise InvestError(20071, msg='新增用户工作周报市场信息失败', detail='新增失败--%s' % instanceSerializer.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(self.serializer_class(instance).data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1715,13 +1514,13 @@ class WorkReportMarketMsgView(viewsets.ModelViewSet):
             lang = request.GET.get('lang')
             instance = self.get_object()
             if request.user != instance.report.user and not request.user.is_superuser:
-                raise InvestError(2009, msg='没有权限增加市场信息')
+                raise InvestError(2009, msg='修改用户工作周报市场信息失败', detail='没有权限增加市场信息')
             with transaction.atomic():
                 newinstanceSeria = WorkReportMarketMsgCreateSerializer(instance, data=data)
                 if newinstanceSeria.is_valid():
                     newinstance = newinstanceSeria.save()
                 else:
-                    raise InvestError(2009, msg='用户工作报表市场信息修改失败——%s' % newinstanceSeria.errors)
+                    raise InvestError(20071, msg='修改用户工作周报市场信息失败', detail='用修改失败——%s' % newinstanceSeria.errors)
                 return JSONResponse(
                     SuccessResponse(returnDictChangeToLanguage(self.serializer_class(newinstance).data, lang)))
         except InvestError as err:
@@ -1735,7 +1534,7 @@ class WorkReportMarketMsgView(viewsets.ModelViewSet):
         try:
             instance = self.get_object()
             if request.user != instance.report.user and not request.user.is_superuser:
-                raise InvestError(2009, msg='没有权限删除市场信息')
+                raise InvestError(2009, msg='删除用户工作周报市场信息失败', detail='没有权限删除市场信息')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
@@ -1825,13 +1624,13 @@ class WorkReportProjInfoView(viewsets.ModelViewSet):
             data['datasource'] = request.user.datasource.id
             reportInstance = WorkReport.objects.get(id=data['report'])
             if request.user != reportInstance.user and not request.user.is_superuser:
-                raise InvestError(2009, msg='没有权限增加项目计划')
+                raise InvestError(2009, msg='新增用户工作周报项目计划失败', detail='没有权限增加项目计划')
             with transaction.atomic():
                 instanceSerializer = WorkReportProjInfoCreateSerializer(data=data)
                 if instanceSerializer.is_valid():
                     instance = instanceSerializer.save()
                 else:
-                    raise InvestError(20071, msg='新增用户工作报表项目计划失败--%s' % instanceSerializer.error_messages)
+                    raise InvestError(20071, msg='新增用户工作周报项目计划失败', detail='新增失败--%s' % instanceSerializer.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(self.serializer_class(instance).data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1846,13 +1645,13 @@ class WorkReportProjInfoView(viewsets.ModelViewSet):
             lang = request.GET.get('lang')
             instance = self.get_object()
             if request.user != instance.report.user and not request.user.is_superuser:
-                raise InvestError(2009, msg='没有权限增加项目计划')
+                raise InvestError(2009, msg='修改用户工作周报项目计划失败', detail='没有权限修改项目计划')
             with transaction.atomic():
                 newinstanceSeria = WorkReportProjInfoCreateSerializer(instance, data=data)
                 if newinstanceSeria.is_valid():
                     newinstance = newinstanceSeria.save()
                 else:
-                    raise InvestError(2009, msg='用户工作报表项目计划修改失败——%s' % newinstanceSeria.errors)
+                    raise InvestError(20071, msg='修改用户工作周报项目计划失败', detail='修改失败——%s' % newinstanceSeria.error_messages)
                 return JSONResponse(
                     SuccessResponse(returnDictChangeToLanguage(self.serializer_class(newinstance).data, lang)))
         except InvestError as err:
@@ -1866,7 +1665,7 @@ class WorkReportProjInfoView(viewsets.ModelViewSet):
         try:
             instance = self.get_object()
             if request.user != instance.report.user and not request.user.is_superuser:
-                raise InvestError(2009, msg='没有权限删除项目计划')
+                raise InvestError(2009, msg='删除用户工作周报项目计划失败', detail='没有权限删除项目计划')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
@@ -1929,7 +1728,7 @@ class OKRView(viewsets.ModelViewSet):
             if request.user.has_perm('usersys.as_trader'):
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='获取用户OKR失败')
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
@@ -1955,7 +1754,7 @@ class OKRView(viewsets.ModelViewSet):
             if request.user.has_perm('usersys.as_trader'):
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='新增用户OKR失败')
             data = request.data
             lang = request.GET.get('lang')
             data['createuser'] = request.user.id
@@ -1965,7 +1764,7 @@ class OKRView(viewsets.ModelViewSet):
                 if instanceSerializer.is_valid():
                     instance = instanceSerializer.save()
                 else:
-                    raise InvestError(20071, msg='新增OKR失败--%s' % instanceSerializer.error_messages)
+                    raise InvestError(20071, msg='新增用户OKR失败', detail='新增OKR失败--%s' % instanceSerializer.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(self.serializer_class(instance).data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1980,7 +1779,7 @@ class OKRView(viewsets.ModelViewSet):
             if request.user.has_perm('usersys.as_trader'):
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='查看用户OKR失败')
             instance = self.get_object()
             serializer = self.serializer_class(instance)
             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data, lang)))
@@ -2000,13 +1799,13 @@ class OKRView(viewsets.ModelViewSet):
             if request.user == instance.createuser or request.user.is_superuser:
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='修改用户OKR失败')
             with transaction.atomic():
                 newinstanceSeria = OKRCreateSerializer(instance, data=data)
                 if newinstanceSeria.is_valid():
                     newinstance = newinstanceSeria.save()
                 else:
-                    raise InvestError(2009, msg='OKR修改失败——%s' % newinstanceSeria.errors)
+                    raise InvestError(20071, msg='修改用户OKR失败', detail='OKR修改失败——%s' % newinstanceSeria.errors)
                 return JSONResponse(
                     SuccessResponse(returnDictChangeToLanguage(self.serializer_class(newinstance).data, lang)))
         except InvestError as err:
@@ -2022,7 +1821,7 @@ class OKRView(viewsets.ModelViewSet):
             if request.user == instance.createuser or request.user.is_superuser:
                 pass
             else:
-                raise InvestError(2009, msg='没有权限删除该OKR')
+                raise InvestError(2009, msg='删除用户OKR失败', detail='没有权限删除该OKR')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user
@@ -2081,7 +1880,7 @@ class OKRResultView(viewsets.ModelViewSet):
             if request.user.has_perm('usersys.as_trader'):
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='获取用户OKR相关结果失败')
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
@@ -2112,13 +1911,13 @@ class OKRResultView(viewsets.ModelViewSet):
             if request.user == okrInstance.createuser or request.user.is_superuser:
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='新增用户OKR相关结果失败')
             with transaction.atomic():
                 instanceSerializer = OKRResultCreateSerializer(data=data)
                 if instanceSerializer.is_valid():
                     instance = instanceSerializer.save()
                 else:
-                    raise InvestError(20071, msg='新增用户工作报表项目计划失败--%s' % instanceSerializer.error_messages)
+                    raise InvestError(20071, msg='新增用户OKR相关结果失败', detail='新增失败--%s' % instanceSerializer.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(self.serializer_class(instance).data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -2133,7 +1932,7 @@ class OKRResultView(viewsets.ModelViewSet):
             if request.user.has_perm('usersys.as_trader'):
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='查看用户OKR相关结果失败')
             instance = self.get_object()
             serializer = self.serializer_class(instance)
             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data, lang)))
@@ -2152,13 +1951,13 @@ class OKRResultView(viewsets.ModelViewSet):
             if request.user == instance.okr.createuser or request.user.is_superuser:
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='修改用户OKR相关结果失败')
             with transaction.atomic():
                 newinstanceSeria = OKRResultCreateSerializer(instance, data=data)
                 if newinstanceSeria.is_valid():
                     newinstance = newinstanceSeria.save()
                 else:
-                    raise InvestError(2009, msg='用户工作报表项目计划修改失败——%s' % newinstanceSeria.errors)
+                    raise InvestError(20071, msg='修改用户OKR相关结果失败', detail='修改失败——%s' % newinstanceSeria.errors)
                 return JSONResponse(
                     SuccessResponse(returnDictChangeToLanguage(self.serializer_class(newinstance).data, lang)))
         except InvestError as err:
@@ -2174,7 +1973,7 @@ class OKRResultView(viewsets.ModelViewSet):
             if request.user == instance.okr.createuser or request.user.is_superuser:
                 pass
             else:
-                raise InvestError(2009)
+                raise InvestError(2009, msg='删除用户OKR相关结果失败')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deleteduser = request.user

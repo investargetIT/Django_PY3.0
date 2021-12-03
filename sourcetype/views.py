@@ -8,14 +8,15 @@ from rest_framework import viewsets
 from sourcetype.models import Tag, TitleType, DataSource, Country, Industry, TransactionType, \
     TransactionPhases, OrgArea, CurrencyType, OrgType, CharacterType, ProjectStatus, TransactionStatus, orgtitletable, \
     webmenu, Service, OrgAttribute, BDStatus, AndroidAppVersion, OrgBdResponse, OrgLevelType, FamiliarLevel, \
-    IndustryGroup
+    IndustryGroup, DidiOrderType, Education, PerformanceAppraisalLevel, TrainingType, TrainingStatus
 from sourcetype.serializer import tagSerializer, countrySerializer, industrySerializer, \
     titleTypeSerializer, DataSourceSerializer, orgAreaSerializer, transactionTypeSerializer, \
     transactionPhasesSerializer, \
     currencyTypeSerializer, orgTypeSerializer, characterTypeSerializer, ProjectStatusSerializer, \
     transactionStatuSerializer, OrgtitletableSerializer, WebMenuSerializer, serviceSerializer, orgAttributeSerializer, \
     BDStatusSerializer, AndroidAppSerializer, OrgBdResponseSerializer, OrgLevelTypeSerializer, FamiliarLevelSerializer, \
-    industryGroupSerializer
+    industryGroupSerializer, PerformanceAppraisalLevelSerializer, EducationSerializer, TrainingTypeSerializer, \
+    TrainingStatusSerializer
 from utils.customClass import JSONResponse, InvestError, MySearchFilter
 from utils.util import SuccessResponse, InvestErrorResponse, ExceptionResponse, returnListChangeToLanguage, \
     catchexcption, loginTokenIsAvailable, removeDuclicates
@@ -43,27 +44,6 @@ class TagView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    # @loginTokenIsAvailable()
-    # def create(self, request, *args, **kwargs):
-    #     try:
-    #         if not request.user.is_superuser:
-    #             raise InvestError(2009,msg='没有操作权限')
-    #         with transaction.atomic():
-    #             lang = request.GET.get('lang')
-    #             data = request.data
-    #             serializer = self.serializer_class(data=data)
-    #             if serializer.is_valid():
-    #                  serializer.save()
-    #             else:
-    #                 raise InvestError(code=20071,msg='data有误_%s' % serializer.error_messages)
-    #             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data, lang)))
-    #     except InvestError as err:
-    #         return JSONResponse(InvestErrorResponse(err))
-    #     except Exception:
-    #         catchexcption(request)
-    #         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
-
 
 class OrgBdResponseView(viewsets.ModelViewSet):
     """
@@ -83,7 +63,6 @@ class OrgBdResponseView(viewsets.ModelViewSet):
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
 
 class FamiliarLevelView(viewsets.ModelViewSet):
     """
@@ -388,6 +367,47 @@ class TransactionPhasesView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
+
+class EducationView(viewsets.ModelViewSet):
+    """
+        list:获取所有学历
+        create:新增学历
+        update:修改学历
+        destroy:删除学历
+    """
+    queryset = Education.objects.all().filter(is_deleted=False)
+    serializer_class = EducationSerializer
+    def list(self, request, *args, **kwargs):
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(SuccessResponse(serializer.data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+class PerformanceAppraisalLevelView(viewsets.ModelViewSet):
+    """
+        list:获取所有绩效考核等级
+        create:新增绩效考核等级
+        update:修改绩效考核等级
+        destroy:删除绩效考核等级
+    """
+    queryset = PerformanceAppraisalLevel.objects.all().filter(is_deleted=False)
+    serializer_class = PerformanceAppraisalLevelSerializer
+    def list(self, request, *args, **kwargs):
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(SuccessResponse(serializer.data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+
 class TransactionStatusView(viewsets.ModelViewSet):
     """
         list:获取所有时间轴状态
@@ -407,6 +427,27 @@ class TransactionStatusView(viewsets.ModelViewSet):
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+class DidiOrderTypeView(viewsets.ModelViewSet):
+    """
+        list:获取所有Didi订单类型
+    """
+
+    queryset = DidiOrderType.objects.all().filter(is_deleted=False)
+    serializer_class = OrgBdResponseSerializer
+
+    def list(self, request, *args, **kwargs):
+        try:
+            lang = request.GET.get('lang')
+            queryset = self.filter_queryset(self.get_queryset()).order_by('sort')
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(SuccessResponse(returnListChangeToLanguage(serializer.data,lang)))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
 
 class OrgTypeView(viewsets.ModelViewSet):
     """
@@ -510,6 +551,45 @@ class IndustryGroupView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
+class TrainingTypeView(viewsets.ModelViewSet):
+    """
+        list:获取所有培训方式
+    """
+
+    queryset = TrainingType.objects.all().filter(is_deleted=False)
+    serializer_class = TrainingTypeSerializer
+
+    def list(self, request, *args, **kwargs):
+        try:
+            lang = request.GET.get('lang')
+            queryset = self.filter_queryset(self.get_queryset())
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(SuccessResponse(returnListChangeToLanguage(serializer.data,lang)))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+class TrainingStatusView(viewsets.ModelViewSet):
+    """
+        list:获取所有培训状态
+    """
+
+    queryset = TrainingStatus.objects.all().filter(is_deleted=False)
+    serializer_class = TrainingStatusSerializer
+
+    def list(self, request, *args, **kwargs):
+        try:
+            lang = request.GET.get('lang')
+            queryset = self.filter_queryset(self.get_queryset())
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(SuccessResponse(returnListChangeToLanguage(serializer.data,lang)))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
 
 class AndroidAppVersionView(viewsets.ModelViewSet):
 
@@ -537,7 +617,7 @@ class AndroidAppVersionView(viewsets.ModelViewSet):
                 if serializer.is_valid():
                     serializer.save()
                 else:
-                    raise InvestError(code=20071, msg='data有误_%s' % serializer.error_messages)
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
                 return JSONResponse(SuccessResponse(serializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -557,7 +637,7 @@ class AndroidAppVersionView(viewsets.ModelViewSet):
                 if serializer.is_valid():
                     serializer.save()
                 else:
-                    raise InvestError(code=20071, msg='data有误_%s' % serializer.error_messages)
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
                 return JSONResponse(SuccessResponse(serializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -579,42 +659,59 @@ class AndroidAppVersionView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
+class WebmenuView(viewsets.ModelViewSet):
+    """
+        list:获取所有菜单
+    """
+
+    queryset = webmenu.objects.all().filter(is_deleted=False)
+    serializer_class = WebMenuSerializer
+
+    def list(self, request, *args, **kwargs):
+        try:
+            lang = request.GET.get('lang')
+            queryset = self.filter_queryset(self.get_queryset())
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(SuccessResponse(returnListChangeToLanguage(serializer.data,lang)))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+
 def getmenulist(user):
     allmenuobj = webmenu.objects.all()
     if user.has_perm('dataroom.onlydataroom') and not user.is_superuser:
         return WebMenuSerializer(allmenuobj.filter(id__in=[6,30]),many=True).data
-    qslist = [1, 6, 7, 8, 10, 11, 14, 15, 16, 18, 20, 21, 24, 25, 26, 30]
-    if user.has_perm('usersys.admin_getuser'):
+    qslist = [1, 6, 7, 8, 10, 14, 15, 16, 21, 24, 26, 28, 30, 41]
+    if user.has_perm('usersys.admin_manageuser'):
         qslist.extend([5])
     if not user.has_perm('usersys.as_investor') or user.is_superuser:
         qslist.extend([27, 28, 33])
     if user.has_perm('usersys.as_trader') and not user.is_superuser:
         qslist.extend([12])
-    if user.has_perm('usersys.as_trader') and user.has_perm('usersys.user_adduser'):
+    if user.has_perm('usersys.as_trader'):
         qslist.extend([34, 35])                        # 周报、OKR
     if user.has_perm('emailmanage.getemailmanage'):
         qslist.extend([3])
-    if user.has_perm('BD.user_getProjectBD') or user.has_perm('BD.manageProjectBD'): # 项目bd管理
+    if user.has_perm('usersys.as_trader') or user.has_perm('BD.manageProjectBD'): # 项目bd管理
         qslist.extend([22, 23])
-    if user.has_perm('BD.user_getOrgBD') or user.has_perm('BD.manageOrgBD'):         # 机构bd管理
-        qslist.extend([2, 23])
-    if user.has_perm('BD.user_getMeetBD') or user.has_perm('BD.manageMeetBD'):         # 会议bd管理
-        qslist.extend([29, 23])
+    if user.has_perm('usersys.as_trader') or user.has_perm('BD.manageOrgBD'):         # 机构bd管理
+        qslist.extend([2, 37, 23])
     if user.has_perm('APILog.manage_userinfolog'):#日志查询
         qslist.extend([9])
-    if user.has_perm('msg.user_onlineTest'):  #在线测试
-        qslist.extend([36])
     if user.is_superuser:
-        qslist.extend([17, 34])
-    if user.has_perm('proj.admin_addproj') or user.has_perm('proj.user_addproj'):
-        qslist.extend([19])
+        qslist.extend([17])
     if user.has_perm('dataroom.get_companydataroom'):
         qslist.extend([31])
     if user.has_perm('org.export_org'):
-        qslist.extend([28, 32])
-    if user.has_perm('timeline.admin_getline'):
-        qslist.extend([4])
-    if user.has_perm('usersys.getProjReport'):
-        qslist.extend([37])
+        qslist.extend([32])
+    if user.has_perm('usersys.admin_managepersonnelrelation'):
+        qslist.extend([38])      # 人事管理菜单
+    if user.has_perm('usersys.admin_manageindgroupinvestor'):
+        qslist.extend([39, 5])        # 管理行业组离职交易师所属投资人
+    if user.has_perm('usersys.manageusermenu'):
+        qslist.extend([40, 5])         # 全库用户管理 菜单
     qsres = allmenuobj.filter(id__in=removeDuclicates(qslist), is_deleted=False).order_by('index')
     return WebMenuSerializer(qsres,many=True).data

@@ -35,6 +35,11 @@ country = views.CountryView.as_view({
 })
 
 
+didiType = views.DidiOrderTypeView.as_view({
+        'get': 'list',
+})
+
+
 character = views.CharacterTypeView.as_view({
         'get': 'list',
         # 'post':'create',
@@ -98,6 +103,16 @@ transactionStatus = views.TransactionStatusView.as_view({
         # 'post':'create',
 })
 
+educationType = views.EducationView.as_view({
+        'get': 'list',
+        # 'post':'create',
+})
+
+performanceAppraisalLevelType = views.PerformanceAppraisalLevelView.as_view({
+        'get': 'list',
+        # 'post':'create',
+})
+
 
 currencyType = views.CurrencyTypeView.as_view({
         'get': 'list',
@@ -112,6 +127,21 @@ Orgtitletable = views.OrgtitletableView.as_view({
 
 
 IndustryGroup = views.IndustryGroupView.as_view({
+        'get': 'list',
+})
+
+
+TrainingType = views.TrainingTypeView.as_view({
+        'get': 'list',
+})
+
+
+TrainingStatus = views.TrainingStatusView.as_view({
+        'get': 'list',
+})
+
+
+Webmenu = views.WebmenuView.as_view({
         'get': 'list',
 })
 
@@ -156,6 +186,8 @@ urlpatterns = [
 
     url(r'^bdStatus$', bdStatus,name='bdStatussource',),
 
+    url(r'^didiType$', didiType, name='didiType',),
+
     url(r'^transactionType$', transactionType,name='transactionTypesource',),
 
     url(r'^transactionPhases$', transactionPhases,name='transactionPhasessource',),
@@ -169,6 +201,16 @@ urlpatterns = [
     url(r'^orgtitletable$', Orgtitletable,name='Orgtitletablesource',),
 
     url(r'^industryGroup$', IndustryGroup,name='IndustryGroupSource',),
+
+    url(r'^trainingType$', TrainingType,name='TrainingTypeSource',),
+
+    url(r'^trainingStatus$', TrainingStatus,name='TrainingStatusSource',),
+
+    url(r'^education$', educationType,name='EducationSource',),
+
+    url(r'^webmenu$', Webmenu, name='WebmenuSource', ),
+
+    url(r'^palevel$', performanceAppraisalLevelType,name='PerformanceAppraisalLevelSource',),
 
     url(r'^android$', AndroidVersion,name='AndroidVersion',),
 

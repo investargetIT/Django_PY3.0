@@ -126,12 +126,11 @@ class ViewprojLogView(viewsets.ModelViewSet):
 
 class UserInfoUpdateLogView(viewsets.ModelViewSet):
 
-    filter_backends = (MySearchFilter,)
+    filter_backends = (filters.DjangoFilterBackend, MySearchFilter)
     filter_fields = ('user_name', 'requestuser_name', 'type', 'before', 'after')
     search_fields = ('user_name', 'requestuser_name')
     queryset = userinfoupdatelog.objects.filter(is_deleted=False)
     serializer_class = UserInfoUpdateLogSerializer
-
 
     @loginTokenIsAvailable(['APIlog.manage_userinfolog'])
     def list(self, request, *args, **kwargs):

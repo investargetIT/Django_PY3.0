@@ -158,7 +158,7 @@ def sendProjEmailToUser(proj,user,datasource):
         if emailsend.is_valid():
             emailsend.save()
         else:
-            raise InvestError(8888,msg=emailsend.error_messages)
+            raise InvestError(8888, msg='保存submail邮件发送记录失败', detail=emailsend.error_messages)
 
 class EmailgroupsendlistView(viewsets.ModelViewSet):
     """
@@ -200,7 +200,7 @@ class EmailgroupsendlistView(viewsets.ModelViewSet):
             token = data.get('token')
             signature = data.get('signature')
             if not checkSubhookKey(token,signature):
-                raise InvestError(8888, msg='subhook验证未通过')
+                raise InvestError(8888, msg='submail邮件发送已读回执更新失败', detail='subhook验证未通过')
             send_id = data.get('send_id')
             data['isSend'] = True
             try:
@@ -215,7 +215,7 @@ class EmailgroupsendlistView(viewsets.ModelViewSet):
                     newemailgroupsend.readtime = datetime.datetime.now()
                     newemailgroupsend.save()
                 else:
-                    raise InvestError(code=20071,msg='data有误_%s' % emailserializer.errors)
+                    raise InvestError(20071, msg='submail邮件发送已读回执更新失败', detail='%s' % emailserializer.error_messages)
                 return JSONResponse(SuccessResponse(None))
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))

@@ -6,7 +6,7 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
 from dataroom.models import dataroom_User_file
-from msg.models import message, schedule, webexUser, webexMeeting, InternOnlineTest
+from msg.models import message, schedule, webexUser, webexMeeting
 from proj.serializer import ProjCommonSerializer
 from sourcetype.serializer import countrySerializer, orgAreaSerializer
 from third.thirdconfig import webEX_webExID, webEX_password
@@ -95,16 +95,3 @@ class WebEXUserSerializer(serializers.ModelSerializer):
                 fields=('meeting', 'email')
             )
         ]
-class InternOnlineTestCreateSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = InternOnlineTest
-        fields = '__all__'
-
-class InternOnlineTestSerializer(serializers.ModelSerializer):
-    user = UserCommenSerializer()
-    createuser = UserCommenSerializer()
-
-    class Meta:
-        model = InternOnlineTest
-        exclude = ('deleteduser', 'datasource', 'is_deleted', 'deletedtime')

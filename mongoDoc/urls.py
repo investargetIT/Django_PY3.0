@@ -51,11 +51,6 @@ EmailGroupList = views.GroupEmailDataView.as_view({
 
 })
 
-IMChatMessagesList = views.IMChatMessagesView.as_view({
-        'get': 'list',
-
-})
-
 WXChatDataList = views.WXChatDataView.as_view({
         'get': 'list',
         'put': 'update',
@@ -81,7 +76,6 @@ urlpatterns = [
     url(r'^projnews$', ProjectNewsList, name='ProjectNews-list',),
     url(r'^projremark$', ProjectRemarkList, name='ProjectRemark-list',),
     url(r'^email$', EmailGroupList,name='WXContent-list',),
-    url(r'^chatmsg$', IMChatMessagesList, name='IMChatMessages-list', ),
     url(r'^wxmsg$', WXChatDataList, name='WXChatData-list', ),
     url(r'^count', getCount, name='count', ),
 ]
