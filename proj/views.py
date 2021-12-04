@@ -1298,8 +1298,8 @@ def testPdf(request):
 
 def readDidiRecord(csvFilePath):
     modelKeyField = {'成本中心名称': 'projName', '成本中心id': 'proj', '专快订单号': 'orderNumber', '支付时间': 'orderDate',
-                     '用车权限': 'orderPerm', '用车城市': 'city', '实际出发地': 'startPlace', '实际目的地': 'endPlace', '企业实付金额': 'money'}
-    values = ['成本中心名称', '成本中心id', '专快订单号', '支付时间', '用车权限', '用车城市', '实际出发地', '实际目的地', '企业实付金额']
+                     '用车备注': 'orderPerm', '用车城市': 'city', '实际出发地': 'startPlace', '实际目的地': 'endPlace', '企业实付金额': 'money'}
+    values = ['成本中心名称', '成本中心id', '专快订单号', '支付时间', '用车备注', '用车城市', '实际出发地', '实际目的地', '企业实付金额']
     valuesdic, data_list = {}, []
     with open(csvFilePath, 'rb') as file:
         encod = chardet.detect(file.readline())['encoding']
