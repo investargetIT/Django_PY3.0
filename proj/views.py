@@ -1303,6 +1303,7 @@ def readDidiRecord(csvFilePath):
     valuesdic, data_list = {}, []
     with open(csvFilePath, 'rb') as file:
         encod = chardet.detect(file.readline())['encoding']
+        encod = "GBK" if encod =='GB2312' else encod
     with open(csvFilePath, 'r', encoding=encod)as f:
         f_csv = csv.reader(f)
         line_count = 0
@@ -1340,4 +1341,4 @@ def importDidiRecordCsvFile():
             importDidiRecord(recordData)
             os.remove(csvFilePath)
         except Exception as e:
-            logexcption()
+            logexcption(str(e))
