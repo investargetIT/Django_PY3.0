@@ -509,14 +509,18 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
             if dataroomid is None or not dataroom.objects.filter(id=dataroomid).exists():
                 raise InvestError(code=20072, msg='获取dataroom文件失败', detail='dataroom不能为空或者不存在')
             dataroominstance = dataroom.objects.get(id=dataroomid, is_deleted=False)
+            queryset = self.get_queryset().filter(datasource=self.request.user.datasource)
             if request.user.has_perm('dataroom.admin_managedataroom') or is_dataroomTrader(request.user, dataroominstance):
                 pass
             elif dataroominstance.isCompanyFile and request.user.has_perm('dataroom.get_companydataroom'):
                 if dataroominstance.proj.indGroup and  dataroominstance.proj.indGroup != request.user.indGroup:
                     raise InvestError(2009, msg='获取该dataroom文件失败')
+            elif is_dataroomInvestor(request.user, dataroominstance.id):
+                user_dataroomInstance = dataroom_User_file.objects.filter(user=request.user, dataroom__id=dataroomid).first()
+                queryset = queryset.filter(file_userSeeFile__dataroomUserfile=user_dataroomInstance, file_userSeeFile__is_deleted=False)
             else:
                 raise InvestError(2009, msg='获取该dataroom文件失败')
-            queryset = self.filter_queryset(self.get_queryset()).filter(datasource=self.request.user.datasource).order_by(sortfield)
+            queryset = self.filter_queryset(queryset).order_by(sortfield)
             count = queryset.count()
             serializer = DataroomdirectoryorfileSerializer(queryset, many=True)
             return JSONResponse(SuccessResponse({'count':count,'data':returnListChangeToLanguage(serializer.data,lang)}))
@@ -543,7 +547,7 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
                     queryset = self.get_queryset()
             elif is_dataroomInvestor(request.user, dataroominstance.id):
                 user_dataroomInstance = dataroom_User_file.objects.filter(user=request.user, dataroom__id=dataroomid).first()
-                queryset = user_dataroomInstance.file_userSeeFile.all().filter(is_deleted=False)
+                queryset = self.get_queryset().filter(file_userSeeFile__dataroomUserfile=user_dataroomInstance, file_userSeeFile__is_deleted=False)
             else:
                 raise InvestError(2009, msg='获取dataroom文件路径失败', detail='没有权限查看该dataroom')
             queryset = self.filter_queryset(queryset)
@@ -575,7 +579,7 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
             searchIds = set()
             for source in results:
                 searchIds.add(source['_source']['id'])
-            file_qs = queryset.filter(Q(id__in=searchIds) | Q(filename__icontains=search)).distinct()
+            file_qs = queryset.filter(Q(id__in=searchIds) | Q(filename__icontains=search))
             count = file_qs.count()
             serializer = DataroomdirectoryorfilePathSerializer(file_qs, many=True)
             return JSONResponse(SuccessResponse({'count': count, 'data': returnListChangeToLanguage(serializer.data, lang)}))

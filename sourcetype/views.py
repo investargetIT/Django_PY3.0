@@ -684,7 +684,7 @@ def getmenulist(user):
     allmenuobj = webmenu.objects.all()
     if user.has_perm('dataroom.onlydataroom') and not user.is_superuser:
         return WebMenuSerializer(allmenuobj.filter(id__in=[6,30]),many=True).data
-    qslist = [1, 6, 7, 8, 10, 14, 15, 16, 21, 24, 26, 28, 30, 41]
+    qslist = [1, 6, 7, 8, 10, 14, 16, 21, 24, 26, 28, 30]
     if user.has_perm('usersys.admin_manageuser'):
         qslist.extend([5])
     if not user.has_perm('usersys.as_investor') or user.is_superuser:
@@ -692,7 +692,7 @@ def getmenulist(user):
     if user.has_perm('usersys.as_trader') and not user.is_superuser:
         qslist.extend([12])
     if user.has_perm('usersys.as_trader'):
-        qslist.extend([34, 35])                        # 周报、OKR
+        qslist.extend([34, 35, 15, 41])                        # 周报、OKR、个人中心、基本设置
     if user.has_perm('emailmanage.getemailmanage'):
         qslist.extend([3])
     if user.has_perm('usersys.as_trader') or user.has_perm('BD.manageProjectBD'): # 项目bd管理
