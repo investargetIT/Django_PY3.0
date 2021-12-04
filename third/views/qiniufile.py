@@ -221,8 +221,8 @@ def downloadFileToPath(key,bucket,path):
             raise InvestError(8002, msg=repr(r.content))
         with open(path, "wb") as code:
             code.write(r.content)
-    except Exception:
-        logexcption(msg='download error')
+    except Exception as err:
+        logexcption(msg=str(err))
         return None
     else:
         return path
