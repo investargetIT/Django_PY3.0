@@ -45,7 +45,6 @@ class ProjectFilter(FilterSet):
     ids = RelationFilter(filterstr='id', lookup_method='in')
     createuser = RelationFilter(filterstr='createuser', lookup_method='in')
     indGroup = RelationFilter(filterstr='indGroup', lookup_method='in')
-    user = RelationFilter(filterstr='proj_traders__user', relationName='proj_traders__is_deleted', lookup_method='in')
     isoverseasproject = RelationFilter(filterstr='isoverseasproject', lookup_method='in')
     industries = RelationFilter(filterstr='industries',lookup_method='in',relationName='project_industries__is_deleted')
     tags = RelationFilter(filterstr='tags',lookup_method='in',relationName='project_tags__is_deleted')
@@ -141,10 +140,9 @@ class ProjectView(viewsets.ModelViewSet):
             setrequestuser(request)
             checkrequestpagesize(request)
             queryset = self.filter_queryset(queryset)
-            if request.GET.get('user') and request.GET.get('usertype'):
+            if request.GET.get('user'):
                 userlist = request.GET.get('user').split(',')
-                usertypelist = request.GET.get('usertype').split(',')
-                queryset = queryset.filter(proj_traders__user__in=userlist, proj_traders__type__in=usertypelist, proj_traders__is_deleted=False)
+                queryset = queryset.filter(Q(proj_traders__user__in=userlist, proj_traders__is_deleted=False) | Q(PM__in=userlist))
             if request.user.is_anonymous:
                 queryset = queryset.filter(isHidden=False,projstatus_id__in=[4,6,7,8])
                 serializerclass = ProjCommonSerializer
