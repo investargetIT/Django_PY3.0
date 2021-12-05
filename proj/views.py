@@ -58,7 +58,7 @@ class ProjectFilter(FilterSet):
     grossProfit_T = RelationFilter(filterstr='proj_finances__grossProfit', lookup_method='lte')
     class Meta:
         model = project
-        fields = ('ids', 'bdm', 'indGroup', 'user', 'createuser','service','supportUser','isoverseasproject','industries','tags','projstatus','country','netIncome_USD_F','netIncome_USD_T','grossProfit_F','grossProfit_T')
+        fields = ('ids', 'bdm', 'indGroup', 'createuser','service','supportUser','isoverseasproject','industries','tags','projstatus','country','netIncome_USD_F','netIncome_USD_T','grossProfit_F','grossProfit_T')
 
 
 class ProjectView(viewsets.ModelViewSet):
