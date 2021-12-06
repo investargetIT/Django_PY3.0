@@ -43,8 +43,9 @@ class UserCommenSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MyUser
-        fields = ('id', 'usernameC', 'usernameE', 'tags', 'userstatus', 'photourl', 'title', 'onjob', 'mobile', 'email',
-                  'is_active', 'org', 'specialtyhobby', 'others', 'school', 'specialty', 'entryTime', 'bornTime', 'isMarried')
+        fields = ('id', 'usernameC', 'usernameE', 'tags', 'userstatus', 'photourl', 'title', 'onjob', 'mobile',
+                  'mobileAreaCode', 'email', 'is_active', 'org', 'indGroup', 'entryTime', 'bornTime', 'isMarried',
+                  'directSupervisor', 'mentor', 'school', 'specialty', 'education', 'specialtyhobby', 'others')
         depth = 1
 
     def get_tags(self, obj):
@@ -300,7 +301,8 @@ class UserListSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = ('id','groups','tags','country', 'department', 'usernameC', 'usernameE', 'mobile', 'mobileAreaCode','mobiletrue', 'indGroup',
-                  'email', 'title', 'userstatus', 'org', 'trader_relation', 'photourl','is_active', 'hasIM', 'wechat', 'directSupervisor', 'mentor', 'entryTime', 'bornTime', 'isMarried')
+                  'email', 'title', 'userstatus', 'org', 'trader_relation', 'photourl','is_active', 'hasIM', 'wechat', 'directSupervisor', 'mentor', 'entryTime', 'bornTime', 'isMarried',
+                  'school', 'specialty', 'education', 'specialtyhobby', 'others')
 
     def get_mobiletrue(self, obj):
         return checkMobileTrue(obj.mobile, obj.mobileAreaCode)
