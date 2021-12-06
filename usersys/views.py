@@ -405,7 +405,7 @@ class UserView(viewsets.ModelViewSet):
         try:
             lang = request.GET.get('lang')
             user = self.get_object()
-            if request.user.has_perm('usersys.admin_manageuser') or request.user.has_perm('usersys.admin_managepersonnelrelation'):
+            if request.user.has_perm('usersys.admin_manageuser'):
                 userserializer = UserSerializer
             elif request.user == user.createuser or request.user == user:
                 userserializer = UserSerializer
