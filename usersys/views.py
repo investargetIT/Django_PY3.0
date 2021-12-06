@@ -405,25 +405,23 @@ class UserView(viewsets.ModelViewSet):
         try:
             lang = request.GET.get('lang')
             user = self.get_object()
-            if request.user == user:
+            if request.user.has_perm('usersys.admin_manageuser') or request.user.has_perm('usersys.admin_managepersonnelrelation'):
                 userserializer = UserSerializer
-            else:
-                if request.user.has_perm('usersys.admin_manageuser'):
-                    userserializer = UserSerializer
-                elif request.user == user.createuser:
-                    userserializer = UserSerializer
-                elif is_userInvestor(request.user, user.id):
-                    userserializer = UserSerializer
-                elif is_userTrader(request.user, user.id):
-                    userserializer = UserSerializer
-                elif request.user.has_perm('usersys.as_trader'):
-                    # 投资人有交易师 但交易师已离职
-                    if not UserRelation.objects.filter(investoruser=user, traderuser__onjob=True, is_deleted=False).exists() and UserRelation.objects.filter(investoruser=user, is_deleted=False).exists():
-                        userserializer = UserSerializer  # 显示
-                    else:
-                        userserializer = UserCommenSerializer  # 隐藏
+            elif request.user == user.createuser or request.user == user:
+                userserializer = UserSerializer
+            elif is_userInvestor(request.user, user.id):
+                userserializer = UserSerializer
+            elif is_userTrader(request.user, user.id):
+                userserializer = UserSerializer
+            elif request.user.has_perm('usersys.as_trader'):
+                # 投资人有交易师 但交易师已离职
+                if not UserRelation.objects.filter(investoruser=user, traderuser__onjob=True, is_deleted=False).exists() and UserRelation.objects.filter(
+                        investoruser=user, is_deleted=False).exists():
+                    userserializer = UserSerializer  # 显示
                 else:
-                    userserializer = UserCommenSerializer
+                    userserializer = UserCommenSerializer  # 隐藏
+            else:
+                userserializer = UserCommenSerializer
             serializer = userserializer(user)
             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data,lang)))
         except InvestError as err:
