@@ -566,6 +566,7 @@ class UserTrainingRecords(MyModel):
     trainingType = MyForeignKey(TrainingType, blank=True, help_text='培训形式')
     trainingContent = models.TextField(blank=True, null=True, help_text='培训内容')
     trainingStatus = MyForeignKey(TrainingStatus, blank=True, help_text='培训状态')
+    trainingFile = models.BigIntegerField(blank=True, null=True, help_text='培训文件id')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_trainingrecords')
     createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_trainingrecords')
     lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_trainingrecords')
