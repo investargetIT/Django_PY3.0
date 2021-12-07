@@ -64,6 +64,7 @@ class ProjectFilter(FilterSet):
 class ProjectView(viewsets.ModelViewSet):
     """
     list:获取项目列表
+    countProject: 查看项目数量
     create:创建项目
     retrieve:获取项目详情
     update:修改项目
@@ -185,6 +186,21 @@ class ProjectView(viewsets.ModelViewSet):
         except Exception:
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable(['proj.admin_manageproj', 'usersys.as_trader'])
+    def countProject(self, request, *args, **kwargs):
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            if request.GET.get('user'):
+                userlist = request.GET.get('user').split(',')
+                queryset = queryset.filter( Q(proj_traders__user__in=userlist, proj_traders__is_deleted=False) | Q(PM__in=userlist))
+            return JSONResponse(SuccessResponse({'count': queryset.count()}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
 
     @loginTokenIsAvailable(['proj.admin_manageproj', 'usersys.as_trader'])
     def create(self, request, *args, **kwargs):

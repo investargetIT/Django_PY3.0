@@ -627,7 +627,7 @@ class OrgBDView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable()
+    @loginTokenIsAvailable(['BD.manageOrgBD', 'usersys.as_trader'])
     def countBDManager(self, request, *args, **kwargs):
         try:
             queryset = self.filter_queryset(self.get_queryset())
@@ -642,7 +642,7 @@ class OrgBDView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable()
+    @loginTokenIsAvailable(['BD.manageOrgBD', 'usersys.as_trader'])
     def countBDResponse(self, request, *args, **kwargs):
         try:
             queryset = self.filter_queryset(self.get_queryset())
