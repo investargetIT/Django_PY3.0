@@ -2023,6 +2023,9 @@ class UserTrainingRecordsView(viewsets.ModelViewSet):
             data['datasource'] = request.user.datasource.id
             if request.user.has_perm('usersys.admin_managepersonnelrelation'):
                 pass
+            elif request.user.has_perm('usersys.as_trader'):
+                if data['user'] != request.user.id or data['trainingType'] != 1:  # 普通交易师可以给自己创建线上培训记录
+                    raise InvestError(2009, msg='没有权限新建用户培训记录')
             else:
                 raise InvestError(2009, msg='没有权限给该用户新建用户培训记录')
             with transaction.atomic():
@@ -2044,7 +2047,7 @@ class UserTrainingRecordsView(viewsets.ModelViewSet):
             data = request.data
             lang = request.GET.get('lang')
             instance = self.get_object()
-            if request.user.has_perm('usersys.admin_managepersonnelrelation'):
+            if request.user.has_perm('usersys.admin_managepersonnelrelation') or request.user == instance.createuser:
                 pass
             else:
                 raise InvestError(2009, msg='没有权限编辑该用户培训记录')
@@ -2066,7 +2069,7 @@ class UserTrainingRecordsView(viewsets.ModelViewSet):
         try:
             lang = request.GET.get('lang')
             instance = self.get_object()
-            if request.user.has_perm('usersys.admin_managepersonnelrelation'):
+            if request.user.has_perm('usersys.admin_managepersonnelrelation') or request.user == instance.createuser:
                 pass
             else:
                 raise InvestError(2009, msg='没有权限删除给该用户培训记录')
