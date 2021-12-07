@@ -22,7 +22,7 @@ from invest.settings import cli_domain
 from msg.views import deleteMessage
 from org.models import organization
 from usersys.models import MyUser
-from utils.customClass import RelationFilter, InvestError, JSONResponse, MyFilterSet, MySearchFilter
+from utils.customClass import RelationFilter, InvestError, JSONResponse, MyFilterSet
 from utils.logicJudge import is_projBDManager, is_projTrader, is_orgBDTrader
 from utils.sendMessage import sendmessage_orgBDMessage, sendmessage_orgBDExpireMessage, sendmessage_workReportDonotWrite
 from utils.somedef import getEsScrollResult, excel_table_byindex
@@ -61,10 +61,10 @@ class ProjectBDView(viewsets.ModelViewSet):
     update:修改bd信息
     destroy:删除新项目BD
     """
-    filter_backends = (filters.DjangoFilterBackend, MySearchFilter)
+    filter_backends = (filters.DjangoFilterBackend,filters.SearchFilter)
     queryset = ProjectBD.objects.filter(is_deleted=False)
     filter_class = ProjectBDFilter
-    search_fields = ('com_name', 'username')
+    search_fields = ('com_name', 'username', 'source')
     serializer_class = ProjectBDSerializer
 
     def get_queryset(self):
@@ -503,7 +503,7 @@ class OrgBDView(viewsets.ModelViewSet):
     update: 修改机构看板信息
     destroy: 删除机构看板
     """
-    filter_backends = (filters.DjangoFilterBackend, MySearchFilter)
+    filter_backends = (filters.DjangoFilterBackend,filters.SearchFilter)
     queryset = OrgBD.objects.filter(is_deleted=False)
     filter_class = OrgBDFilter
     search_fields = ('proj__projtitleC', 'username', 'usermobile', 'manager__usernameC', 'org__orgnameC', 'org__orgnameE')
@@ -538,11 +538,11 @@ class OrgBDView(viewsets.ModelViewSet):
             raise InvestError(code=8888, msg='获取机构BD信息失败')
         return obj
 
-    @loginTokenIsAvailable()
+    @loginTokenIsAvailable(['BD.manageOrgBD', 'usersys.as_trader'])
     def countBDProjectOrg(self, request, *args, **kwargs):
         try:
             queryset = self.filter_queryset(self.get_queryset())
-            if not request.user.has_perm('BD.manageOrgBD'):
+            if request.GET.get('filter') in ['1', 'True', True, 1, 'true']:
                 queryset = queryset.filter(Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(manager=request.user))
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
@@ -564,11 +564,11 @@ class OrgBDView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable()
+    @loginTokenIsAvailable(['BD.manageOrgBD', 'usersys.as_trader'])
     def countBDProject(self, request, *args, **kwargs):
         try:
             queryset = self.filter_queryset(self.get_queryset())
-            if not request.user.has_perm('BD.manageOrgBD'):
+            if request.GET.get('filter') in ['1', 'True', True, 1, 'true']:
                 queryset = queryset.filter(Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(manager=request.user))
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
@@ -592,7 +592,7 @@ class OrgBDView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
-    @loginTokenIsAvailable()
+    @loginTokenIsAvailable(['BD.manageOrgBD', 'usersys.as_trader'])
     def list(self, request, *args, **kwargs):
         try:
             queryset = self.filter_queryset(self.get_queryset())
@@ -602,7 +602,7 @@ class OrgBDView(viewsets.ModelViewSet):
             response = read_from_cache(cachekey)
             if response:
                 return JSONResponse(SuccessResponse(response))
-            if not request.user.has_perm('BD.manageOrgBD'):
+            if request.GET.get('filter') in ['1', 'True', True, 1, 'true']:
                 queryset = queryset.filter(Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(manager=request.user))
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
@@ -631,7 +631,7 @@ class OrgBDView(viewsets.ModelViewSet):
     def countBDManager(self, request, *args, **kwargs):
         try:
             queryset = self.filter_queryset(self.get_queryset())
-            if not request.user.has_perm('BD.manageOrgBD'):
+            if request.GET.get('filter') in ['1', 'True', True, 1, 'true']:
                 queryset = queryset.filter(Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(manager=request.user))
             count = queryset.count()
             queryset = queryset.values_list('manager').annotate(count=Count('manager'))
@@ -711,17 +711,11 @@ class OrgBDView(viewsets.ModelViewSet):
         else:
             raise InvestError(20071, msg='检测机构BD黑名单失败', detail='org/proj 不能是空' )
 
-    @loginTokenIsAvailable()
+    @loginTokenIsAvailable(['BD.manageOrgBD', 'usersys.as_trader'])
     def retrieve(self, request, *args, **kwargs):
         try:
             lang = request.GET.get('lang')
             instance = self.get_object()
-            if request.user.has_perm('BD.manageOrgBD') or is_orgBDTrader(request.user, instance):
-                pass
-            elif request.user == instance.manager:
-                pass
-            else:
-                raise InvestError(2009, msg='查看该机构BD记录失败')
             serializer = self.serializer_class(instance, context={'user_id': request.user.id})
             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data, lang)))
         except InvestError as err:
@@ -853,17 +847,13 @@ class OrgBDBlackView(viewsets.ModelViewSet):
 
 
 
-    @loginTokenIsAvailable()
+    @loginTokenIsAvailable(['BD.manageOrgBD', 'usersys.as_trader'])
     def list(self, request, *args, **kwargs):
         try:
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
             queryset = self.filter_queryset(self.get_queryset())
-            if request.user.has_perm('BD.manageOrgBD'):
-                queryset = queryset
-            else:
-                queryset = queryset.filter(Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(createuser=request.user))
             try:
                 count = queryset.count()
                 queryset = Paginator(queryset, page_size)
@@ -879,7 +869,7 @@ class OrgBDBlackView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
-    @loginTokenIsAvailable()
+    @loginTokenIsAvailable(['BD.manageOrgBD', 'usersys.as_trader'])
     def create(self, request, *args, **kwargs):
         try:
             data = request.data
@@ -1000,15 +990,13 @@ class OrgBDCommentsView(viewsets.ModelViewSet):
 
 
 
-    @loginTokenIsAvailable()
+    @loginTokenIsAvailable(['BD.manageOrgBD', 'usersys.as_trader'])
     def list(self, request, *args, **kwargs):
         try:
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
             queryset = self.filter_queryset(self.get_queryset())
-            if not request.user.has_perm('BD.manageOrgBD'):
-                queryset = queryset.filter(Q(createuser=request.user) | Q(orgBD__manager=request.user) | Q(orgBD__proj__proj_traders=request.user))
             try:
                 count = queryset.count()
                 queryset = Paginator(queryset, page_size)
@@ -1698,7 +1686,7 @@ class OKRView(viewsets.ModelViewSet):
     update: 修改某一季度OKR
     destroy: 删除某一季度OKR
     """
-    filter_backends = (filters.DjangoFilterBackend, MySearchFilter)
+    filter_backends = (filters.DjangoFilterBackend, filters.SearchFilter)
     queryset = OKR.objects.filter(is_deleted=False)
     filter_class = OKRFilter
     search_fields = ('target',)
@@ -1851,7 +1839,7 @@ class OKRResultView(viewsets.ModelViewSet):
     update: 修改某一季度OKR相关结果
     destroy: 删除某一季度OKR相关结果
     """
-    filter_backends = (filters.DjangoFilterBackend, MySearchFilter)
+    filter_backends = (filters.DjangoFilterBackend, filters.SearchFilter)
     queryset = OKRResult.objects.filter(is_deleted=False)
     filter_class = OKRResultFilter
     search_fields = ('krs',)
