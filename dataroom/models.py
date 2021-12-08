@@ -247,3 +247,4 @@ class dataroom_user_readFileRecord(MyModel):
                 raise InvestError(20071, msg='必须是文件类型')
         return super(dataroom_user_readFileRecord, self).save(*args, **kwargs)
 
+

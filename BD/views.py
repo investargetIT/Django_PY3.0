@@ -543,7 +543,7 @@ class OrgBDView(viewsets.ModelViewSet):
         try:
             queryset = self.filter_queryset(self.get_queryset())
             if request.GET.get('filter') in ['1', 'True', True, 1, 'true']:
-                queryset = queryset.filter(Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(manager=request.user))
+                queryset = queryset.filter(Q(proj__PM=request.user) | Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(manager=request.user))
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
             sort = request.GET.get('sort', 'isimportant')
@@ -569,7 +569,7 @@ class OrgBDView(viewsets.ModelViewSet):
         try:
             queryset = self.filter_queryset(self.get_queryset())
             if request.GET.get('filter') in ['1', 'True', True, 1, 'true']:
-                queryset = queryset.filter(Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(manager=request.user))
+                queryset = queryset.filter(Q(proj__PM=request.user) | Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(manager=request.user))
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
@@ -603,7 +603,7 @@ class OrgBDView(viewsets.ModelViewSet):
             if response:
                 return JSONResponse(SuccessResponse(response))
             if request.GET.get('filter') in ['1', 'True', True, 1, 'true']:
-                queryset = queryset.filter(Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(manager=request.user))
+                queryset = queryset.filter(Q(proj__PM=request.user) | Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(manager=request.user))
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
@@ -632,7 +632,7 @@ class OrgBDView(viewsets.ModelViewSet):
         try:
             queryset = self.filter_queryset(self.get_queryset())
             if request.GET.get('filter') in ['1', 'True', True, 1, 'true']:
-                queryset = queryset.filter(Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(manager=request.user))
+                queryset = queryset.filter(Q(proj__PM=request.user) | Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(manager=request.user))
             count = queryset.count()
             queryset = queryset.values_list('manager').annotate(count=Count('manager'))
             serializer = json.dumps(list(queryset), cls=DjangoJSONEncoder)
@@ -647,7 +647,7 @@ class OrgBDView(viewsets.ModelViewSet):
         try:
             queryset = self.filter_queryset(self.get_queryset())
             if request.GET.get('filter') in ['1', 'True', True, 1, 'true']:
-                queryset = queryset.filter(Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(manager=request.user))
+                queryset = queryset.filter(Q(proj__PM=request.user) | Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(manager=request.user))
             count = queryset.count()
             queryset = queryset.values('response').annotate(count=Count('*'))
             serializer = json.dumps(list(queryset), cls=DjangoJSONEncoder)

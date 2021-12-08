@@ -15,9 +15,11 @@ def is_userInvestor(investor, trader_id):
     return False
 
 
-# 检测是否dataroom交易师
+# 检测是否dataroom交易师  加上 PM
 def is_dataroomTrader(user, dataroom):
     if dataroom.proj and dataroom.proj.proj_traders.all().filter(user=user, is_deleted=False).exists():
+        return True
+    elif dataroom.proj and dataroom.proj.PM == user:
         return True
     return False
 
@@ -35,9 +37,11 @@ def is_projdataroomInvestor(user, proj_id):
     return False
 
 
-# 检测是否项目交易师
+# 检测是否项目交易师    加上 PM
 def is_projTrader(user, proj_id):
     if proj_id and user.user_projects.all().filter(proj_id=proj_id, is_deleted=False).exists():
+        return True
+    elif proj_id and user.userPM_projs.all().filter(id=proj_id, is_deleted=False).exists():
         return True
     return False
 
@@ -53,9 +57,11 @@ def is_projBDManager(user_id, projbd):
     return False
 
 
-# 检测是否机构BD交易师
+# 检测是否机构BD交易师    加上 PM
 def is_orgBDTrader(user, orgbd):
     if orgbd.proj and orgbd.proj.proj_traders.all().filter(user=user, is_deleted=False).exists():
+        return True
+    elif orgbd.proj and orgbd.proj.PM == user:
         return True
     return False
 

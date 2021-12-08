@@ -90,7 +90,7 @@ class DataroomView(viewsets.ModelViewSet):
             if request.user.has_perm('dataroom.admin_managedataroom'):
                 queryset = queryset
             elif request.user.has_perm('usersys.as_trader'):
-                queryset = queryset.filter(Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False)
+                queryset = queryset.filter(Q(proj__PM=request.user) | Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False)
                                            | Q(isCompanyFile=True, proj__indGroup=request.user.indGroup)
                                            | Q(isCompanyFile=True, proj__indGroup__isnull=True))
             else:
@@ -717,6 +717,22 @@ class User_DataroomfileView(viewsets.ModelViewSet):
     serializer_class = User_DataroomfileCreateSerializer
     Model = dataroom_User_file
 
+    def get_queryset(self):
+        assert self.queryset is not None, (
+            "'%s' should either include a `queryset` attribute, "
+            "or override the `get_queryset()` method."
+            % self.__class__.__name__
+        )
+        queryset = self.queryset
+        if isinstance(queryset, QuerySet):
+            if self.request.user.is_authenticated:
+                queryset = queryset.filter(datasource_id=self.request.user.datasource_id)
+            else:
+                queryset = queryset
+        else:
+            raise InvestError(code=8890)
+        return queryset
+
     def get_object(self,pk=None):
         if pk:
             try:
@@ -737,14 +753,14 @@ class User_DataroomfileView(viewsets.ModelViewSet):
         try:
             lang = request.GET.get('lang', 'cn')
             user = request.GET.get('user',None)
+            queryset = self.filter_queryset(self.get_queryset())
             if request.user.has_perm('dataroom.admin_managedataroom'):
-                filters = {'datasource':request.user.datasource}
-                queryset = self.filter_queryset(self.get_queryset()).filter(**filters)
+                pass
             else:
                 if user:
                     if user != request.user.id:
                         raise InvestError(2009, msg='获取dataroom用户列表信息失败')
-                queryset = self.filter_queryset(self.get_queryset()).filter(Q(datasource=request.user.datasource,user=request.user) | Q(dataroom__proj__proj_traders__user=request.user, dataroom__proj__proj_traders__is_deleted=False))
+                queryset = queryset.filter(Q(user=request.user) | Q(dataroom__proj__PM=request.user) | Q(dataroom__proj__proj_traders__user=request.user, dataroom__proj__proj_traders__is_deleted=False)).distinct()
             count = queryset.count()
             serializer = User_DataroomSerializer(queryset, many=True)
             return JSONResponse(SuccessResponse({'count':count,'data':returnListChangeToLanguage(serializer.data,lang)}))
@@ -796,7 +812,7 @@ class User_DataroomfileView(viewsets.ModelViewSet):
             if request.user == instance.user:
                 instance.lastgettime = datetime.datetime.now()
                 instance.save()
-            elif request.user.has_perm('dataroom.admin_managedataroom') or instance.dataroom.proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            elif request.user.has_perm('dataroom.admin_managedataroom') or is_dataroomTrader(request.user, instance.dataroom):
                 pass
             else:
                 raise InvestError(code=2009, msg='获取dataroom用户近期更新文件失败')
@@ -1112,11 +1128,11 @@ class User_Dataroom_TemplateView(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         try:
             lang = request.GET.get('lang', 'cn')
+            queryset = self.filter_queryset(self.get_queryset()).filter(datasource=request.user.datasource)
             if request.user.has_perm('dataroom.admin_managedataroom'):
-                filters = {'datasource':request.user.datasource}
-                queryset = self.filter_queryset(self.get_queryset()).filter(**filters)
+                pass
             else:
-                queryset = self.filter_queryset(self.get_queryset()).filter(Q(datasource=request.user.datasource, user=request.user) | Q(dataroom__proj__proj_traders__user=request.user, dataroom__proj__proj_traders__is_deleted=False))
+                queryset = queryset.filter(Q(user=request.user) | Q(dataroom__proj__PM=request.user) | Q(dataroom__proj__proj_traders__user=request.user, dataroom__proj__proj_traders__is_deleted=False)).distinct()
             count = queryset.count()
             serializer = self.serializer_class(queryset, many=True)
             return JSONResponse(SuccessResponse({'count':count,'data':returnListChangeToLanguage(serializer.data,lang)}))
@@ -1301,7 +1317,7 @@ class DataroomUserDiscussView(viewsets.ModelViewSet):
             if request.user.has_perm('dataroom.admin_managedataroom'):
                 queryset = queryset
             else:
-                queryset = queryset.filter(Q(file__in=dataroomUserSeeFiles.objects.filter(is_deleted=False, dataroomUserfile__user=request.user).values_list('file')) |
+                queryset = queryset.filter(Q(file__in=dataroomUserSeeFiles.objects.filter(is_deleted=False, dataroomUserfile__user=request.user).values_list('file')) | Q(dataroom__proj__PM=request.user) |
                                            Q(dataroom__proj__proj_traders__user=request.user, dataroom__proj__proj_traders__is_deleted=False)).distinct()
             sortfield = request.GET.get('sort', 'lastmodifytime')
             desc = request.GET.get('desc', 1)
@@ -1332,7 +1348,7 @@ class DataroomUserDiscussView(viewsets.ModelViewSet):
             if request.user.has_perm('dataroom.admin_managedataroom'):
                 queryset = queryset
             else:
-                queryset = queryset.filter(Q(file__in=dataroomUserSeeFiles.objects.filter(is_deleted=False, dataroomUserfile__user=request.user).values_list('file')) |
+                queryset = queryset.filter(Q(file__in=dataroomUserSeeFiles.objects.filter(is_deleted=False, dataroomUserfile__user=request.user).values_list('file')) | Q(dataroom__proj__PM=request.user) |
                                            Q(dataroom__proj__proj_traders__user=request.user, dataroom__proj__proj_traders__is_deleted=False)).distinct()
             queryset = queryset.values(group_by).annotate(count=Count('id', distinct=True))
             try:
@@ -1452,7 +1468,7 @@ class DataroomUserReadFileRecordView(viewsets.ModelViewSet):
             if request.user.has_perm('dataroom.admin_managedataroom'):
                 queryset = queryset
             else:
-                queryset = queryset.filter(Q(file__in=dataroomUserSeeFiles.objects.filter(is_deleted=False, dataroomUserfile__user=request.user).values_list('file')) |
+                queryset = queryset.filter(Q(file__in=dataroomUserSeeFiles.objects.filter(is_deleted=False, dataroomUserfile__user=request.user).values_list('file')) | Q(dataroom__proj__PM=request.user) |
                                            Q(file__dataroom__proj__proj_traders__user=request.user, file__dataroom__proj__proj_traders__is_deleted=False)).distinct()
             sortfield = request.GET.get('sort', 'lastmodifytime')
             desc = request.GET.get('desc', 1)

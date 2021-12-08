@@ -274,5 +274,6 @@ class orgAttachments(MyModel):
     class Meta:
         db_table = "org_attachments"
 
+
     def save(self, *args, **kwargs):
         return super(orgAttachments, self).save(*args, **kwargs)

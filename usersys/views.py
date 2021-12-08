@@ -423,7 +423,7 @@ class UserView(viewsets.ModelViewSet):
             else:
                 userserializer = UserCommenSerializer
             serializer = userserializer(user)
-            return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data,lang)))
+            return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
@@ -1343,7 +1343,7 @@ class UserRelationView(viewsets.ModelViewSet):
             if dataroom_id:
                 dataroominstance = dataroom.objects.get(id=dataroom_id, is_deleted=False)
                 if request.user.has_perm('usersys.admin_manageuserrelation') or request.user.has_perm('usersys.admin_manageindgroupinvestor') or is_dataroomTrader(request.user, dataroominstance):
-                    queryset = queryset.filter(traderuser__in=dataroominstance.proj.proj_traders.all().filter(is_deleted=False).values_list('user_id'))
+                    queryset = queryset.filter(Q(traderuser__in=dataroominstance.proj.proj_traders.all().filter(is_deleted=False).values_list('user_id')) | Q(traderuser=dataroominstance.proj.PM)).distinct()
                 else:
                     raise InvestError(2009, msg='查询失败', detail='没有权限查看该dataroom承揽承做对接投资人')
             else:
@@ -2024,7 +2024,7 @@ class UserTrainingRecordsView(viewsets.ModelViewSet):
             if request.user.has_perm('usersys.admin_managepersonnelrelation'):
                 pass
             elif request.user.has_perm('usersys.as_trader'):
-                if data['user'] != request.user.id or data['trainingType'] != 1:  #普通交易师可以给自己创建线上培训记录
+                if data['user'] != request.user.id or data['trainingType'] != 1:  # 普通交易师可以给自己创建线上培训记录
                     raise InvestError(2009, msg='没有权限新建用户培训记录')
             else:
                 raise InvestError(2009, msg='没有权限给该用户新建用户培训记录')
@@ -2067,6 +2067,7 @@ class UserTrainingRecordsView(viewsets.ModelViewSet):
     @loginTokenIsAvailable()
     def destroy(self, request, *args, **kwargs):
         try:
+            lang = request.GET.get('lang')
             instance = self.get_object()
             if request.user.has_perm('usersys.admin_managepersonnelrelation') or request.user == instance.createuser:
                 pass

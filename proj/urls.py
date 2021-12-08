@@ -11,7 +11,6 @@ proj_count = views.ProjectView.as_view({
         'get': 'countProject'
 })
 
-
 proj_detail = views.ProjectView.as_view({
         'get': 'retrieve',
         'put': 'update',
@@ -73,6 +72,7 @@ urlpatterns = [
         url(r'^(?P<pk>\d+)/$', proj_detail, name='proj_detail'),
         url(r'^count$', proj_count, name='proj_count'),
         url(r'^traders$', projTraders_list , name='projTraders_list'),
+        url(r'^count$', proj_count, name='proj_count'),
         url(r'^traders/(?P<pk>\d+)/$', projTraders_detail, name='projTraders_detail'),
         url(r'^sendpdf/(?P<pk>\d+)/$', sendWXGroupPdfURI, name='sendWXGroupPdf'),
         url(r'^finance/$', proj_finance, name='proj_finance'),
