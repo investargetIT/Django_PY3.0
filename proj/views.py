@@ -152,7 +152,7 @@ class ProjectView(viewsets.ModelViewSet):
                     queryset = queryset
                     serializerclass = ProjListSerializer_admin
                 elif request.user.has_perm('usersys.as_trader') and request.user.userstatus_id == 2:
-                    queryset = queryset.filter(Q(isHidden=False) | Q(proj_traders__user=request.user, proj_traders__is_deleted=False) | Q(supportUser=request.user) | Q(isHidden=True, proj_orgBDs__manager=request.user, proj_orgBDs__is_deleted=False))
+                    queryset = queryset.filter(Q(PM=request.user) | Q(isHidden=False) | Q(proj_traders__user=request.user, proj_traders__is_deleted=False) | Q(supportUser=request.user) | Q(isHidden=True, proj_orgBDs__manager=request.user, proj_orgBDs__is_deleted=False))
                     serializerclass = ProjListSerializer_admin
                 else:
                     queryset = queryset.filter(Q(isHidden=False,projstatus_id__in=[4,6,7,8]) | Q(isHidden=True, proj_datarooms__is_deleted=False, proj_datarooms__dataroom_users__user=request.user, proj_datarooms__dataroom_users__is_deleted=False))
@@ -624,7 +624,7 @@ class ProjectView(viewsets.ModelViewSet):
             aaa = pdfkit.from_url(PROJECTPDF_URLPATH + '{}&lang={}'.format(proj.id, lang), pdfpath, configuration=config, options=options)
             if not aaa:
                 raise InvestError(4008, msg='获取项目pdf失败', detail='项目pdf生成失败')
-            if not proj.proj_traders.all().filter(user=request.user, is_deleted=False).exists():
+            if not is_projTrader(request.user, proj.id):
                 username = request.user.usernameC
                 orgname = request.user.org.orgnameC if request.user.org else ''
                 if lang == 'en':
@@ -730,7 +730,7 @@ class ProjTradersView(viewsets.ModelViewSet):
             if request.user.has_perm('proj.admin_manageproj'):
                 queryset = queryset
             else:
-                queryset = queryset.filter(Q(proj__supportUser=request.user) | Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False))
+                queryset = queryset.filter(Q(proj__PM=request.user) | Q(proj__supportUser=request.user) | Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False)).distinct()
             try:
                 count = queryset.count()
                 queryset = Paginator(queryset, page_size)
@@ -897,14 +897,10 @@ class ProjAttachmentView(viewsets.ModelViewSet):
             lang = request.GET.get('lang', 'cn')
             projid = request.GET.get('proj')
             if projid:
-                proj = self.get_proj(projid)
+                self.get_proj(projid)
             else:
                 raise InvestError(20072, msg='获取项目附件失败', detail='项目（proj）不能为空')
             queryset = self.filter_queryset(self.get_queryset())
-            if not request.user.has_perm('proj.admin_manageproj'):
-                queryset = queryset
-            else:
-                queryset = queryset.filter(proj=proj)
             try:
                 count = queryset.count()
                 queryset = Paginator(queryset, page_size)
@@ -1281,18 +1277,6 @@ class ProjDiDiRecordView(viewsets.ModelViewSet):
         except Exception:
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
-
-def isProjectTrader(proj_id, user_id):
-    try:
-        projectInstance = project.objects.get(id=proj_id, is_deleted=False)
-    except Exception:
-        raise InvestError(4002, msg='项目不存在', detail='项目不存在')
-    else:
-        if projectInstance.proj_traders.all().filter(user=user_id, is_deleted=False).exists():
-            return True
-        else:
-            return False
 
 
 def testPdf(request):

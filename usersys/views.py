@@ -1343,7 +1343,7 @@ class UserRelationView(viewsets.ModelViewSet):
             if dataroom_id:
                 dataroominstance = dataroom.objects.get(id=dataroom_id, is_deleted=False)
                 if request.user.has_perm('usersys.admin_manageuserrelation') or request.user.has_perm('usersys.admin_manageindgroupinvestor') or is_dataroomTrader(request.user, dataroominstance):
-                    queryset = queryset.filter(traderuser__in=dataroominstance.proj.proj_traders.all().filter(is_deleted=False).values_list('user_id'))
+                    queryset = queryset.filter(Q(traderuser__in=dataroominstance.proj.proj_traders.all().filter(is_deleted=False).values_list('user_id')) | Q(traderuser=dataroominstance.proj.PM)).distinct()
                 else:
                     raise InvestError(2009, msg='查询失败', detail='没有权限查看该dataroom承揽承做对接投资人')
             else:
