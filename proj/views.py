@@ -56,7 +56,7 @@ class ProjectFilter(FilterSet):
     netIncome_USD_T = RelationFilter(filterstr='proj_finances__netIncome_USD', lookup_method='lte')
     grossProfit_F = RelationFilter(filterstr='proj_finances__grossProfit', lookup_method='gte')
     grossProfit_T = RelationFilter(filterstr='proj_finances__grossProfit', lookup_method='lte')
-    iscomproj = RelationFilter(filterstr='proj_datarooms__isCompanyFile', lookup_method='lte')
+    iscomproj = RelationFilter(filterstr='proj_datarooms__isCompanyFile', lookup_method='in')
     class Meta:
         model = project
         fields = ('ids', 'bdm', 'indGroup', 'createuser', 'service', 'supportUser', 'isoverseasproject', 'industries',
