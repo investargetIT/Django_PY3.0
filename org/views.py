@@ -365,7 +365,6 @@ class OrgRemarkView(viewsets.ModelViewSet):
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
-            orgid = request.GET.get('org', None)
             queryset = self.filter_queryset(self.get_queryset()).filter(datasource=request.user.datasource)
             try:
                 count = queryset.count()
