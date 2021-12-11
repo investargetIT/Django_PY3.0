@@ -365,9 +365,6 @@ class OrgRemarkView(viewsets.ModelViewSet):
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
-            orgid = request.GET.get('org', None)
-            if not orgid:
-                raise InvestError(20072, msg='获取机构备注失败', detail='机构（org）不能为空')
             queryset = self.filter_queryset(self.get_queryset()).filter(datasource=request.user.datasource)
             try:
                 count = queryset.count()
