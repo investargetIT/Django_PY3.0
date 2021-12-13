@@ -56,12 +56,11 @@ class ProjectFilter(FilterSet):
     netIncome_USD_T = RelationFilter(filterstr='proj_finances__netIncome_USD', lookup_method='lte')
     grossProfit_F = RelationFilter(filterstr='proj_finances__grossProfit', lookup_method='gte')
     grossProfit_T = RelationFilter(filterstr='proj_finances__grossProfit', lookup_method='lte')
-    iscomproj = RelationFilter(filterstr='proj_datarooms__isCompanyFile', lookup_method='in')
     class Meta:
         model = project
         fields = ('ids', 'bdm', 'indGroup', 'createuser', 'service', 'supportUser', 'isoverseasproject', 'industries',
                   'tags', 'projstatus', 'country', 'netIncome_USD_F', 'netIncome_USD_T', 'grossProfit_F',
-                  'grossProfit_T', 'iscomproj')
+                  'grossProfit_T')
 
 class ProjectView(viewsets.ModelViewSet):
     """
@@ -143,6 +142,10 @@ class ProjectView(viewsets.ModelViewSet):
             setrequestuser(request)
             checkrequestpagesize(request)
             queryset = self.filter_queryset(queryset)
+            if request.GET.get('iscomproj') in [1, '1', 'True', True]:
+                queryset = queryset.filter(proj_datarooms__isCompanyFile=True)
+            elif request.GET.get('iscomproj') in [0, '0', 'False', False]:
+                queryset = queryset.exclude(proj_datarooms__isCompanyFile=True)
             if request.GET.get('user'):
                 userlist = request.GET.get('user').split(',')
                 queryset = queryset.filter(Q(proj_traders__user__in=userlist, proj_traders__is_deleted=False) | Q(PM__in=userlist))
