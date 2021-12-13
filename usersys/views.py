@@ -1602,11 +1602,21 @@ class UserPersonnelRelationsView(viewsets.ModelViewSet):
             if user.directSupervisor != personnelRelationsInstance.supervisorOrMentor:
                 user.directSupervisor = personnelRelationsInstance.supervisorOrMentor
                 user.save()
+                cache_delete_key('user_%s' % user.id)
+        else:
+            user.directSupervisor = None
+            user.save()
+            cache_delete_key('user_%s' % user.id)
         if UserPersonnelRelations.objects.filter(is_deleted=False, user=user, type=1).exists():
             personnelRelationsInstance = UserPersonnelRelations.objects.filter(is_deleted=False, user=user, type=1).order_by('-startDate').first()
             if user.mentor != personnelRelationsInstance.supervisorOrMentor:
                 user.mentor = personnelRelationsInstance.supervisorOrMentor
                 user.save()
+                cache_delete_key('user_%s' % user.id)
+        else:
+            user.mentor = None
+            user.save()
+            cache_delete_key('user_%s' % user.id)
 
 
     @loginTokenIsAvailable()
