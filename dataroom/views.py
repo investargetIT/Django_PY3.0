@@ -468,6 +468,14 @@ def downloadDataroomPDFs():
         except Exception:
             logexcption()
 
+class DataroomdirectoryorfileFilter(FilterSet):
+    dataroom = RelationFilter(filterstr='dataroom', lookup_method='in')
+    parent = RelationFilter(filterstr='parent', lookup_method='in')
+    isFile = RelationFilter(filterstr='isFile', lookup_method='in')
+    id = RelationFilter(filterstr='id', lookup_method='in')
+    class Meta:
+        model = dataroomdirectoryorfile
+        fields = ('dataroom', 'parent', 'isFile', 'id')
 
 class DataroomdirectoryorfileView(viewsets.ModelViewSet):
     """
@@ -479,7 +487,7 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
         """
     filter_backends = (filters.DjangoFilterBackend,)
     queryset = dataroomdirectoryorfile.objects.all().filter(is_deleted=False)
-    filter_fields = ('dataroom', 'parent','isFile')
+    filter_class = DataroomdirectoryorfileFilter
     serializer_class = DataroomdirectoryorfileCreateSerializer
     Model = dataroomdirectoryorfile
 
