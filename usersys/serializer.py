@@ -1,9 +1,7 @@
 #coding=utf-8
-import re
-
 from django.contrib.auth.models import Group, Permission
 from rest_framework import serializers
-
+from dataroom.models import dataroomdirectoryorfile
 from mongoDoc.models import MergeFinanceData
 from org.serializer import OrgCommonSerializer
 from sourcetype.serializer import tagSerializer, countrySerializer, titleTypeSerializer, \
@@ -438,15 +436,37 @@ class UserTrainingRecordsCreateSerializer(serializers.ModelSerializer):
         model = UserTrainingRecords
         fields = '__all__'
 
+class trainingFileSerializer(serializers.ModelSerializer):
+    fileurl = serializers.SerializerMethodField()
+    class Meta:
+        model = dataroomdirectoryorfile
+        exclude = ('is_deleted', 'deleteduser', 'deletedtime', 'lastmodifyuser', 'lastmodifytime',)
+
+    def get_fileurl(self, obj):
+        if obj.bucket and obj.key:
+            return getUrlWithBucketAndKey(obj.bucket, obj.key)
+        else:
+            return None
 
 class UserTrainingRecordsSerializer(serializers.ModelSerializer):
     user = UserSimpleSerializer()
     trainingStatus = TrainingStatusSerializer()
     trainingType = TrainingTypeSerializer()
+    trainingfileobj = serializers.SerializerMethodField()
 
     class Meta:
         model = UserTrainingRecords
         exclude = ('deleteduser', 'datasource', 'is_deleted', 'deletedtime')
+
+    def get_trainingfileobj(self, obj):
+        if obj.trainingFile:
+            if dataroomdirectoryorfile.objects.all().filter(is_deleted=False, id=obj.trainingFile).exists():
+                file = dataroomdirectoryorfile.objects.all().filter(is_deleted=False, id=obj.trainingFile).first()
+                return trainingFileSerializer(file).data
+            else:
+                return None
+        else:
+            return None
 
 class UserMentorTrackingRecordsCreateSerializer(serializers.ModelSerializer):
 

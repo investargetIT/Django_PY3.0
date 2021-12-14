@@ -468,18 +468,23 @@ def downloadDataroomPDFs():
         except Exception:
             logexcption()
 
+class DataroomdirectoryorfileFilter(FilterSet):
+    dataroom = RelationFilter(filterstr='dataroom', lookup_method='in')
+    parent = RelationFilter(filterstr='parent', lookup_method='in')
+    isFile = RelationFilter(filterstr='isFile', lookup_method='in')
+    id = RelationFilter(filterstr='id', lookup_method='in')
+    class Meta:
+        model = dataroomdirectoryorfile
+        fields = ('dataroom', 'parent', 'isFile', 'id')
 
 class DataroomdirectoryorfileView(viewsets.ModelViewSet):
     """
-           list:dataroom文件或目录列表
-           create:新建dataroom文件或目录
-           update:移动目录或文件到目标位置
-           destroy:删除dataroom文件或目录
-           getFilePath: 获取文件路径
+@ -479,7 +487,7 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
         """
     filter_backends = (filters.DjangoFilterBackend,)
     queryset = dataroomdirectoryorfile.objects.all().filter(is_deleted=False)
     filter_fields = ('dataroom', 'parent','isFile')
+    filter_class = DataroomdirectoryorfileFilter
     serializer_class = DataroomdirectoryorfileCreateSerializer
     Model = dataroomdirectoryorfile
 
