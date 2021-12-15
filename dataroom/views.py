@@ -524,7 +524,7 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
                 if dataroominstance.proj.indGroup and  dataroominstance.proj.indGroup != request.user.indGroup:
                     raise InvestError(2009, msg='获取该dataroom文件失败')
             elif is_dataroomInvestor(request.user, dataroominstance.id):
-                user_dataroomInstance = dataroom_User_file.objects.filter(user=request.user, dataroom__id=dataroomid).first()
+                user_dataroomInstance = dataroom_User_file.objects.filter(user=request.user, dataroom__id=dataroomid, is_deleted=False).first()
                 queryset = queryset.filter(file_userSeeFile__dataroomUserfile=user_dataroomInstance, file_userSeeFile__is_deleted=False)
             else:
                 raise InvestError(2009, msg='获取该dataroom文件失败')
@@ -1476,7 +1476,7 @@ class DataroomUserReadFileRecordView(viewsets.ModelViewSet):
             if request.user.has_perm('dataroom.admin_managedataroom'):
                 queryset = queryset
             else:
-                queryset = queryset.filter(Q(file__in=dataroomUserSeeFiles.objects.filter(is_deleted=False, dataroomUserfile__user=request.user).values_list('file')) | Q(dataroom__proj__PM=request.user) |
+                queryset = queryset.filter(Q(file__in=dataroomUserSeeFiles.objects.filter(is_deleted=False, dataroomUserfile__user=request.user).values_list('file')) | Q(file__dataroom__proj__PM=request.user) |
                                            Q(file__dataroom__proj__proj_traders__user=request.user, file__dataroom__proj__proj_traders__is_deleted=False)).distinct()
             sortfield = request.GET.get('sort', 'lastmodifytime')
             desc = request.GET.get('desc', 1)
