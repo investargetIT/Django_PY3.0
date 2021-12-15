@@ -554,7 +554,7 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
                 else:
                     queryset = self.get_queryset()
             elif is_dataroomInvestor(request.user, dataroominstance.id):
-                user_dataroomInstance = dataroom_User_file.objects.filter(user=request.user, dataroom__id=dataroomid).first()
+                user_dataroomInstance = dataroom_User_file.objects.filter(user=request.user, dataroom__id=dataroomid, is_deleted=False).first()
                 queryset = self.get_queryset().filter(file_userSeeFile__dataroomUserfile=user_dataroomInstance, file_userSeeFile__is_deleted=False)
             else:
                 raise InvestError(2009, msg='获取dataroom文件路径失败', detail='没有权限查看该dataroom')
