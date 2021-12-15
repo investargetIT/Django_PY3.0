@@ -272,12 +272,17 @@ def sendmessage_dataroomuseradd(model,receiver,types,sender=None):
                         xsendEmail(destination, projectsign, vars)
                     except Exception:
                         logexcption()
-                if 'webmsg' in types and sendWebmsg:  # 发送通知以后，将站内信发送给该DataRoom项目的承做
+                if 'webmsg' in types and sendWebmsg:  # 发送通知以后，将站内信发送给该DataRoom项目的承揽承做PM
                     try:
                         msg_content = '已向用户【%s】发送了项目【%s】的dataroom邮件通知' % (receiver.usernameC, model.dataroom.proj.projtitleC)
                         msg_title = '发送dataroom邮件通知记录'
-                        for proj_trader in model.dataroom.proj.proj_traders.filter(type=1, is_deleted=False):
-                            msg_receiver = proj_trader.user
+                        user_ids = []
+                        for proj_trader in model.dataroom.proj.proj_traders.filter(is_deleted=False):
+                            user_ids.append(proj_trader.user.id)
+                        if model.dataroom.proj.PM:
+                            user_ids.append(model.dataroom.proj.PM.id)
+                        msg_receiverusers = MyUser.objects.filter(id__in=user_ids).distinct()
+                        for msg_receiver in msg_receiverusers:
                             saveMessage(msg_content, 12, msg_title, msg_receiver, sender, modeltype='dataroomEmailMsg', sourceid=model.id)
                     except Exception:
                         logexcption()
@@ -326,7 +331,7 @@ def sendmessage_dataroomuserfileupdate(model,receiver,types,sender=None):
                         xsendEmail(destination, projectsign, vars)
                     except Exception:
                         logexcption()
-                if 'webmsg' in types and sendWebmsg:  # 发送通知以后，将站内信发送给该DataRoom项目的承做
+                if 'webmsg' in types and sendWebmsg:  # 发送通知以后，将站内信发送给该DataRoom项目的承揽承做PM
                     try:
                         filestr = '新增文件如下：' + '<br>'
                         if seefiles_queryset.exists():
@@ -334,8 +339,13 @@ def sendmessage_dataroomuserfileupdate(model,receiver,types,sender=None):
                                 filestr = filestr + seefile.file.filename + '<br>'
                         msg_content = '已向用户【%s】发送了项目【%s】的dataroom文件更新邮件通知' % (receiver.usernameC, model.dataroom.proj.projtitleC) + '<br><br>' + filestr
                         msg_title = '发送dataroom文件更新邮件通知记录'
-                        for proj_trader in model.dataroom.proj.proj_traders.filter(type=1, is_deleted=False):
-                            msg_receiver = proj_trader.user
+                        user_ids = []
+                        for proj_trader in model.dataroom.proj.proj_traders.filter(is_deleted=False):
+                            user_ids.append(proj_trader.user.id)
+                        if model.dataroom.proj.PM:
+                            user_ids.append(model.dataroom.proj.PM.id)
+                        msg_receiverusers = MyUser.objects.filter(id__in=user_ids).distinct()
+                        for msg_receiver in msg_receiverusers:
                             saveMessage(msg_content, 13, msg_title, msg_receiver, sender, modeltype='dataroomFileUpdateEmailMsg', sourceid=model.id)
                             # 13 区分dataroom邮件通知的12类型，站内信用到了12类型的消息
                     except Exception:
