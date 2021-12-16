@@ -685,7 +685,10 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
                 raise InvestError(20071, msg='删除dataroom文件失败', detail='except a non-empty array')
             with transaction.atomic():
                 for fileid in filelist:
-                    instance = self.get_object(fileid)
+                    try:
+                        instance = dataroomdirectoryorfile.objects.get(id=fileid, is_deleted=False)
+                    except dataroomdirectoryorfile.DoesNotExist:
+                        continue
                     if request.user.has_perm('dataroom.admin_managedataroom') or is_dataroomTrader(request.user, instance.dataroom):
                         pass
                     else:
