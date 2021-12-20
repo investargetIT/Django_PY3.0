@@ -540,10 +540,11 @@ class IndustryGroupView(viewsets.ModelViewSet):
     queryset = IndustryGroup.objects.all().filter(is_deleted=False)
     serializer_class = industryGroupSerializer
 
+    @loginTokenIsAvailable()
     def list(self, request, *args, **kwargs):
         try:
             lang = request.GET.get('lang')
-            queryset = self.filter_queryset(self.get_queryset())
+            queryset = self.filter_queryset(self.get_queryset()).filter(datasource=request.user.datasource)
             serializer = self.serializer_class(queryset, many=True)
             return JSONResponse(SuccessResponse(returnListChangeToLanguage(serializer.data,lang)))
         except InvestError as err:
