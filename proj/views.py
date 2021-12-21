@@ -157,7 +157,7 @@ class ProjectView(viewsets.ModelViewSet):
                     queryset = queryset
                     serializerclass = ProjListSerializer_admin
                 elif request.user.has_perm('usersys.as_trader') and request.user.userstatus_id == 2:
-                    queryset = queryset.filter(Q(PM=request.user) | Q(isHidden=False) | Q(proj_traders__user=request.user, proj_traders__is_deleted=False) | Q(supportUser=request.user) | Q(isHidden=True, proj_orgBDs__manager=request.user, proj_orgBDs__is_deleted=False))
+                    queryset = queryset.filter(Q(createuser=request.user) | Q(PM=request.user) | Q(isHidden=False) | Q(proj_traders__user=request.user, proj_traders__is_deleted=False) | Q(supportUser=request.user) | Q(isHidden=True, proj_orgBDs__manager=request.user, proj_orgBDs__is_deleted=False))
                     serializerclass = ProjListSerializer_admin
                 else:
                     queryset = queryset.filter(Q(isHidden=False,projstatus_id__in=[4,6,7,8]) | Q(isHidden=True, proj_datarooms__is_deleted=False, proj_datarooms__dataroom_users__user=request.user, proj_datarooms__dataroom_users__is_deleted=False))
@@ -166,26 +166,8 @@ class ProjectView(viewsets.ModelViewSet):
             queryset = mySortQuery(queryset, sortfield, desc)
             count = queryset.count()
             queryset = queryset[int(skip_count):int(max_size)+int(skip_count)]
-            responselist = []
-            for instance in queryset:
-                actionlist = {'get': False, 'change': False, 'delete': False, 'canAddOrgBD':False, 'canAddMeetBD':False, 'canAddDataroom':False}
-                if request.user.is_anonymous:
-                    pass
-                else:
-                    actionlist['get'] = True
-                    if request.user.has_perm('proj.admin_manageproj') or is_projTrader(request.user, instance.id):
-                        actionlist['change'] = True
-                        actionlist['delete'] = True
-                        actionlist['canAddOrgBD'] = True
-                        actionlist['canAddDataroom'] = True
-                    if request.user.has_perm('BD.manageOrgBD'):
-                        actionlist['canAddOrgBD'] = True
-                    if request.user.has_perm('dataroom.admin_managedataroom'):
-                        actionlist['canAddDataroom'] = True
-                instancedata = serializerclass(instance).data
-                instancedata['action'] = actionlist
-                responselist.append(instancedata)
-            return JSONResponse(SuccessResponse({'count': count, 'data': returnListChangeToLanguage(responselist, lang)}))
+            instancedata = serializerclass(queryset, many=True).data
+            return JSONResponse(SuccessResponse({'count': count, 'data': returnListChangeToLanguage(instancedata, lang)}))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
@@ -365,8 +347,7 @@ class ProjectView(viewsets.ModelViewSet):
             if request.user.has_perm('proj.admin_manageproj') or is_projTrader(request.user, pro.id):
                 pass
             elif request.user in [pro.supportUser, pro.createuser] :
-                if projdata.get('projstatus', None) and projdata.get('projstatus', None) >= 4:
-                    raise InvestError(2009, msg='修改项目信息失败', detail='只有管理员和项目交易师才能修改到该状态')
+                pass
             else:
                 raise InvestError(code=2009, msg='修改项目信息失败', detail='非上传方或管理员无法修改项目')
             projdata['lastmodifyuser'] = request.user.id
@@ -531,8 +512,7 @@ class ProjectView(viewsets.ModelViewSet):
             if request.user.has_perm('proj.admin_manageproj'):
                 pass
             elif request.user == instance.supportUser or is_projTrader(request.user, instance.id):
-                if instance.projstatus_id >= 4:
-                    raise InvestError(2009, msg='删除项目失败', detail='没有权限删除该状态项目，请联系管理员删除')
+                pass
             else:
                 raise InvestError(code=2009, msg='删除项目失败', detail='没有权限，请联系管理员删除')
             if instance.proj_datarooms.filter(is_deleted=False, proj=instance).exists():

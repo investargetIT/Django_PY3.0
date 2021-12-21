@@ -121,16 +121,17 @@ class ProjSerializer(serializers.ModelSerializer):
 
 
 class ProjCommonSerializer(serializers.ModelSerializer):
-    supportUser = UserCommenSerializer()
-    PM = UserCommenSerializer()
     country = countrySerializer()
     tags = serializers.SerializerMethodField()
     industries = serializers.SerializerMethodField()
     lastProject = ProjSimpleSerializer()
+    PM = UserCommenSerializer()
+    createuser = UserCommenSerializer()
+    projTraders = serializers.SerializerMethodField()
 
     class Meta:
         model = project
-        fields = ('id','industries','projtitleC','projtitleE','tags', 'currency', 'financeAmount','financeAmount_USD','country','projstatus','isHidden','supportUser', 'PM','lastProject','publishDate','createdtime')
+        fields = ('id','industries','projtitleC','projtitleE','tags', 'currency', 'financeAmount','financeAmount_USD','country','projstatus','isHidden', 'PM','createuser','projTraders','lastProject','publishDate','createdtime')
         depth = 1
 
     def get_tags(self, obj):
@@ -143,6 +144,11 @@ class ProjCommonSerializer(serializers.ModelSerializer):
         qs = obj.project_industries.filter(is_deleted=False)
         if qs.exists():
             return ProjIndustrySerializer(qs,many=True).data
+        return None
+    def get_projTraders(self, obj):
+        qs = obj.proj_traders.filter(is_deleted=False, user__isnull=False)
+        if qs.exists():
+            return ProjTradersSerializer(qs, many=True).data
         return None
 
 
@@ -159,10 +165,13 @@ class ProjListSerializer_admin(serializers.ModelSerializer):
     tags = serializers.SerializerMethodField()
     industries = serializers.SerializerMethodField()
     transactionType = serializers.SerializerMethodField()
+    PM = UserCommenSerializer()
+    createuser = UserCommenSerializer()
+    projTraders = serializers.SerializerMethodField()
 
     class Meta:
         model = project
-        fields = ('id','industries','projtitleC','projtitleE', 'currency','transactionType','tags','financeAmount','financeAmount_USD','country','projstatus','isHidden','publishDate','createdtime')
+        fields = ('id','industries','projtitleC','projtitleE', 'currency','transactionType','tags','financeAmount','financeAmount_USD','country','projstatus','isHidden','publishDate','createdtime','PM','createuser','projTraders')
         depth = 1
 
     def get_tags(self, obj):
@@ -183,6 +192,11 @@ class ProjListSerializer_admin(serializers.ModelSerializer):
             return transactionTypeSerializer(qs,many=True).data
         return None
 
+    def get_projTraders(self, obj):
+        qs = obj.proj_traders.filter(is_deleted=False, user__isnull=False)
+        if qs.exists():
+            return ProjTradersSerializer(qs, many=True).data
+        return None
 
 
 class ProjListSerializer_user(serializers.ModelSerializer):
@@ -190,11 +204,14 @@ class ProjListSerializer_user(serializers.ModelSerializer):
     industries = serializers.SerializerMethodField()
     country = countrySerializer()
     transactionType = serializers.SerializerMethodField()
+    PM = UserCommenSerializer()
+    createuser = UserCommenSerializer()
+    projTraders = serializers.SerializerMethodField()
 
     class Meta:
         model = project
         depth = 1
-        fields = ('id','industries','projtitleC','projtitleE','tags', 'currency', 'transactionType','financeAmount','financeAmount_USD','country','projstatus','publishDate')
+        fields = ('id','industries','projtitleC','projtitleE','tags', 'currency', 'transactionType','financeAmount','financeAmount_USD','country','projstatus','publishDate','PM','createuser','projTraders')
 
     def get_tags(self, obj):
         qs = obj.tags.filter(tag_projects__is_deleted=False)
@@ -213,6 +230,13 @@ class ProjListSerializer_user(serializers.ModelSerializer):
         if qs.exists():
             return transactionTypeSerializer(qs,many=True).data
         return None
+
+    def get_projTraders(self, obj):
+        qs = obj.proj_traders.filter(is_deleted=False, user__isnull=False)
+        if qs.exists():
+            return ProjTradersSerializer(qs, many=True).data
+        return None
+
 #detail
 class ProjDetailSerializer_withoutsecretinfo(serializers.ModelSerializer):
     tags = serializers.SerializerMethodField()
@@ -225,10 +249,12 @@ class ProjDetailSerializer_withoutsecretinfo(serializers.ModelSerializer):
     linkpdfurl = serializers.SerializerMethodField()
     lastProject = ProjSimpleSerializer()
     PM = UserCommenSerializer()
+    projTraders = serializers.SerializerMethodField()
+    createuser = UserCommenSerializer()
 
     class Meta:
         model = project
-        exclude = ('supportUser', 'phoneNumber', 'email', 'contactPerson','createuser', 'lastmodifyuser', 'deleteduser', 'deletedtime', 'datasource','isSendEmail','realname')
+        exclude = ('supportUser', 'phoneNumber', 'email', 'contactPerson', 'lastmodifyuser', 'deleteduser', 'deletedtime', 'datasource','isSendEmail','realname')
         depth = 1
 
     def get_service(self, obj):
@@ -270,6 +296,11 @@ class ProjDetailSerializer_withoutsecretinfo(serializers.ModelSerializer):
     def get_linkpdfurl(self, obj):
         return None
 
+    def get_projTraders(self, obj):
+        qs = obj.proj_traders.filter(is_deleted=False, user__isnull=False)
+        if qs.exists():
+            return ProjTradersSerializer(qs, many=True).data
+        return None
 
 class ProjDetailSerializer_all(serializers.ModelSerializer):
     tags = serializers.SerializerMethodField()
@@ -281,13 +312,14 @@ class ProjDetailSerializer_all(serializers.ModelSerializer):
     country = countryWithContinentSerializer()
     supportUser = UserCommenSerializer()
     PM = UserCommenSerializer()
+    createuser = UserCommenSerializer()
     projTraders = serializers.SerializerMethodField()
     linkpdfurl = serializers.SerializerMethodField()
     lastProject = ProjSimpleSerializer()
 
     class Meta:
         model = project
-        exclude = ('createuser', 'lastmodifyuser', 'deleteduser', 'deletedtime', 'datasource','isSendEmail',)
+        exclude = ('lastmodifyuser', 'deleteduser', 'deletedtime', 'datasource','isSendEmail',)
         depth = 1
 
     def get_service(self, obj):
@@ -341,7 +373,7 @@ class DiDiRecordSerializer(serializers.ModelSerializer):
     orderType = DidiOrderTypeSerializer()
     class Meta:
         model = projectDiDiRecord
-        exclude = ('createuser', 'deleteduser', 'datasource', 'is_deleted', 'deletedtime', 'lastmodifytime')
+        exclude = ('deleteduser', 'datasource', 'is_deleted', 'deletedtime', 'lastmodifytime')
 
 class TaxiRecordCreateSerializer(serializers.ModelSerializer):
 
