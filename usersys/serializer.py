@@ -306,9 +306,9 @@ class UserListSerializer(serializers.ModelSerializer):
         return checkMobileTrue(obj.mobile, obj.mobileAreaCode)
 
     def get_trader_relation(self, obj):
-        usertrader = obj.investor_relations.filter(relationtype=True, is_deleted=False)
+        usertrader = obj.investor_relations.filter(is_deleted=False)
         if usertrader.exists():
-            return UserTraderSimpleSerializer(usertrader.first()).data
+            return UserTraderSimpleSerializer(usertrader, many=True).data
         return None
 
     def get_photourl(self, obj):
@@ -335,10 +335,11 @@ class UserListCommenSerializer(serializers.ModelSerializer):
     email = serializers.SerializerMethodField()
     mobiletrue = serializers.SerializerMethodField()
     org = OrgCommonSerializer()
+    trader_relation = serializers.SerializerMethodField()
 
     class Meta:
         model = MyUser
-        fields = ('id', 'usernameC', 'usernameE', 'tags', 'userstatus', 'photourl', 'title', 'onjob', 'mobile', 'mobileAreaCode',
+        fields = ('id', 'usernameC', 'usernameE', 'tags', 'userstatus', 'photourl', 'title', 'onjob', 'mobile', 'mobileAreaCode', 'trader_relation',
                   'mobiletrue', 'email', 'is_active', 'org', 'indGroup', 'entryTime', 'bornTime', 'isMarried', 'directSupervisor', 'mentor')
 
 
@@ -372,6 +373,12 @@ class UserListCommenSerializer(serializers.ModelSerializer):
             return center
         else:
             return None
+
+    def get_trader_relation(self, obj):
+        usertrader = obj.investor_relations.filter(is_deleted=False)
+        if usertrader.exists():
+            return UserTraderSimpleSerializer(usertrader, many=True).data
+        return None
 
 class UserPersonnelRelationsCreateSerializer(serializers.ModelSerializer):
 

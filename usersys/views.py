@@ -128,17 +128,13 @@ class UserView(viewsets.ModelViewSet):
                 return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
             responselist = []
             for instance in queryset:
-                actionlist = {'get': True, 'change': False, 'delete': False}
                 if request.user.has_perm('usersys.admin_manageuser') or is_userTrader(request.user, instance.id):
-                    actionlist['change'] = True
-                    actionlist['delete'] = True
                     instancedata = UserListSerializer(instance).data
                 elif (not UserRelation.objects.filter(investoruser=instance, traderuser__onjob=True, is_deleted=False).exists()) and \
                             UserRelation.objects.filter(investoruser=instance, is_deleted=False).exists() and request.user.has_perm('usersys.as_trader'):
                     instancedata = UserListSerializer(instance).data     # 显示
                 else:
                     instancedata = UserListCommenSerializer(instance).data  # 隐藏
-                instancedata['action'] = actionlist
                 responselist.append(instancedata)
             return JSONResponse(
                 SuccessResponse({'count': count, 'data': returnListChangeToLanguage(responselist, lang)}))
