@@ -31,12 +31,10 @@ from usersys.serializer import UserSerializer, UserListSerializer, UserRelationS
     UserWorkingPositionRecordsSerializer, UserWorkingPositionRecordsCreateSerializer, UserInfoSerializer
 from sourcetype.models import Tag, DataSource, TagContrastTable
 from utils.customClass import JSONResponse, InvestError, RelationFilter, MySearchFilter
-from utils.logicJudge import is_userInvestor, is_userTrader, is_dataroomTrader, is_traderDirectSupervisor, \
-    is_traderMentor
+from utils.logicJudge import is_userInvestor, is_userTrader, is_dataroomTrader
 from utils.sendMessage import sendmessage_userauditstatuchange, sendmessage_userregister, sendmessage_traderadd
-from utils.util import read_from_cache, write_to_cache, loginTokenIsAvailable, \
-    catchexcption, cache_delete_key, returnDictChangeToLanguage, returnListChangeToLanguage, SuccessResponse, \
-    InvestErrorResponse, ExceptionResponse, add_perm, mySortQuery, checkRequestToken
+from utils.util import loginTokenIsAvailable, catchexcption, returnDictChangeToLanguage, returnListChangeToLanguage,\
+    SuccessResponse, InvestErrorResponse, ExceptionResponse,  mySortQuery, checkRequestToken
 from django_filters import FilterSet
 
 
@@ -81,7 +79,6 @@ class UserView(viewsets.ModelViewSet):
     search_fields = ('mobile','email','usernameC','usernameE','org__orgnameC','orgarea__nameC','org__orgfullname','investor_relations__traderuser__usernameC')
     serializer_class = UserSerializer
     filter_class = UserFilter
-    redis_key = 'user'
     Model = MyUser
 
     def get_queryset(self):
@@ -99,24 +96,16 @@ class UserView(viewsets.ModelViewSet):
 
     def get_object(self,pk=None):
         if pk:
-            obj = read_from_cache(self.redis_key + '_%s' % pk)
-            if not obj:
-                try:
-                    obj = self.queryset.get(id=pk)
-                except self.Model.DoesNotExist:
-                    raise InvestError(code=2002, msg='用户不存在')
-                else:
-                    write_to_cache(self.redis_key + '_%s' % pk, obj)
+            try:
+                obj = self.queryset.get(id=pk)
+            except self.Model.DoesNotExist:
+                raise InvestError(code=2002, msg='用户不存在')
         else:
             lookup_url_kwarg = 'pk'
-            obj = read_from_cache(self.redis_key+'_%s'%self.kwargs[lookup_url_kwarg])
-            if not obj:
-                try:
-                    obj = self.queryset.get(id=self.kwargs[lookup_url_kwarg])
-                except self.Model.DoesNotExist:
-                    raise InvestError(code=2002, msg='用户不存在')
-                else:
-                    write_to_cache(self.redis_key+'_%s'%self.kwargs[lookup_url_kwarg],obj)
+            try:
+                obj = self.queryset.get(id=self.kwargs[lookup_url_kwarg])
+            except self.Model.DoesNotExist:
+                raise InvestError(code=2002, msg='用户不存在')
         if obj.datasource != self.request.user.datasource:
             raise InvestError(code=8888, msg='查询用户失败')
         return obj
@@ -312,7 +301,6 @@ class UserView(viewsets.ModelViewSet):
                 returndic = CreatUserSerializer(user).data
                 sendmessage_userregister(user,user,['email','webmsg','app'])
                 apilog(request, 'MyUser', None, None, datasource=source)
-                cache_delete_key(self.redis_key)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(returndic,lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -367,7 +355,6 @@ class UserView(viewsets.ModelViewSet):
                 else:
                     raise InvestError(20071, msg='新用户创建失败', detail='参数有误%s' % userserializer.error_messages)
                 apilog(request, 'MyUser', None, None, datasource=request.user.datasource_id)
-                cache_delete_key(self.redis_key)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(UserSerializer(user).data,lang=lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -478,7 +465,6 @@ class UserView(viewsets.ModelViewSet):
                         userserializer = UpdateUserSerializer(user, data=data)
                         if userserializer.is_valid():
                             user = userserializer.save()
-                            cache_delete_key(self.redis_key + '_%s' % user.id)
                             if tags:
                                 taglist = Tag.objects.in_bulk(tags)
                                 addlist = [item for item in taglist if item not in user.tags.all()]
@@ -497,7 +483,6 @@ class UserView(viewsets.ModelViewSet):
                     for user,sendmsg in messagelist:
                         if sendmsg:
                             sendmessage_userauditstatuchange(user,user,['app','email', 'sms','webmsg'],sender=request.user)
-                cache_delete_key(self.redis_key)
                 return JSONResponse(SuccessResponse(returnListChangeToLanguage(userlist,lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -564,10 +549,8 @@ class UserView(viewsets.ModelViewSet):
                                         manager.all().update(is_deleted=True)
                                 except FieldDoesNotExist:
                                     pass
-                    cache_delete_key(self.redis_key + '_%s' % instance.id)
                     userlist.append({})
                     instance.delete()
-                cache_delete_key(self.redis_key)
                 return JSONResponse(SuccessResponse(returnListChangeToLanguage(userlist,lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -607,8 +590,6 @@ class UserView(viewsets.ModelViewSet):
                 user.set_password(password)
                 user.save(update_fields=['password'])
                 user.user_token.all().update(is_deleted=True)
-                cache_delete_key(self.redis_key + '_%s' % user.id)
-                cache_delete_key(self.redis_key)
                 return JSONResponse(SuccessResponse(password))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -639,8 +620,6 @@ class UserView(viewsets.ModelViewSet):
                 user.set_password(password)
                 user.save(update_fields=['password'])
                 user.user_token.all().update(is_deleted=True)
-                cache_delete_key(self.redis_key + '_%s' % user.id)
-                cache_delete_key(self.redis_key)
                 return JSONResponse(SuccessResponse(password))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -661,8 +640,6 @@ class UserView(viewsets.ModelViewSet):
                 user.set_password('Aa123456')
                 user.save(update_fields=['password'])
                 user.user_token.all().update(is_deleted=True)
-                cache_delete_key(self.redis_key + '_%s' % user.id)
-                cache_delete_key(self.redis_key)
                 return JSONResponse(SuccessResponse('Aa123456'))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -731,15 +708,9 @@ class UserView(viewsets.ModelViewSet):
     def getCount(self, request, *args, **kwargs):
         try:
             total_redisKey = 'user_totalcount_%s' % request.user.datasource_id
-            totalcount = read_from_cache(total_redisKey)
-            if not totalcount:
-                totalcount = self.get_queryset().count()
-                write_to_cache(total_redisKey, totalcount, 3600)
+            totalcount = self.get_queryset().count()
             new_redisKey = 'user_newcount_%s' % request.user.datasource_id
-            newcount = read_from_cache(new_redisKey)
-            if not newcount:
-                newcount = self.get_queryset().filter(createdtime__gte=datetime.datetime.now() - datetime.timedelta(days=1)).count()
-                write_to_cache(new_redisKey, newcount, 3600)
+            newcount = self.get_queryset().filter(createdtime__gte=datetime.datetime.now() - datetime.timedelta(days=1)).count()
             result = {'total': totalcount, 'new': newcount}
             return JSONResponse(SuccessResponse(result))
         except InvestError as err:
@@ -1602,21 +1573,17 @@ class UserPersonnelRelationsView(viewsets.ModelViewSet):
             if user.directSupervisor != personnelRelationsInstance.supervisorOrMentor:
                 user.directSupervisor = personnelRelationsInstance.supervisorOrMentor
                 user.save()
-                cache_delete_key('user_%s' % user.id)
         else:
             user.directSupervisor = None
             user.save()
-            cache_delete_key('user_%s' % user.id)
         if UserPersonnelRelations.objects.filter(is_deleted=False, user=user, type=1).exists():
             personnelRelationsInstance = UserPersonnelRelations.objects.filter(is_deleted=False, user=user, type=1).order_by('-startDate').first()
             if user.mentor != personnelRelationsInstance.supervisorOrMentor:
                 user.mentor = personnelRelationsInstance.supervisorOrMentor
                 user.save()
-                cache_delete_key('user_%s' % user.id)
         else:
             user.mentor = None
             user.save()
-            cache_delete_key('user_%s' % user.id)
 
 
     @loginTokenIsAvailable()
