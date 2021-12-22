@@ -217,6 +217,8 @@ class DataroomView(viewsets.ModelViewSet):
     @loginTokenIsAvailable()
     def checkZipStatus(self, request, *args, **kwargs):
         try:
+            if request.user.has_perm('dataroom.onlydataroom') and not request.user.is_superuser:
+                raise InvestError(2009, msg='没有下载权限')
             deleteExpireDir(APILOG_PATH['dataroomFilePath'])
             dataroominstance = self.get_object()
             files = request.GET.get('files')
@@ -280,6 +282,8 @@ class DataroomView(viewsets.ModelViewSet):
         try:
             userid = request.GET.get('user')
             request.user = checkrequesttoken(request.GET.get('token',None))
+            if request.user.has_perm('dataroom.onlydataroom') and not request.user.is_superuser:
+                raise InvestError(2009, msg='没有下载权限')
             dataroominstance = self.get_object()
             ispart = request.GET.get('part')
             nowater = True if request.GET.get('nowater') in ['1', 1, u'1'] else False
