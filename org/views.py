@@ -143,16 +143,12 @@ class OrganizationView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
-    @loginTokenIsAvailable()
+    @loginTokenIsAvailable(['org.admin_manageorg', 'usersys.as_trader'])
     def create(self, request, *args, **kwargs):
         data = request.data
         lang = request.GET.get('lang')
         data['createuser'] = request.user.id
         data['datasource'] = request.user.datasource.id
-        if request.user.has_perm('org.admin_manageorg'):
-            pass
-        else:
-            raise InvestError(2009, msg='新增机构失败', detail='没有新增权限')
         try:
             with transaction.atomic():
                 orgTransactionPhases = data.pop('orgtransactionphase', None)
@@ -250,7 +246,7 @@ class OrganizationView(viewsets.ModelViewSet):
             lang = request.GET.get('lang')
             if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, instance):
                 pass
-            elif request.user == instance.createuser and instance.orgstatus != 2:
+            elif request.user == instance.createuser:
                 pass
             else:
                 raise InvestError(code=2009, msg='删除机构失败')
