@@ -205,7 +205,7 @@ class OrganizationView(viewsets.ModelViewSet):
             if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, org):
                 pass
             elif request.user == org.createuser:
-                data.pop('orgstatus', None)
+                pass
             else:
                 raise InvestError(code=2009, msg='修改机构信息失败')
             with transaction.atomic():
