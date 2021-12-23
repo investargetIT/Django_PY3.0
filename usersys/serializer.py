@@ -292,13 +292,14 @@ class UserListSerializer(serializers.ModelSerializer):
     indGroup = industryGroupSerializer()
     mobiletrue = serializers.SerializerMethodField()
     trader_relation = serializers.SerializerMethodField()
+    trader_relations = serializers.SerializerMethodField()
     photourl = serializers.SerializerMethodField()
     directSupervisor = UserSimpleSerializer()
     mentor = UserSimpleSerializer()
 
     class Meta:
         model = MyUser
-        fields = ('id','groups','tags','country', 'department', 'usernameC', 'usernameE', 'mobile', 'mobileAreaCode','mobiletrue', 'indGroup',
+        fields = ('id','groups','tags','country', 'department', 'usernameC', 'usernameE', 'mobile', 'mobileAreaCode','mobiletrue', 'indGroup', 'trader_relations',
                   'email', 'title', 'userstatus', 'org', 'trader_relation', 'photourl','is_active', 'hasIM', 'wechat', 'directSupervisor', 'mentor', 'entryTime', 'bornTime', 'isMarried',
                   'school', 'specialty', 'education', 'specialtyhobby', 'others')
 
@@ -306,6 +307,12 @@ class UserListSerializer(serializers.ModelSerializer):
         return checkMobileTrue(obj.mobile, obj.mobileAreaCode)
 
     def get_trader_relation(self, obj):
+        usertrader = obj.investor_relations.filter(is_deleted=False, relationtype=True)
+        if usertrader.exists():
+            return UserTraderSimpleSerializer(usertrader.first()).data
+        return None
+
+    def get_trader_relations(self, obj):
         usertrader = obj.investor_relations.filter(is_deleted=False)
         if usertrader.exists():
             return UserTraderSimpleSerializer(usertrader, many=True).data
@@ -336,10 +343,11 @@ class UserListCommenSerializer(serializers.ModelSerializer):
     mobiletrue = serializers.SerializerMethodField()
     org = OrgCommonSerializer()
     trader_relation = serializers.SerializerMethodField()
+    trader_relations = serializers.SerializerMethodField()
 
     class Meta:
         model = MyUser
-        fields = ('id', 'usernameC', 'usernameE', 'tags', 'userstatus', 'photourl', 'title', 'onjob', 'mobile', 'mobileAreaCode', 'trader_relation',
+        fields = ('id', 'usernameC', 'usernameE', 'tags', 'userstatus', 'photourl', 'title', 'onjob', 'mobile', 'mobileAreaCode', 'trader_relation', 'trader_relations',
                   'mobiletrue', 'email', 'is_active', 'org', 'indGroup', 'entryTime', 'bornTime', 'isMarried', 'directSupervisor', 'mentor')
 
 
@@ -375,6 +383,13 @@ class UserListCommenSerializer(serializers.ModelSerializer):
             return None
 
     def get_trader_relation(self, obj):
+        usertrader = obj.investor_relations.filter(is_deleted=False, relationtype=True)
+        if usertrader.exists():
+            return UserTraderSimpleSerializer(usertrader.first()).data
+        return None
+
+
+    def get_trader_relations(self, obj):
         usertrader = obj.investor_relations.filter(is_deleted=False)
         if usertrader.exists():
             return UserTraderSimpleSerializer(usertrader, many=True).data
