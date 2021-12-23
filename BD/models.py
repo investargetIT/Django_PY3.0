@@ -57,8 +57,7 @@ class ProjectBD(MyModel):
     def save(self, *args, **kwargs):
         if self.manager is None:
             raise InvestError(20071,msg='manager can`t be null')
-        if not self.datasource:
-            raise InvestError(20071, msg='datasource can`t be null')
+        self.datasource = self.createuser.datasource
         if not self.is_deleted:
             if ProjectBD.objects.exclude(pk=self.pk).filter(is_deleted=False, com_name=self.com_name).exists():
                 raise InvestError(50061, msg='同名项目bd已存在')
@@ -335,8 +334,7 @@ class OKR(MyModel):
                 raise InvestError(20072, msg='目标不能为空')
             if OKR.objects.exclude(pk=self.pk).filter(is_deleted=False, year=self.year, okrType=filtertype, createuser=self.createuser).exists():
                 raise InvestError(20071, msg='该年度已存在季度/年度OKR')
-        if not self.datasource:
-            self.datasource = self.createuser.datasource
+        self.datasource = self.createuser.datasource
         return super(OKR, self).save(*args, **kwargs)
 
 

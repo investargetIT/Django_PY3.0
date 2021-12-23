@@ -19,7 +19,8 @@ from third.views.qiniufile import deleteqiniufile
 from third.views.weixinlogin import get_openid
 from usersys.models import MyUser, UserRelation, userTags, MyToken, UnreachUser, UserRemarks, \
     userAttachments, userEvents, UserContrastThirdAccount, registersourcechoice, UserPerformanceAppraisalRecord, \
-    UserPersonnelRelations, UserTrainingRecords, UserMentorTrackingRecords, UserWorkingPositionRecords
+    UserPersonnelRelations, UserTrainingRecords, UserMentorTrackingRecords, UserWorkingPositionRecords, \
+    UserGetStarInvestor
 from usersys.serializer import UserSerializer, UserListSerializer, UserRelationSerializer, \
     CreatUserSerializer, UserCommenSerializer, UserRelationCreateSerializer, GroupSerializer, GroupDetailSerializer, \
     GroupCreateSerializer, PermissionSerializer, \
@@ -28,8 +29,9 @@ from usersys.serializer import UserSerializer, UserListSerializer, UserRelationS
     InvestorUserSerializer, UserPerformanceAppraisalRecordSerializer, UserPerformanceAppraisalRecordCreateSerializer, \
     UserPersonnelRelationsSerializer, UserPersonnelRelationsCreateSerializer, UserTrainingRecordsSerializer, \
     UserTrainingRecordsCreateSerializer, UserMentorTrackingRecordsSerializer, UserMentorTrackingRecordsCreateSerializer, \
-    UserWorkingPositionRecordsSerializer, UserWorkingPositionRecordsCreateSerializer, UserInfoSerializer
-from sourcetype.models import Tag, DataSource, TagContrastTable
+    UserWorkingPositionRecordsSerializer, UserWorkingPositionRecordsCreateSerializer, UserInfoSerializer, \
+    UserGetStarInvestorCreateSerializer, UserGetStarInvestorSerializer
+from sourcetype.models import Tag, DataSource, TagContrastTable, IndustryGroup
 from utils.customClass import JSONResponse, InvestError, RelationFilter, MySearchFilter
 from utils.logicJudge import is_userInvestor, is_userTrader, is_dataroomTrader
 from utils.sendMessage import sendmessage_userauditstatuchange, sendmessage_userregister, sendmessage_traderadd
@@ -133,6 +135,8 @@ class UserView(viewsets.ModelViewSet):
                 elif (not UserRelation.objects.filter(investoruser=instance, traderuser__onjob=True, is_deleted=False).exists()) and \
                             UserRelation.objects.filter(investoruser=instance, is_deleted=False).exists() and request.user.has_perm('usersys.as_trader'):
                     instancedata = UserListSerializer(instance).data     # 显示
+                elif UserGetStarInvestor.objects.filter(is_deleted=False, user=request.user, investor=instance).exists():
+                    instancedata = UserListSerializer(instance).data  # 显示
                 else:
                     instancedata = UserListCommenSerializer(instance).data  # 隐藏
                 responselist.append(instancedata)
@@ -403,6 +407,8 @@ class UserView(viewsets.ModelViewSet):
                     userserializer = UserSerializer  # 显示
                 else:
                     userserializer = UserCommenSerializer  # 隐藏
+            elif UserGetStarInvestor.objects.filter(is_deleted=False, user=request.user, investor=user).exists():
+                userserializer = UserSerializer  # 显示
             else:
                 userserializer = UserCommenSerializer
             serializer = userserializer(user)
@@ -2525,3 +2531,123 @@ def makeUserRemark(user,remark,createuser):
         if serializer.is_valid():
             serializer.save()
         return
+
+
+class UserGetStarInvestorFilter(FilterSet):
+    investor = RelationFilter(filterstr='investor', lookup_method='in')
+    user = RelationFilter(filterstr='user',lookup_method='in')
+    stime = RelationFilter(filterstr='getTime', lookup_method='gte')
+    etime = RelationFilter(filterstr='getTime', lookup_method='lt')
+
+    class Meta:
+        model = UserGetStarInvestor
+        fields = ('investor', 'user', 'stime', 'etime')
+
+class UserGetStarInvestorView(viewsets.ModelViewSet):
+    """
+            list: 查看获取*用户列表
+            create: 查看*用户
+            getAvailableCount: 查看今日获取用户数
+            """
+    filter_backends = (filters.DjangoFilterBackend, MySearchFilter)
+    queryset = UserGetStarInvestor.objects.all().filter(is_deleted=False)
+    filter_class = UserGetStarInvestorFilter
+    filter_fields = ('user',)
+    serializer_class = UserGetStarInvestorSerializer
+
+    def get_queryset(self):
+        assert self.queryset is not None, (
+            "'%s' should either include a `queryset` attribute, "
+            "or override the `get_queryset()` method."
+            % self.__class__.__name__
+        )
+        queryset = self.queryset
+        if isinstance(queryset, QuerySet):
+            if self.request.user.is_authenticated:
+                queryset = queryset.filter(datasource=self.request.user.datasource)
+            else:
+                queryset = queryset.all()
+        else:
+            raise InvestError(code=8890)
+        return queryset
+
+    @loginTokenIsAvailable(['usersys.admin_manageuser', 'usersys.as_trader'])
+    def list(self, request, *args, **kwargs):
+        try:
+            page_size = request.GET.get('page_size', 10)
+            page_index = request.GET.get('page_index', 1)
+            lang = request.GET.get('lang', 'cn')
+            queryset = self.filter_queryset(self.get_queryset())
+            if request.user.has_perm('usersys.admin_manageuser'):
+                pass
+            else:
+                if IndustryGroup.objects.all().filter(is_deleted=False, manager=request.user.id).exists():
+                    indGroups = IndustryGroup.objects.all().filter(is_deleted=False, manager=request.user.id)
+                    queryset = queryset.filter(Q(user=request.user) | Q(user__indGroup__in=indGroups)).distinct()
+                else:
+                    queryset = queryset.filter(user=request.user)
+            sortfield = request.GET.get('sort', 'createdtime')
+            desc = request.GET.get('desc', 1)
+            queryset = mySortQuery(queryset, sortfield, desc)
+            try:
+                count = queryset.count()
+                queryset = Paginator(queryset, page_size)
+                queryset = queryset.page(page_index)
+            except EmptyPage:
+                return JSONResponse(SuccessResponse({'count': 0, 'data': [],}))
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(SuccessResponse({'count': count, 'data': returnListChangeToLanguage(serializer.data, lang)}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def create(self, request, *args, **kwargs):
+        try:
+            lang = request.GET.get('lang')
+            data = request.data
+            data['user'] = request.user.id
+            data['createuser'] = request.user.id
+            data['datasource'] = request.user.datasource.id
+            if self.get_queryset().filter(user_id=data['user'], investor_id=data['investor']).exists():
+                instance = self.get_queryset().filter(user_id=data['user'], investor_id=data['investor']).first()
+                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(UserGetStarInvestorCreateSerializer(instance).data, lang)))
+            with transaction.atomic():
+                serializer = UserGetStarInvestorCreateSerializer(data=data)
+                if serializer.is_valid():
+                    serializer.save()
+                else:
+                    raise InvestError(20071, msg='查询*用户信息失败', detail='%s' %  serializer.error_messages)
+                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data, lang)))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable(['usersys.admin_manageuser', 'usersys.as_trader'])
+    def getAvailableCount(self, request, *args, **kwargs):
+        try:
+            user_id = request.GET.get('user', request.user.id)
+            try:
+                user = MyUser.objects.get(id=user_id, datasource=request.user.datasource, is_deleted=False)
+            except MyUser.DoesNotExist:
+                raise InvestError(code=2002, msg='查询用户不存在', detail='查询用户不存在')
+            if user.indGroup:
+                today = datetime.datetime.strptime(datetime.datetime.now().strftime("%Y-%m-%d"), "%Y-%m-%d")
+                tomorrow = today + datetime.timedelta(days=1)
+                if request.user.has_perm('usersys.admin_manageuser') or request.user.id == user.indGroup.manager:
+                    getCount = self.get_queryset().filter(user=user, getTime__gte=today, getTime__lt=tomorrow).count()
+                else:
+                    getCount = self.get_queryset().filter(user=request.user, getTime__gte=today, getTime__lt=tomorrow).count()
+                availableCount = user.indGroup.getUserCount - getCount
+            else:
+                raise InvestError(2052, msg='获取查看*用户统计失败，该交易师没有设置行业组', detail='该交易师没有行业组，无法统计剩余数量')
+            return JSONResponse(SuccessResponse({"getCount": getCount, "availableCount": availableCount}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+

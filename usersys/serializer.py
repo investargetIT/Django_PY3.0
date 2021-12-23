@@ -10,7 +10,7 @@ from third.views.qiniufile import getUrlWithBucketAndKey
 from utils.util import checkMobileTrue
 from .models import MyUser, UserRelation, UnreachUser, UserRemarks, userAttachments, userEvents, \
     UserPerformanceAppraisalRecord, UserPersonnelRelations, UserTrainingRecords, UserMentorTrackingRecords, \
-    UserWorkingPositionRecords
+    UserWorkingPositionRecords, UserGetStarInvestor
 
 
 class UnreachUserSerializer(serializers.ModelSerializer):
@@ -505,3 +505,18 @@ class UserMentorTrackingRecordsSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserMentorTrackingRecords
         exclude = ('deleteduser', 'datasource', 'is_deleted', 'deletedtime')
+
+
+class UserGetStarInvestorCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserGetStarInvestor
+        fields = '__all__'
+
+
+class UserGetStarInvestorSerializer(serializers.ModelSerializer):
+    user = UserCommenSerializer()
+    investor = UserCommenSerializer()
+
+    class Meta:
+        model = UserGetStarInvestor
+        fields = '__all__'

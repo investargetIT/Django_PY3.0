@@ -211,8 +211,7 @@ class dataroom_user_discuss(MyModel):
 
     def save(self, *args, **kwargs):
         if not self.is_deleted:
-            if not self.datasource:
-                raise InvestError(code=8888, msg='datasource有误')
+            self.datasource = self.createuser.datasource
             if not self.user:
                 raise InvestError(code=2004, msg='用户不能为空')
             if not self.file.isFile:

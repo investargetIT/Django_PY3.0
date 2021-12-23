@@ -124,8 +124,7 @@ class projTraders(MyModel):
         db_table = "project_traders"
 
     def save(self, *args, **kwargs):
-        if not self.datasource:
-            self.datasource = self.user.datasource
+        self.datasource = self.user.datasource
         if self.user.datasource != self.proj.datasource:
             raise InvestError(code=8888,msg='项目用户datasource不合法')
         if not self.is_deleted:

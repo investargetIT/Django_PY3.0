@@ -33,10 +33,9 @@ class message(MyModel):
     readtime = models.DateTimeField(blank=True,null=True)
     datasource = MyForeignKey(DataSource, help_text='数据源',blank=True,default=1)
     def save(self, *args, **kwargs):
-        if not self.datasource:
-            raise InvestError(code=8888, msg='datasource有误')
         if not self.receiver:
             raise InvestError(code=2018)
+        self.datasource = self.receiver.datasource
         return super(message, self).save(*args, **kwargs)
     def __str__(self):
         return self.messagetitle
