@@ -487,7 +487,6 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
         """
     filter_backends = (filters.DjangoFilterBackend,)
     queryset = dataroomdirectoryorfile.objects.all().filter(is_deleted=False)
-    filter_fields = ('dataroom', 'parent','isFile')
     filter_class = DataroomdirectoryorfileFilter
     serializer_class = DataroomdirectoryorfileCreateSerializer
     Model = dataroomdirectoryorfile
@@ -1469,6 +1468,22 @@ class DataroomUserReadFileRecordView(viewsets.ModelViewSet):
     filter_class = DataroomUserReadFileRecordFilter
     serializer_class = DataroomUserReadFileRecordSerializer
     Model = dataroom_user_readFileRecord
+
+    def get_queryset(self):
+        assert self.queryset is not None, (
+            "'%s' should either include a `queryset` attribute, "
+            "or override the `get_queryset()` method."
+            % self.__class__.__name__
+        )
+        queryset = self.queryset
+        if isinstance(queryset, QuerySet):
+            if self.request.user.is_authenticated:
+                queryset = queryset.filter(user__datasource_id=self.request.user.datasource_id)
+            else:
+                queryset = queryset
+        else:
+            raise InvestError(code=8890)
+        return queryset
 
     @loginTokenIsAvailable()
     def list(self, request, *args, **kwargs):

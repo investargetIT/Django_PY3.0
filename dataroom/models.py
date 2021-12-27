@@ -211,8 +211,7 @@ class dataroom_user_discuss(MyModel):
 
     def save(self, *args, **kwargs):
         if not self.is_deleted:
-            if not self.datasource:
-                raise InvestError(code=8888, msg='datasource有误')
+            self.datasource = self.createuser.datasource
             if not self.user:
                 raise InvestError(code=2004, msg='用户不能为空')
             if not self.file.isFile:
@@ -228,14 +227,11 @@ class dataroom_user_readFileRecord(MyModel):
     createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='userCreate_dataroomReadRecord')
     lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='userModify_dataroomuserReadRecord')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userDelete_dataroomReadRecord')
-    datasource = MyForeignKey(DataSource, help_text='数据源', blank=True, default=1)
 
     class Meta:
         db_table = 'dataroom_user_readFileRecord'
 
     def save(self, *args, **kwargs):
-        if not self.datasource:
-            self.datasource = self.user.datasource
         if not self.is_deleted:
             if not self.startTime:
                 self.startTime = datetime.datetime.now()

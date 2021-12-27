@@ -470,8 +470,7 @@ class UserPersonnelRelations(MyModel):
                     earlierMeeting = earlierMeetingQS.order_by('startDate').last()
                     if earlierMeeting.endDate > self.startDate:
                         raise InvestError(2028, msg='时间冲突，编辑人事记录失败', detail='已存在结束时间处于本时间段内的记录')
-        if not self.datasource:
-            self.datasource = self.user.datasource
+        self.datasource = self.user.datasource
         super(UserPersonnelRelations, self).save(*args,**kwargs)
 
 # 用户绩效考核记录表
@@ -511,8 +510,7 @@ class UserPerformanceAppraisalRecord(MyModel):
                 earlierMeeting = earlierMeetingQS.order_by('startDate').last()
                 if earlierMeeting.endDate > self.startDate:
                     raise InvestError(2027, msg='绩效考核时间冲突，编辑绩效考核记录失败', detail='已存在结束时间处于本时间段内的记录')
-        if not self.datasource:
-            self.datasource = self.user.datasource
+        self.datasource = self.user.datasource
         super(UserPerformanceAppraisalRecord, self).save(*args,**kwargs)
 
 # 任职岗位记录表
@@ -554,8 +552,7 @@ class UserWorkingPositionRecords(MyModel):
                     earlierMeeting = earlierMeetingQS.order_by('startDate').last()
                     if earlierMeeting.endDate > self.startDate:
                         raise InvestError(2029, msg='任职时间冲突，编辑人事记录失败', detail='已存在结束时间处于本时间段内的记录')
-        if not self.datasource:
-            self.datasource = self.user.datasource
+        self.datasource = self.user.datasource
         super(UserWorkingPositionRecords, self).save(*args,**kwargs)
 
 
@@ -577,8 +574,7 @@ class UserTrainingRecords(MyModel):
         ordering = ('user', '-trainingDate')
 
     def save(self, *args, **kwargs):
-        if not self.datasource:
-            self.datasource = self.user.datasource
+        self.datasource = self.user.datasource
         super(UserTrainingRecords, self).save(*args, **kwargs)
 
 #入职后导师计划跟踪记录表
@@ -598,8 +594,7 @@ class UserMentorTrackingRecords(MyModel):
         ordering = ('user', '-communicateDate')
 
     def save(self, *args, **kwargs):
-        if not self.datasource:
-            self.datasource = self.user.datasource
+        self.datasource = self.user.datasource
         super(UserMentorTrackingRecords, self).save(*args, **kwargs)
 
 
@@ -721,8 +716,7 @@ class UserRelation(MyModel):
     lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_relations',)
     datasource = MyForeignKey(DataSource, blank=True, default=1, help_text='数据源')
     def save(self, *args, **kwargs):
-        if not self.datasource:
-            raise InvestError(code=8888,msg='datasource有误')
+        self.datasource = self.createuser.datasource
         if self.datasource !=self.traderuser.datasource or self.datasource != self.investoruser.datasource:
             raise InvestError(code=8888,msg='requestuser.datasource不匹配')
         if not self.is_deleted:
@@ -755,3 +749,32 @@ class UserContrastThirdAccount(MyModel):
 
     class Meta:
         db_table = "user_contrastaccount"
+
+
+class UserGetStarInvestor(MyModel):
+    id = models.AutoField(primary_key=True)
+    user = MyForeignKey(MyUser, related_name='user_getInvestors', blank=True, null=True, on_delete=CASCADE)
+    investor = MyForeignKey(MyUser, related_name='investor_userget', blank=True, null=True, on_delete=CASCADE)
+    getTime = models.DateTimeField(blank=True, null=True)
+    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_getInvestors')
+    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_getInvestors')
+    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_getInvestor')
+    datasource = MyForeignKey(DataSource, help_text='数据源', default=1)
+
+    class Meta:
+        db_table = 'user_getStarInvestor'
+
+    def save(self, *args, **kwargs):
+        self.datasource = self.user.datasource
+        if not self.is_deleted:
+            if self.getTime is None:
+                self.getTime = datetime.datetime.now()
+            if self.user.indGroup:
+                today = datetime.datetime.strptime(self.getTime.strftime("%Y-%m-%d"), "%Y-%m-%d")
+                tomorrow = today +  datetime.timedelta(days=1)
+                getCount = UserGetStarInvestor.objects.exclude(id=self.id).filter(is_deleted=False, user=self.user, getTime__gte=today, getTime__lt=tomorrow).count()
+                if getCount >= self.user.indGroup.getUserCount:
+                    raise InvestError(2052, msg='查看*用户失败，已达到交易师行业组最大查看数量', detail='查看*用户超限')
+            else:
+                raise InvestError(2052, msg='查看*用户失败，该交易师没有行业组', detail='交易师没有行业组，无法判断是否超过数量限制')
+        super(UserGetStarInvestor, self).save(*args, **kwargs)

@@ -125,18 +125,13 @@ class OrganizationView(viewsets.ModelViewSet):
                 return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
             responselist = []
             for instance in queryset:
-                actionlist = {'get': True, 'change': False, 'delete': False}
                 user_count = 0
                 if request.user.is_anonymous:
                     pass
                 else:
                     if instance.orglevel_id == 1 or instance.orglevel_id == 2:
                         user_count = checkOrgUserContactInfoTruth(instance, request.user.datasource)
-                    if request.user.has_perm('org.admin_manageorg') or request.user == instance.createuser:
-                        actionlist['change'] = True
-                        actionlist['delete'] = True
                 instancedata = serializerclass(instance).data
-                instancedata['action'] = actionlist
                 instancedata['user_count'] = user_count
                 responselist.append(instancedata)
             return JSONResponse(SuccessResponse({'count':count,'data':returnListChangeToLanguage(responselist,lang)}))
@@ -1780,18 +1775,13 @@ def fulltextsearch(request):
             serializerclass = OrgListSerializer
         responselist = []
         for instance in org_qs:
-            actionlist = {'get': True, 'change': False, 'delete': False}
             user_count = 0
             if request.user.is_anonymous:
                 pass
             else:
                 if instance.orglevel_id == 1 or instance.orglevel_id == 2:
                     user_count = checkOrgUserContactInfoTruth(instance, request.user.datasource)
-                if request.user.has_perm('org.admin_manageorg') or request.user == instance.createuser:
-                    actionlist['change'] = True
-                    actionlist['delete'] = True
             instancedata = serializerclass(instance).data
-            instancedata['action'] = actionlist
             instancedata['user_count'] = user_count
             responselist.append(instancedata)
         return JSONResponse(SuccessResponse({'count': count, 'data': returnListChangeToLanguage(responselist, lang)}))

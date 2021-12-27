@@ -9,7 +9,7 @@ from third.views.qiniufile import getUrlWithBucketAndKey
 class OrgCommonSerializer(serializers.ModelSerializer):
     class Meta:
         model = organization
-        fields = ('id', 'orgfullname', 'orgnameC', 'orgnameE', 'description')
+        fields = ('id', 'orgfullname', 'orgnameC', 'orgnameE', 'description', 'createuser')
 
 
 class OrgCreateSerializer(serializers.ModelSerializer):
@@ -56,7 +56,7 @@ class OrgListSerializer(serializers.ModelSerializer):
     class Meta:
         model = organization
         depth = 1
-        exclude = ('datasource', 'createuser', 'createdtime', 'is_deleted', 'deleteduser', 'deletedtime', 'lastmodifyuser', 'lastmodifytime',)
+        exclude = ('datasource', 'createdtime', 'is_deleted', 'deleteduser', 'deletedtime', 'lastmodifyuser', 'lastmodifytime',)
 
     def get_orgtransactionphase(self, obj):
         phase = obj.orgtransactionphase.filter(transactionPhase_orgs__is_deleted=False)

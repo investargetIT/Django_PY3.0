@@ -184,6 +184,14 @@ checkUserAccountExist = views.UserView.as_view({
         'get':'checkUserAccountExist',
 })
 
+userGetStarInvestor = views.UserGetStarInvestorView.as_view({
+        'get': 'list',
+        'post': 'create',
+})
+userGetStarInvestorCount = views.UserGetStarInvestorView.as_view({
+        'get': 'getAvailableCount',
+})
+
 urlpatterns = [
     url(r'^$', user_list,name='user-list',),
     url(r'^simple$', getuserinfo_simple,name='getuserinfo_simple',),
@@ -225,5 +233,7 @@ urlpatterns = [
     url(r'^trainingrecords/(?P<pk>\d+)/$', userTrainingRecords_deteil, name='usertrainingrecords-detail'),
     url(r'^mentortracking/$', userMentorTrackingRecords_list, name='usermentortracking-list'),
     url(r'^mentortracking/(?P<pk>\d+)/$', userMentorTrackingRecords_deteil, name='usermentortracking-detail'),
+    url(r'^getStarInvestor/$', userGetStarInvestor, name='userGetStarInvestor'),
+    url(r'^getStarInvestor/count/$', userGetStarInvestorCount, name='userGetStarInvestorCount'),
     # url(r'^test/$',views.test)
 ]
