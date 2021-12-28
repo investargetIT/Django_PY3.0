@@ -45,13 +45,12 @@ class dataroom(MyModel):
             ('get_companydataroom', '查看公司dataroom')
         )
 
-    def save(self, force_insert=False, force_update=False, using=None,
-             update_fields=None):
+    def save(self, *args, **kwargs):
         if not self.proj:
             raise InvestError(code=7004,msg='proj缺失')
         if self.proj.projstatus.id < 4:
             raise InvestError(5003,msg='项目尚未终审发布')
-        super(dataroom, self).save(force_insert, force_update, using, update_fields)
+        super(dataroom, self).save(*args, **kwargs)
 
 class dataroomdirectoryorfile(MyModel):
     id = models.AutoField(primary_key=True)
@@ -72,7 +71,7 @@ class dataroomdirectoryorfile(MyModel):
     class Meta:
         db_table = 'dataroomdirectoryorfile'
 
-    def save(self, force_insert=False, force_update=False, using=None,update_fields=None):
+    def save(self, *args, **kwargs):
         if self.isFile:
             try:
                 if self.pk:
@@ -99,7 +98,7 @@ class dataroomdirectoryorfile(MyModel):
             filename, type = os.path.splitext(file_path)
             if type == '.pdf' and not os.path.exists(file_path):
                 threading.Thread(target=downloadPDFToPath, args=(self, self.realfilekey, self.bucket, file_path)).start()
-        super(dataroomdirectoryorfile, self).save(force_insert, force_update, using, update_fields)
+        super(dataroomdirectoryorfile, self).save(*args, **kwargs)
 
 # 下载dataroom PDF到本地
 def downloadPDFToPath(fileInstance, key, bucket, path):
@@ -121,7 +120,7 @@ class dataroom_User_file(MyModel):
     class Meta:
         db_table = 'dataroom_user'
 
-    def save(self, force_insert=False, force_update=False, using=None,update_fields=None):
+    def save(self, *args, **kwargs):
         if not self.user:
             raise InvestError(20072, '投资人不能为空')
         if self.pk is None:
@@ -133,7 +132,7 @@ class dataroom_User_file(MyModel):
                 pass
             else:
                 raise InvestError(code=2004, msg='用户已存在一个相同项目的dataroom了')
-        super(dataroom_User_file, self).save(force_insert, force_update, using, update_fields)
+        super(dataroom_User_file, self).save(*args, **kwargs)
 
 
 class dataroomUserSeeFiles(MyModel):
@@ -146,7 +145,7 @@ class dataroomUserSeeFiles(MyModel):
     class Meta:
         db_table = 'dataroom_user_seefiles'
 
-    def save(self, force_insert=False, force_update=False, using=None,update_fields=None):
+    def save(self, *args, **kwargs):
         self.datasource = self.file.datasource
         if self.pk is None:
             if self.dataroomUserfile.dataroom.isClose or self.dataroomUserfile.dataroom.is_deleted:
@@ -159,7 +158,7 @@ class dataroomUserSeeFiles(MyModel):
                 raise InvestError(code=2004, msg='用户已存在一个相同的可见文件了')
         if not self.file:
             self.is_deleted = True
-        super(dataroomUserSeeFiles, self).save(force_insert, force_update, using, update_fields)
+        super(dataroomUserSeeFiles, self).save(*args, **kwargs)
 
 class dataroom_User_template(MyModel):
     dataroom = MyForeignKey(dataroom, blank=True, null=True, related_name='dataroom_userTemp')
@@ -174,7 +173,7 @@ class dataroom_User_template(MyModel):
     class Meta:
         db_table = 'dataroom_User_template'
 
-    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+    def save(self, *args, **kwargs):
         if not self.user:
             raise InvestError(code=2004, msg='用户不能为空')
         try:
@@ -186,7 +185,7 @@ class dataroom_User_template(MyModel):
             raise InvestError(code=2004, msg='用户已存在一个相同dataroom的模板了')
         if self.user != self.dataroomUserfile.user:
             raise InvestError(code=2004, msg='用户与模板不匹配')
-        super(dataroom_User_template, self).save(force_insert, force_update, using, update_fields)
+        super(dataroom_User_template, self).save(*args, **kwargs)
 
 
 

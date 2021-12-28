@@ -400,6 +400,8 @@ class UserView(viewsets.ModelViewSet):
                 userserializer = UserSerializer
             elif is_userTrader(request.user, user.id):
                 userserializer = UserSerializer
+            elif UserGetStarInvestor.objects.filter(is_deleted=False, user=request.user, investor=user).exists():
+                userserializer = UserSerializer  # 显示
             elif request.user.has_perm('usersys.as_trader'):
                 # 投资人有交易师 但交易师已离职
                 if not UserRelation.objects.filter(investoruser=user, traderuser__onjob=True, is_deleted=False).exists() and UserRelation.objects.filter(
@@ -407,8 +409,6 @@ class UserView(viewsets.ModelViewSet):
                     userserializer = UserSerializer  # 显示
                 else:
                     userserializer = UserCommenSerializer  # 隐藏
-            elif UserGetStarInvestor.objects.filter(is_deleted=False, user=request.user, investor=user).exists():
-                userserializer = UserSerializer  # 显示
             else:
                 userserializer = UserCommenSerializer
             serializer = userserializer(user)
