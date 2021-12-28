@@ -1303,6 +1303,22 @@ class DataroomUserDiscussView(viewsets.ModelViewSet):
     serializer_class = DataroomUserDiscussSerializer
     Model = dataroom_user_discuss
 
+    def get_queryset(self):
+        assert self.queryset is not None, (
+            "'%s' should either include a `queryset` attribute, "
+            "or override the `get_queryset()` method."
+            % self.__class__.__name__
+        )
+        queryset = self.queryset
+        if isinstance(queryset, QuerySet):
+            if self.request.user.is_authenticated:
+                queryset = queryset.filter(datasource_id=self.request.user.datasource_id)
+            else:
+                queryset = queryset
+        else:
+            raise InvestError(code=8890)
+        return queryset
+
     def get_object(self, pk=None):
         if pk:
             try:
