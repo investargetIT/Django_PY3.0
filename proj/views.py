@@ -476,7 +476,8 @@ class ProjectView(viewsets.ModelViewSet):
                     sendmessage_projectpublish(pro, pro.supportUser,['email', 'webmsg'],sender=request.user)
                     for proj_trader in pro.proj_traders.filter(type=0, is_deleted=False):
                         sendmessage_projectpublish(pro, proj_trader.user, ['email', 'webmsg'], sender=request.user)
-                    pulishProjectCreateDataroom(pro, request.user)
+                if projdata['projstatus'] in [4, 6, 7]:  # 已发布，交易中，已完成
+                    pulishProjectCreateDataroom(pro, request.user)  # 创建dataroom，（已创建自动跳过）
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(ProjSerializer(pro).data,lang)))
         except InvestError as err:
                 return JSONResponse(InvestErrorResponse(err))
