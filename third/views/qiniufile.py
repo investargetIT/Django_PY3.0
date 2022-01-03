@@ -7,6 +7,8 @@ import random
 import string
 import threading
 import traceback
+from subprocess import TimeoutExpired
+
 import qiniu
 import requests
 
