@@ -239,9 +239,11 @@ def convertAndUploadOffice(inputpath, outputpath, bucket_name, bucket_key):
         def run(self):
             try:
                 import subprocess
-                subprocess.check_output(['unoconv', '-f', 'pdf', inputpath])  #执行完毕程序才会往下进行
+                subprocess.check_output(['python3', '/var/www/DocumentConverter.py', inputpath, outputpath], timeout=60)  #执行完毕程序才会往下进行
             except ImportError:
                 logexcption(msg='引入模块失败')
+            except TimeoutExpired:
+                logexcption(msg='文件转换超时')
             except Exception:
                 logexcption(msg='文件转换失败')
             if os.path.exists(outputpath):
