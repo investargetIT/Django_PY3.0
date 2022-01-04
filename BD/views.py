@@ -166,7 +166,9 @@ class ProjectBDView(viewsets.ModelViewSet):
             data['datasource'] = request.user.datasource.id
             data['manager'] = relateManagers.pop(0) if relateManagers else request.user.id
             data['contractors'] = data['contractors'] if data.get('contractors') else request.user.id
-            if request.user.has_perm('BD.manageProjectBD') or request.user.has_perm('usersys.as_trader'):
+            if request.user.has_perm('BD.manageProjectBD'):
+                pass
+            elif request.user.has_perm('usersys.as_trader') and request.user.indGroup:
                 pass
             else:
                 raise InvestError(2009, msg='新增项目BD信息失败')
