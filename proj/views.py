@@ -190,9 +190,15 @@ class ProjectView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
-    @loginTokenIsAvailable(['proj.admin_manageproj', 'usersys.as_trader'])
+    @loginTokenIsAvailable()
     def create(self, request, *args, **kwargs):
         try:
+            if request.user.has_perm('proj.admin_manageproj'):
+                pass
+            elif request.user.has_perm('usersys.as_trader') and request.user.indGroup:
+                pass
+            else:
+                raise InvestError(2009, msg='新增项目B失败')
             projdata = request.data
             lang = request.GET.get('lang')
             projdata['createuser'] = request.user.id
