@@ -569,6 +569,8 @@ class OrgBDView(viewsets.ModelViewSet):
     @loginTokenIsAvailable(['BD.manageOrgBD', 'usersys.as_trader'])
     def countBDProject(self, request, *args, **kwargs):
         try:
+            if request.user.has_perm('usersys.as_trader') and (not request.user.is_superuser) and (request.user.indGroup is None):
+                return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
             queryset = self.filter_queryset(self.get_queryset())
             if request.GET.get('filter') in ['1', 'True', True, 1, 'true']:
                 queryset = queryset.filter(Q(proj__PM=request.user) | Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False) | Q(manager=request.user))
@@ -597,6 +599,8 @@ class OrgBDView(viewsets.ModelViewSet):
     @loginTokenIsAvailable(['BD.manageOrgBD', 'usersys.as_trader'])
     def list(self, request, *args, **kwargs):
         try:
+            if request.user.has_perm('usersys.as_trader') and (not request.user.is_superuser) and (request.user.indGroup is None):
+                return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
             queryset = self.filter_queryset(self.get_queryset())
             query_string = request.META['QUERY_STRING']
             uriPath = str(request.path)
