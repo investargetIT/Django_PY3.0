@@ -6,7 +6,8 @@ from sourcetype.serializer import tagSerializer, transactionTypeSerializer, serv
     industryWithPIndustrySerializer, countryWithContinentSerializer, DidiOrderTypeSerializer, currencyTypeSerializer, \
     ProjectStatusSerializer
 from third.views.qiniufile import getUrlWithBucketAndKey
-from usersys.serializer import UserCommenSerializer
+from usersys.serializer import UserCommenSerializer, UserNameSerializer
+
 
 class ProjSimpleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -20,7 +21,7 @@ class ProjTradersCreateSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class ProjTradersSerializer(serializers.ModelSerializer):
-    user = UserCommenSerializer()
+    user = UserNameSerializer()
     class Meta:
         model = projTraders
         fields = '__all__'
@@ -126,8 +127,8 @@ class ProjCommonSerializer(serializers.ModelSerializer):
     tags = serializers.SerializerMethodField()
     industries = serializers.SerializerMethodField()
     lastProject = ProjSimpleSerializer()
-    PM = UserCommenSerializer()
-    createuser = UserCommenSerializer()
+    PM = UserNameSerializer()
+    createuser = UserNameSerializer()
     projTraders = serializers.SerializerMethodField()
     currency = currencyTypeSerializer()
     projstatus = ProjectStatusSerializer()
@@ -167,8 +168,8 @@ class ProjListSerializer_admin(serializers.ModelSerializer):
     tags = serializers.SerializerMethodField()
     industries = serializers.SerializerMethodField()
     transactionType = serializers.SerializerMethodField()
-    PM = UserCommenSerializer()
-    createuser = UserCommenSerializer()
+    PM = UserNameSerializer()
+    createuser = UserNameSerializer()
     projTraders = serializers.SerializerMethodField()
     currency = currencyTypeSerializer()
     projstatus = ProjectStatusSerializer()
@@ -208,8 +209,8 @@ class ProjListSerializer_user(serializers.ModelSerializer):
     industries = serializers.SerializerMethodField()
     country = countrySerializer()
     transactionType = serializers.SerializerMethodField()
-    PM = UserCommenSerializer()
-    createuser = UserCommenSerializer()
+    PM = UserNameSerializer()
+    createuser = UserNameSerializer()
     projTraders = serializers.SerializerMethodField()
     currency = currencyTypeSerializer()
     projstatus = ProjectStatusSerializer()

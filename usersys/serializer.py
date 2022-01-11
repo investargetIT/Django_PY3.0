@@ -5,7 +5,8 @@ from dataroom.models import dataroomdirectoryorfile
 from mongoDoc.models import MergeFinanceData
 from org.serializer import OrgCommonSerializer
 from sourcetype.serializer import tagSerializer, countrySerializer, titleTypeSerializer, \
-    PerformanceAppraisalLevelSerializer, TrainingStatusSerializer, TrainingTypeSerializer, industryGroupSerializer
+    PerformanceAppraisalLevelSerializer, TrainingStatusSerializer, TrainingTypeSerializer, industryGroupSerializer, \
+    EducationSerializer, AuditStatusSerializer
 from third.views.qiniufile import getUrlWithBucketAndKey
 from utils.util import checkMobileTrue
 from .models import MyUser, UserRelation, UnreachUser, UserRemarks, userAttachments, userEvents, \
@@ -29,6 +30,11 @@ class PermissionSerializer(serializers.ModelSerializer):
     def get_codename(self, obj):
         return str(obj.content_type.app_label) + '.' + obj.codename
 
+# 用户基本信息
+class UserNameSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ('id', 'usernameC', 'usernameE')
 
 # 用户基本信息
 class UserCommenSerializer(serializers.ModelSerializer):
@@ -38,13 +44,17 @@ class UserCommenSerializer(serializers.ModelSerializer):
     mobile = serializers.SerializerMethodField()
     email = serializers.SerializerMethodField()
     org = OrgCommonSerializer()
+    education = EducationSerializer()
+    directSupervisor = UserNameSerializer()
+    mentor = UserNameSerializer()
+    userstatus = AuditStatusSerializer()
+    indGroup = industryGroupSerializer
 
     class Meta:
         model = MyUser
         fields = ('id', 'usernameC', 'usernameE', 'tags', 'userstatus', 'photourl', 'title', 'onjob', 'mobile',
                   'mobileAreaCode', 'email', 'is_active', 'org', 'indGroup', 'entryTime', 'bornTime', 'isMarried',
                   'directSupervisor', 'mentor', 'school', 'specialty', 'education', 'specialtyhobby', 'others')
-        depth = 1
 
     def get_tags(self, obj):
         qs = obj.tags.filter(tag_usertags__is_deleted=False)
