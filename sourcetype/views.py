@@ -684,7 +684,7 @@ class WebmenuView(viewsets.ModelViewSet):
 def getmenulist(user):
     allmenuobj = webmenu.objects.all()
     if user.has_perm('dataroom.onlydataroom') and not user.is_superuser:
-        return WebMenuSerializer(allmenuobj.filter(id__in=[6, 8, 14, 30]), many=True).data  # 14：修改密码  8：用户中心  6：dataroom管理  30：普通dataroom
+        return WebMenuSerializer(allmenuobj.filter(id__in=[6, 8, 14, 30]),many=True).data   # 14：修改密码  8：用户中心  6：dataroom管理  30：普通dataroom
     qslist = [1, 6, 7, 8, 10, 14, 16, 21, 24, 26, 28, 30]
     if user.has_perm('usersys.admin_manageuser'):
         qslist.extend([5])

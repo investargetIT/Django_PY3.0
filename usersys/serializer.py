@@ -5,7 +5,8 @@ from dataroom.models import dataroomdirectoryorfile
 from mongoDoc.models import MergeFinanceData
 from org.serializer import OrgCommonSerializer
 from sourcetype.serializer import tagSerializer, countrySerializer, titleTypeSerializer, \
-    PerformanceAppraisalLevelSerializer, TrainingStatusSerializer, TrainingTypeSerializer, industryGroupSerializer
+    PerformanceAppraisalLevelSerializer, TrainingStatusSerializer, TrainingTypeSerializer, industryGroupSerializer, \
+    EducationSerializer, AuditStatusSerializer
 from third.views.qiniufile import getUrlWithBucketAndKey
 from utils.util import checkMobileTrue
 from .models import MyUser, UserRelation, UnreachUser, UserRemarks, userAttachments, userEvents, \
@@ -29,6 +30,11 @@ class PermissionSerializer(serializers.ModelSerializer):
     def get_codename(self, obj):
         return str(obj.content_type.app_label) + '.' + obj.codename
 
+# 用户基本信息
+class UserNameSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ('id', 'usernameC', 'usernameE')
 
 # 用户基本信息
 class UserCommenSerializer(serializers.ModelSerializer):
@@ -38,13 +44,17 @@ class UserCommenSerializer(serializers.ModelSerializer):
     mobile = serializers.SerializerMethodField()
     email = serializers.SerializerMethodField()
     org = OrgCommonSerializer()
+    education = EducationSerializer()
+    directSupervisor = UserNameSerializer()
+    mentor = UserNameSerializer()
+    userstatus = AuditStatusSerializer()
+    indGroup = industryGroupSerializer
 
     class Meta:
         model = MyUser
         fields = ('id', 'usernameC', 'usernameE', 'tags', 'userstatus', 'photourl', 'title', 'onjob', 'mobile',
                   'mobileAreaCode', 'email', 'is_active', 'org', 'indGroup', 'entryTime', 'bornTime', 'isMarried',
                   'directSupervisor', 'mentor', 'school', 'specialty', 'education', 'specialtyhobby', 'others')
-        depth = 1
 
     def get_tags(self, obj):
         qs = obj.tags.filter(tag_usertags__is_deleted=False)
@@ -294,13 +304,13 @@ class UserListSerializer(serializers.ModelSerializer):
     trader_relation = serializers.SerializerMethodField()
     trader_relations = serializers.SerializerMethodField()
     photourl = serializers.SerializerMethodField()
-    directSupervisor = UserSimpleSerializer()
-    mentor = UserSimpleSerializer()
+    directSupervisor = UserNameSerializer()
+    mentor = UserNameSerializer()
 
     class Meta:
         model = MyUser
-        fields = ('id','groups','tags','country', 'department', 'usernameC', 'usernameE', 'mobile', 'mobileAreaCode','mobiletrue', 'indGroup', 'trader_relations',
-                  'email', 'title', 'userstatus', 'org', 'trader_relation', 'photourl','is_active', 'hasIM', 'wechat', 'directSupervisor', 'mentor', 'entryTime', 'bornTime', 'isMarried',
+        fields = ('id','groups','tags','country', 'usernameC', 'usernameE', 'mobile', 'mobileAreaCode','mobiletrue', 'indGroup', 'trader_relations',
+                  'email', 'title', 'userstatus', 'org', 'trader_relation', 'photourl','is_active', 'wechat', 'directSupervisor', 'mentor', 'entryTime', 'bornTime', 'isMarried',
                   'school', 'specialty', 'education', 'specialtyhobby', 'others')
 
     def get_mobiletrue(self, obj):
@@ -326,7 +336,7 @@ class UserListSerializer(serializers.ModelSerializer):
 
 
 class UserTraderSimpleSerializer(serializers.ModelSerializer):
-    traderuser = UserSimpleSerializer()
+    traderuser = UserNameSerializer()
 
     class Meta:
         model = UserRelation
@@ -337,8 +347,8 @@ class UserListCommenSerializer(serializers.ModelSerializer):
     photourl = serializers.SerializerMethodField()
     mobile = serializers.SerializerMethodField()
     indGroup = industryGroupSerializer()
-    directSupervisor = UserSimpleSerializer()
-    mentor = UserSimpleSerializer()
+    directSupervisor = UserNameSerializer()
+    mentor = UserNameSerializer()
     email = serializers.SerializerMethodField()
     mobiletrue = serializers.SerializerMethodField()
     org = OrgCommonSerializer()

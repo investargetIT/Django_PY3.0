@@ -163,7 +163,7 @@ class ProjectView(viewsets.ModelViewSet):
                 else:
                     queryset = queryset.filter(Q(isHidden=False,projstatus_id__in=[4,6,7,8]) | Q(isHidden=True, proj_datarooms__is_deleted=False, proj_datarooms__dataroom_users__user=request.user, proj_datarooms__dataroom_users__is_deleted=False))
                     serializerclass = ProjListSerializer_user
-            queryset = queryset.distinct()
+            queryset = queryset.distinct().select_related("PM", "createuser", "supportUser", "projstatus")
             queryset = mySortQuery(queryset, sortfield, desc)
             count = queryset.count()
             queryset = queryset[int(skip_count):int(max_size)+int(skip_count)]
@@ -482,7 +482,7 @@ class ProjectView(viewsets.ModelViewSet):
                     sendmessage_projectpublish(pro, pro.supportUser,['email', 'webmsg'],sender=request.user)
                     for proj_trader in pro.proj_traders.filter(type=0, is_deleted=False):
                         sendmessage_projectpublish(pro, proj_trader.user, ['email', 'webmsg'], sender=request.user)
-                if projdata['projstatus'] in [4, 6, 7]:  # 已发布，交易中，已完成
+                if projdata['projstatus'] in [4, 6, 7]: # 已发布，交易中，已完成
                     pulishProjectCreateDataroom(pro, request.user)  # 创建dataroom，（已创建自动跳过）
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(ProjSerializer(pro).data,lang)))
         except InvestError as err:
