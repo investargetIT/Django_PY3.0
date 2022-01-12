@@ -304,13 +304,13 @@ class UserListSerializer(serializers.ModelSerializer):
     trader_relation = serializers.SerializerMethodField()
     trader_relations = serializers.SerializerMethodField()
     photourl = serializers.SerializerMethodField()
-    directSupervisor = UserSimpleSerializer()
-    mentor = UserSimpleSerializer()
+    directSupervisor = UserNameSerializer()
+    mentor = UserNameSerializer()
 
     class Meta:
         model = MyUser
-        fields = ('id','groups','tags','country', 'department', 'usernameC', 'usernameE', 'mobile', 'mobileAreaCode','mobiletrue', 'indGroup', 'trader_relations',
-                  'email', 'title', 'userstatus', 'org', 'trader_relation', 'photourl','is_active', 'hasIM', 'wechat', 'directSupervisor', 'mentor', 'entryTime', 'bornTime', 'isMarried',
+        fields = ('id','groups','tags','country', 'usernameC', 'usernameE', 'mobile', 'mobileAreaCode','mobiletrue', 'indGroup', 'trader_relations',
+                  'email', 'title', 'userstatus', 'org', 'trader_relation', 'photourl','is_active', 'wechat', 'directSupervisor', 'mentor', 'entryTime', 'bornTime', 'isMarried',
                   'school', 'specialty', 'education', 'specialtyhobby', 'others')
 
     def get_mobiletrue(self, obj):
@@ -336,7 +336,7 @@ class UserListSerializer(serializers.ModelSerializer):
 
 
 class UserTraderSimpleSerializer(serializers.ModelSerializer):
-    traderuser = UserSimpleSerializer()
+    traderuser = UserNameSerializer()
 
     class Meta:
         model = UserRelation
@@ -347,8 +347,8 @@ class UserListCommenSerializer(serializers.ModelSerializer):
     photourl = serializers.SerializerMethodField()
     mobile = serializers.SerializerMethodField()
     indGroup = industryGroupSerializer()
-    directSupervisor = UserSimpleSerializer()
-    mentor = UserSimpleSerializer()
+    directSupervisor = UserNameSerializer()
+    mentor = UserNameSerializer()
     email = serializers.SerializerMethodField()
     mobiletrue = serializers.SerializerMethodField()
     org = OrgCommonSerializer()

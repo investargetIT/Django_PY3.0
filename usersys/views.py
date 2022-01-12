@@ -122,6 +122,7 @@ class UserView(viewsets.ModelViewSet):
             sortfield = request.GET.get('sort', 'createdtime')
             desc = request.GET.get('desc', 1)
             queryset = mySortQuery(queryset, sortfield, desc, True)
+            queryset = queryset.select_related("org", "indGroup", "directSupervisor", "mentor").prefetch_related('investor_relations')
             count = queryset.count()
             try:
                 queryset = Paginator(queryset, page_size)
@@ -129,19 +130,21 @@ class UserView(viewsets.ModelViewSet):
             except EmptyPage:
                 return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
             responselist = []
-            for instance in queryset:
-                if request.user.has_perm('usersys.admin_manageuser') or is_userTrader(request.user, instance.id):
-                    instancedata = UserListSerializer(instance).data
-                elif (not UserRelation.objects.filter(investoruser=instance, traderuser__onjob=True, is_deleted=False).exists()) and \
-                            UserRelation.objects.filter(investoruser=instance, is_deleted=False).exists() and request.user.has_perm('usersys.as_trader'):
-                    instancedata = UserListSerializer(instance).data     # 显示
-                elif UserGetStarInvestor.objects.filter(is_deleted=False, user=request.user, investor=instance).exists():
-                    instancedata = UserListSerializer(instance).data  # 显示
-                else:
-                    instancedata = UserListCommenSerializer(instance).data  # 隐藏
-                responselist.append(instancedata)
-            return JSONResponse(
-                SuccessResponse({'count': count, 'data': returnListChangeToLanguage(responselist, lang)}))
+            if request.user.has_perm('usersys.admin_manageuser'):
+                responselist = UserListSerializer(queryset, many=True).data
+            else:
+                for instance in queryset:
+                    if is_userTrader(request.user, instance.id):
+                        instancedata = UserListSerializer(instance).data
+                    elif (not UserRelation.objects.filter(investoruser=instance, traderuser__onjob=True, is_deleted=False).exists()) and \
+                                UserRelation.objects.filter(investoruser=instance, is_deleted=False).exists() and request.user.has_perm('usersys.as_trader'):
+                        instancedata = UserListSerializer(instance).data     # 显示
+                    elif UserGetStarInvestor.objects.filter(is_deleted=False, user=request.user, investor=instance).exists():
+                        instancedata = UserListSerializer(instance).data  # 显示
+                    else:
+                        instancedata = UserListCommenSerializer(instance).data  # 隐藏
+                    responselist.append(instancedata)
+            return JSONResponse(SuccessResponse({'count': count, 'data': returnListChangeToLanguage(responselist, lang)}))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
