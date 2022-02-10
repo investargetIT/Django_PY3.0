@@ -292,6 +292,7 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
     tags = models.ManyToManyField(Tag, through='userTags', through_fields=('user', 'tag'), blank=True,related_name='tag_users')
     email = models.EmailField(help_text='邮箱', max_length=128,db_index=True,blank=True,null=True)
     title = MyForeignKey(TitleType,blank=True,null=True,related_name='title_users')
+    workType = models.SmallIntegerField(blank=True, null=True, help_text='职权范围/工作类型（0/IBD、1/ECM）')
     indGroup = MyForeignKey(IndustryGroup, null=True, blank=True, help_text='所属行业组')
     gender = models.BooleanField(blank=True, default=False, help_text=('False=男，True=女'))
     onjob = models.BooleanField(blank=True, default=True, help_text='是否在职')

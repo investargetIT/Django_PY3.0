@@ -25,7 +25,7 @@ class ProjectBDCommentsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProjectBDComments
-        fields = ('comments', 'id', 'createdtime', 'projectBD', 'createuser', 'createuserobj')
+        exclude = ('deleteduser', 'deletedtime', 'datasource', 'is_deleted')
 
     def get_createuserobj(self, obj):
         if obj.createuser:

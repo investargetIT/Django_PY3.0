@@ -97,6 +97,8 @@ class ProjectBDManagers(MyModel):
 class ProjectBDComments(MyModel):
     comments = models.TextField(blank=True, default=False, help_text='内容')
     event_date = models.DateTimeField(blank=True, null=True)
+    key = models.CharField(max_length=128, blank=True, null=True, help_text='文件路径')
+    bucket = models.CharField(max_length=128, blank=True, null=True, help_text='文件所在空间')
     projectBD = MyForeignKey(ProjectBD,blank=True,null=True,help_text='bd项目',related_name='ProjectBD_comments')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_ProjectBDComments')
     createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_ProjectBDComments')
@@ -255,6 +257,8 @@ class WorkReport(MyModel):
 class WorkReportMarketMsg(MyModel):
     report = MyForeignKey(WorkReport, blank=True, null=True, related_name='report_marketmsg', help_text='工作报表归属人')
     marketMsg = models.TextField(blank=True, null=True, help_text='市场信息和项目信息汇报')
+    key = models.CharField(max_length=128, blank=True, null=True, help_text='文件路径')
+    bucket = models.CharField(max_length=128, blank=True, null=True, help_text='文件所在空间')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_workreportmarketmsg')
     createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_workreportmarketmsg')
     lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_workreportmarketmsg')
