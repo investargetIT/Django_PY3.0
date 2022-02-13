@@ -3,6 +3,19 @@ from django.conf.urls import url
 from third.views import submail
 from third.views import qiniufile
 from third.views import others
+from third.views import audioTransfer
+
+audioTrans = audioTransfer.AudioTranslateTaskRecordView.as_view({
+        'get': 'list',
+        'post': 'audioFileTranslateToWord',
+})
+
+
+
+audioTrans_detail = audioTransfer.AudioTranslateTaskRecordView.as_view({
+        'get': 'getAudioFileTranslateToWordTaskResult',
+})
+
 urlpatterns = [
     url(r'^sms$', submail.sendSmscode, name='sendsmscode', ),
     url(r'^qiniubigupload$', qiniufile.bigfileupload, name='qiniubig', ),
@@ -19,4 +32,6 @@ urlpatterns = [
     url(r'^selectUpload$', others.selectUpload, name='selectFromUploadRecord',),
     url(r'^cancelUpload$', others.cancelUpload, name='cancelUploadRecord',),
     url(r'^deleteUpload$', others.deleteUpload, name='deleteUploadRecord',),
+    url(r'^audioTranslate/$', audioTrans, name='deleteUploadRecord',),
+    url(r'^audioTranslate/(?P<pk>\d+)/$', audioTrans_detail, name='getAudioFileTranslateToWordTaskResult',),
 ]
