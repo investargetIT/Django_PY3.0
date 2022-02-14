@@ -12,7 +12,7 @@ from usersys.serializer import UserCommenSerializer, UserNameSerializer
 class ProjSimpleSerializer(serializers.ModelSerializer):
     class Meta:
         model = project
-        fields = ('id', 'projtitleC', 'projtitleE', 'financeAmount', 'financeAmount_USD', 'country', 'projstatus', 'isHidden', 'lastProject', 'publishDate')
+        fields = ('id', 'projtitleC', 'projtitleE', 'financeAmount', 'financeAmount_USD', 'country', 'projstatus', 'isHidden', 'lastProject', 'publishDate','projectBD')
 
 
 class ProjTradersCreateSerializer(serializers.ModelSerializer):
@@ -135,7 +135,7 @@ class ProjCommonSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = project
-        fields = ('id','industries','projtitleC','projtitleE','tags', 'currency', 'financeAmount','financeAmount_USD','country','projstatus','isHidden', 'PM','createuser','projTraders','lastProject','publishDate','createdtime')
+        fields = ('id','industries','projtitleC','projtitleE','tags', 'currency', 'financeAmount','financeAmount_USD','country','projstatus','isHidden', 'PM','createuser','projTraders','lastProject','publishDate','createdtime','projectBD')
 
     def get_tags(self, obj):
         qs = obj.tags.filter(tag_projects__is_deleted=False)
@@ -176,7 +176,7 @@ class ProjListSerializer_admin(serializers.ModelSerializer):
 
     class Meta:
         model = project
-        fields = ('id','industries','projtitleC','projtitleE', 'currency','transactionType','tags','financeAmount','financeAmount_USD','country','projstatus','isHidden','publishDate','createdtime','PM','createuser','projTraders')
+        fields = ('id','industries','projtitleC','projtitleE', 'currency','transactionType','tags','financeAmount','financeAmount_USD','country','projstatus','isHidden','publishDate','createdtime','PM','createuser','projTraders','projectBD')
 
 
     def get_tags(self, obj):
@@ -217,7 +217,7 @@ class ProjListSerializer_user(serializers.ModelSerializer):
 
     class Meta:
         model = project
-        fields = ('id','industries','projtitleC','projtitleE','tags', 'currency', 'transactionType','financeAmount','financeAmount_USD','country','projstatus','publishDate','PM','createuser','projTraders')
+        fields = ('id','industries','projtitleC','projtitleE','tags', 'currency', 'transactionType','financeAmount','financeAmount_USD','country','projstatus','publishDate','PM','createuser','projTraders','projectBD')
 
     def get_tags(self, obj):
         qs = obj.tags.filter(tag_projects__is_deleted=False)
