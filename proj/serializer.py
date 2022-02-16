@@ -104,6 +104,7 @@ class ProjAttachmentSerializer(serializers.ModelSerializer):
 
 class ProjSerializer(serializers.ModelSerializer):
     supportUser = UserCommenSerializer()
+    sponsor = UserCommenSerializer()
     PM = UserCommenSerializer()
     projTraders = serializers.SerializerMethodField()
     proj_finances = ProjFinanceSerializer(many=True)
@@ -127,6 +128,7 @@ class ProjCommonSerializer(serializers.ModelSerializer):
     tags = serializers.SerializerMethodField()
     industries = serializers.SerializerMethodField()
     lastProject = ProjSimpleSerializer()
+    sponsor = UserCommenSerializer()
     PM = UserNameSerializer()
     createuser = UserNameSerializer()
     projTraders = serializers.SerializerMethodField()
@@ -135,7 +137,7 @@ class ProjCommonSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = project
-        fields = ('id','industries','projtitleC','projtitleE','tags', 'currency', 'financeAmount','financeAmount_USD','country','projstatus','isHidden', 'PM','createuser','projTraders','lastProject','publishDate','createdtime','projectBD')
+        fields = ('id','industries','projtitleC','projtitleE','tags', 'currency', 'financeAmount','financeAmount_USD','country','projstatus','isHidden', 'PM', 'sponsor', 'createuser','projTraders','lastProject','publishDate','createdtime','projectBD')
 
     def get_tags(self, obj):
         qs = obj.tags.filter(tag_projects__is_deleted=False)
@@ -168,6 +170,7 @@ class ProjListSerializer_admin(serializers.ModelSerializer):
     tags = serializers.SerializerMethodField()
     industries = serializers.SerializerMethodField()
     transactionType = serializers.SerializerMethodField()
+    sponsor = UserCommenSerializer()
     PM = UserNameSerializer()
     createuser = UserNameSerializer()
     projTraders = serializers.SerializerMethodField()
@@ -176,7 +179,7 @@ class ProjListSerializer_admin(serializers.ModelSerializer):
 
     class Meta:
         model = project
-        fields = ('id','industries','projtitleC','projtitleE', 'currency','transactionType','tags','financeAmount','financeAmount_USD','country','projstatus','isHidden','publishDate','createdtime','PM','createuser','projTraders','projectBD')
+        fields = ('id','industries','projtitleC','projtitleE', 'currency','transactionType','tags','financeAmount','financeAmount_USD','country','projstatus','isHidden','publishDate','createdtime','PM','sponsor','createuser','projTraders','projectBD')
 
 
     def get_tags(self, obj):
@@ -209,6 +212,7 @@ class ProjListSerializer_user(serializers.ModelSerializer):
     industries = serializers.SerializerMethodField()
     country = countrySerializer()
     transactionType = serializers.SerializerMethodField()
+    sponsor = UserCommenSerializer()
     PM = UserNameSerializer()
     createuser = UserNameSerializer()
     projTraders = serializers.SerializerMethodField()
@@ -217,7 +221,7 @@ class ProjListSerializer_user(serializers.ModelSerializer):
 
     class Meta:
         model = project
-        fields = ('id','industries','projtitleC','projtitleE','tags', 'currency', 'transactionType','financeAmount','financeAmount_USD','country','projstatus','publishDate','PM','createuser','projTraders','projectBD')
+        fields = ('id','industries','projtitleC','projtitleE','tags', 'currency', 'transactionType','financeAmount','financeAmount_USD','country','projstatus','publishDate','PM','sponsor','createuser','projTraders','projectBD')
 
     def get_tags(self, obj):
         qs = obj.tags.filter(tag_projects__is_deleted=False)
@@ -255,6 +259,7 @@ class ProjDetailSerializer_withoutsecretinfo(serializers.ModelSerializer):
     linkpdfurl = serializers.SerializerMethodField()
     lastProject = ProjSimpleSerializer()
     PM = UserCommenSerializer()
+    sponsor = UserCommenSerializer()
     projTraders = serializers.SerializerMethodField()
     createuser = UserCommenSerializer()
     currency = currencyTypeSerializer()
@@ -319,6 +324,7 @@ class ProjDetailSerializer_all(serializers.ModelSerializer):
     attachment = serializers.SerializerMethodField()
     country = countryWithContinentSerializer()
     supportUser = UserCommenSerializer()
+    sponsor = UserCommenSerializer()
     PM = UserCommenSerializer()
     createuser = UserCommenSerializer()
     projTraders = serializers.SerializerMethodField()
