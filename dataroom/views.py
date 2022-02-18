@@ -609,7 +609,8 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
             lang = request.GET.get('lang')
             dataroomid = data.get('dataroom', None)
             dataroominstance = dataroom.objects.get(id=dataroomid, is_deleted=False)
-            data['createuser'] = request.user.id
+            if not data.get('createuser'):
+                data['createuser'] = request.user.id
             data['datasource'] = request.user.datasource.id
             if request.user.has_perm('dataroom.admin_managedataroom') or is_dataroomTrader(request.user, dataroominstance):
                 pass
