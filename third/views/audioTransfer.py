@@ -249,7 +249,7 @@ class AudioTranslateTaskRecordView(viewsets.ModelViewSet):
         getAudioFileTranslateToWordTaskResult: 获取转换结果
     """
     filter_backends = (filters.SearchFilter, filters.DjangoFilterBackend,)
-    filter_fields = ('cretateUserId',)
+    filter_fields = ('cretateUserId', 'taskStatus')
     search_fields = ('file_name',)
     queryset = AudioTranslateTaskRecord.objects.all().filter(is_deleted=False)
     serializer_class = AudioTranslateTaskRecordSerializer
