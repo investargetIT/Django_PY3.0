@@ -1181,7 +1181,8 @@ class OrgBuyoutView(viewsets.ModelViewSet):
                 raise InvestError(code=2009, msg='新增机构退出经历失败')
         else:
             raise InvestError(code=20072, msg='新增机构退出经历失败', detail='机构不能为空')
-        data['createuser'] = request.user.id
+        if not data.get('createuser'):
+            data['createuser'] = request.user.id
         try:
             with transaction.atomic():
                 instanceserializer = OrgBuyoutCreateSerializer(data=data)
@@ -1418,7 +1419,8 @@ class OrgAttachmentView(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         data = request.data
         lang = request.GET.get('lang')
-        data['createuser'] = request.user.id
+        if not data.get('createuser'):
+            data['createuser'] = request.user.id
         try:
             with transaction.atomic():
                 attachmentserializer = self.serializer_class(data=data)
