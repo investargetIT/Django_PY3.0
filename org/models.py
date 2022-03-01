@@ -6,7 +6,7 @@ import sys
 
 from django.db.models import Q
 from guardian.shortcuts import assign_perm, remove_perm
-from sourcetype.models import AuditStatus, OrgType , TransactionPhases,CurrencyType, Industry, DataSource, OrgAttribute, Country, \
+from sourcetype.models import AuditStatus, OrgType , TransactionPhases,CurrencyType, DataSource, OrgAttribute, Country, \
     Tag, OrgLevelType
 from usersys.models import MyUser
 from utils.customClass import InvestError, MyForeignKey, MyModel
@@ -52,7 +52,6 @@ class organization(MyModel):
     mobile = models.CharField(max_length=100,blank=True,null=True)
     mobileCode = models.CharField(max_length=8, blank=True, null=True, help_text='电话区号')
     mobileAreaCode = models.CharField(max_length=10, blank=True, null=True, default='86',help_text='电话国家号')
-    industry = MyForeignKey(Industry,help_text='机构行业',blank=True,null=True)
     webSite = models.CharField(max_length=128,blank=True,null=True)
     companyEmail = models.EmailField(blank=True,null=True,max_length=50)
     orgstatus = MyForeignKey(AuditStatus, blank=True, default=1)

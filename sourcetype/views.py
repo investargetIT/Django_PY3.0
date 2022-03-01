@@ -45,6 +45,56 @@ class TagView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def create(self, request, *args, **kwargs):
+        try:
+            with transaction.atomic():
+                data = request.data
+                data['datasource'] = request.user.datasource_id
+                serializer = self.serializer_class(data=data)
+                if serializer.is_valid():
+                    serializer.save()
+                else:
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
+                return JSONResponse(SuccessResponse(serializer.data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def update(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            with transaction.atomic():
+                data = request.data
+                serializer = self.serializer_class(instance, data=data)
+                if serializer.is_valid():
+                    serializer.save()
+                else:
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
+                return JSONResponse(SuccessResponse(serializer.data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def destroy(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            instance.is_deleted = True
+            instance.save(update_fields=['is_deleted'])
+            return JSONResponse(SuccessResponse({'is_deleted': instance.is_deleted}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+
 class OrgBdResponseView(viewsets.ModelViewSet):
     """
         list:获取所有反馈结果类型
