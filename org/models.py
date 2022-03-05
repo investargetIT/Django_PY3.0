@@ -2,19 +2,14 @@
 from __future__ import unicode_literals
 
 from django.db import models
-import sys
-
-from django.db.models import Q
-from guardian.shortcuts import assign_perm, remove_perm
 from sourcetype.models import AuditStatus, OrgType , TransactionPhases,CurrencyType, DataSource, OrgAttribute, Country, \
-    Tag, OrgLevelType
+    Tag
 from usersys.models import MyUser
 from utils.customClass import InvestError, MyForeignKey, MyModel
 # Create your models here.
 
 class organization(MyModel):
     id = models.AutoField(primary_key=True)
-    orglevel = MyForeignKey(OrgLevelType, blank=True, default=3, help_text='机构级别')
     description = models.TextField(blank=True,null=True)
     investoverseasproject = models.BooleanField(blank=True, default=False, help_text='海外机构')
     orgtransactionphase = models.ManyToManyField(TransactionPhases, through='orgTransactionPhase',through_fields=('org','transactionPhase'), blank=True)

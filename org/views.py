@@ -43,7 +43,6 @@ class OrganizationFilter(FilterSet):
     proj = RelationFilter(filterstr='org_orgBDs__proj', relationName='org_orgBDs__is_deleted', lookup_method='in')
     orgfullname = RelationFilter(filterstr='orgfullname')
     ids = RelationFilter(filterstr='id', lookup_method='in')
-    lv = RelationFilter(filterstr='orglevel', lookup_method='in')
     stockcode = RelationFilter(filterstr='stockcode',lookup_method='in')
     stockshortname = RelationFilter(filterstr='stockshortname',lookup_method='in')
     issub = RelationFilter(filterstr='issub', lookup_method='exact')
@@ -58,7 +57,7 @@ class OrganizationFilter(FilterSet):
     trader = RelationFilter(filterstr='org_users__investor_relations__traderuser',lookup_method='in',relationName='org_users__investor_relations__is_deleted')
     class Meta:
         model = organization
-        fields = ['orgname', 'proj','orgfullname', 'orgstatus','currencys','orgtransactionphases','orgtypes','area','trader','stockcode','stockshortname','issub','investoverseasproject', 'ids', 'lv']
+        fields = ['orgname', 'proj','orgfullname', 'orgstatus','currencys','orgtransactionphases','orgtypes','area','trader','stockcode','stockshortname','issub','investoverseasproject', 'ids']
 
 class OrganizationView(viewsets.ModelViewSet):
     """
@@ -125,14 +124,8 @@ class OrganizationView(viewsets.ModelViewSet):
                 return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
             responselist = []
             for instance in queryset:
-                user_count = 0
-                if request.user.is_anonymous:
-                    pass
-                else:
-                    if instance.orglevel_id == 1 or instance.orglevel_id == 2:
-                        user_count = checkOrgUserContactInfoTruth(instance, request.user.datasource)
                 instancedata = serializerclass(instance).data
-                instancedata['user_count'] = user_count
+                instancedata['user_count'] = 0
                 responselist.append(instancedata)
             return JSONResponse(SuccessResponse({'count':count,'data':returnListChangeToLanguage(responselist,lang)}))
         except InvestError as err:
@@ -1765,14 +1758,8 @@ def fulltextsearch(request):
             serializerclass = OrgListSerializer
         responselist = []
         for instance in org_qs:
-            user_count = 0
-            if request.user.is_anonymous:
-                pass
-            else:
-                if instance.orglevel_id == 1 or instance.orglevel_id == 2:
-                    user_count = checkOrgUserContactInfoTruth(instance, request.user.datasource)
             instancedata = serializerclass(instance).data
-            instancedata['user_count'] = user_count
+            instancedata['user_count'] = 0
             responselist.append(instancedata)
         return JSONResponse(SuccessResponse({'count': count, 'data': returnListChangeToLanguage(responselist, lang)}))
     except InvestError as err:
