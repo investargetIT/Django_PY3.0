@@ -51,12 +51,18 @@ class TagView(viewsets.ModelViewSet):
             with transaction.atomic():
                 data = request.data
                 data['datasource'] = request.user.datasource_id
+                if not data.get('nameC') and data.get('nameE'):
+                    data['nameC'] = data['nameE']
+                elif not data.get('nameE') and data.get('nameC'):
+                    data['nameE'] = data['nameC']
+                elif not data.get('nameC') and not data.get('nameE'):
+                    raise InvestError(20071, msg='新建标签失败，名称不能为空', detail='新建标签名称不能为空')
                 serializer = self.serializer_class(data=data)
                 if serializer.is_valid():
-                    serializer.save()
+                    instance = serializer.save()
                 else:
                     raise InvestError(20071, msg='%s' % serializer.error_messages)
-                return JSONResponse(SuccessResponse(serializer.data))
+                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
@@ -71,10 +77,10 @@ class TagView(viewsets.ModelViewSet):
                 data = request.data
                 serializer = self.serializer_class(instance, data=data)
                 if serializer.is_valid():
-                    serializer.save()
+                    instance = serializer.save()
                 else:
                     raise InvestError(20071, msg='%s' % serializer.error_messages)
-                return JSONResponse(SuccessResponse(serializer.data))
+                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:

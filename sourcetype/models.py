@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 import datetime
 from django.db import models
-from utils.customClass import MyForeignKey
+from utils.customClass import MyForeignKey, InvestError
 
 
 class DataSource(models.Model):
@@ -246,13 +246,18 @@ class Tag(models.Model):
     id = models.AutoField(primary_key=True)
     nameC = models.CharField(max_length=20, blank=True, null=True)
     nameE = models.CharField(max_length=128, blank=True, null=True)
-    scopeName = models.CharField(max_length=128, blank=True, null=True)
     hotpoint = models.SmallIntegerField(blank=True, default=0)
     datasource = MyForeignKey(DataSource, help_text='数据源', blank=True, default=1)
     is_deleted = models.BooleanField(blank=True, default=False)
 
     def __str__(self):
         return self.nameC
+
+    def save(self, *args, **kwargs):
+        if Tag.objects.exclude(pk=self.pk).filter(nameC=self.nameC).exists():
+            raise InvestError(2026, msg='编辑标签失败，已存在相同标签', detail='已存在相同标签')
+        else:
+            super(Tag, self).save(*args, **kwargs)
 
 
 class OrgArea(models.Model):
@@ -266,12 +271,6 @@ class OrgArea(models.Model):
 
     def __str__(self):
         return self.nameC
-    def save(self, force_insert=False, force_update=False, using=None,
-             update_fields=None):
-        if OrgArea.objects.filter(nameC=self.nameC).exists():
-            pass
-        else:
-            super(OrgArea, self).save(force_insert, force_update, using, update_fields)
 
 
 class Education(models.Model):
