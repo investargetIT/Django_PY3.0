@@ -119,16 +119,16 @@ def loginTokenIsAvailable(permissions=None):#判断class级别权限
                     try:
                         token = MyToken.objects.get(key=tokenkey,is_deleted=False)
                     except MyToken.DoesNotExist:
-                        return JSONResponse(InvestErrorResponse(InvestError(3000, msg='请先登录')))
+                        return JSONResponse(InvestErrorResponse(InvestError(3000, msg='请重新登录')))
                 else:
-                    return JSONResponse(InvestErrorResponse(InvestError(3000, msg='请先登录')))
+                    return JSONResponse(InvestErrorResponse(InvestError(3000, msg='请重新登录')))
             except Exception as exc:
                 return JSONResponse(InvestErrorResponse(InvestError(code=3000, msg=repr(exc))))
             else:
                 if token.timeout():
-                    return JSONResponse(InvestErrorResponse(InvestError(3000, msg='登录失效，请重新登录')))
+                    return JSONResponse(InvestErrorResponse(InvestError(3000, msg='请重新登录')))
                 if token.user.is_deleted:
-                    return JSONResponse(InvestErrorResponse(InvestError(3000, msg='用户不存在')))
+                    return JSONResponse(InvestErrorResponse(InvestError(3000, msg='请重新登录', detail='用户不存在')))
                 page_size = request.GET.get('page_size')
                 if page_size and int(page_size) > request_max_size:
                     return JSONResponse(InvestErrorResponse(InvestError(8200, msg='请求数据量超限', detail='请求数据量超限，最多{}'.format(request_max_size))))
@@ -170,12 +170,12 @@ def checkRequestToken():
                     try:
                         token = MyToken.objects.get(key=tokenkey,is_deleted=False)
                     except MyToken.DoesNotExist:
-                        return JSONResponse(InvestErrorResponse(InvestError(3000, msg='请先登录')))
+                        return JSONResponse(InvestErrorResponse(InvestError(3000, msg='请重新登录')))
                     else:
                         if token.timeout():
-                            return JSONResponse(InvestErrorResponse(InvestError(3000, msg='登录失效，请重新登录')))
+                            return JSONResponse(InvestErrorResponse(InvestError(3000, msg='请重新登录')))
                         if token.user.is_deleted:
-                            return JSONResponse(InvestErrorResponse(InvestError(3000, msg='用户不存在')))
+                            return JSONResponse(InvestErrorResponse(InvestError(3000, msg='请重新登录', detail='用户不存在')))
                         if token.user.userstatus_id == 3:
                             return JSONResponse(InvestErrorResponse(InvestError(3000, msg='用户审核未通过，如有疑问请咨询相关工作人员。')))
                         page_size = request.GET.get('page_size')
