@@ -15,7 +15,7 @@ from sourcetype.models import ProjectStatus, CurrencyType, Tag, Country, Transac
 from usersys.models import MyUser
 
 from utils.customClass import InvestError, MyForeignKey, MyModel
-from utils.util import add_perm, rem_perm
+from utils.util import rem_perm
 
 
 
@@ -23,6 +23,7 @@ class project(MyModel):
     id = models.AutoField(primary_key=True)
     indGroup = MyForeignKey(IndustryGroup, null=True, blank=True, help_text='项目所属行业组')
     lastProject = MyForeignKey('self', blank=True, null=True, related_name='relate_projects')
+    projectBD = MyForeignKey('BD.ProjectBD', blank=True, null=True, related_name='relate_projectBD')
     projtitleC = models.CharField(max_length=128,db_index=True,default='标题')
     projtitleE = models.CharField(max_length=256,blank=True,null=True,db_index=True)
     projstatus = MyForeignKey(ProjectStatus,help_text='项目状态',default=2)
