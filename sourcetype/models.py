@@ -255,7 +255,7 @@ class Tag(models.Model):
 
     def save(self, *args, **kwargs):
         if Tag.objects.exclude(pk=self.pk).filter(nameC=self.nameC).exists():
-            raise InvestError(2026, msg='编辑标签失败，已存在相同标签', detail='已存在相同标签')
+            raise InvestError(6101, msg='编辑标签失败，已存在相同标签', detail='已存在相同标签')
         else:
             super(Tag, self).save(*args, **kwargs)
 
