@@ -124,6 +124,7 @@ class TitleType(models.Model):
     id = models.AutoField(primary_key=True)
     nameC = models.CharField(max_length=20,blank=True,null=True)
     nameE = models.CharField(max_length=128,blank=True,null=True)
+    score = models.IntegerField(blank=True, null=True, help_text='职位等级分数')
     is_deleted = models.BooleanField(blank=True, default=False)
 
     def __str__(self):
