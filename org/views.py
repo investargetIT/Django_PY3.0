@@ -108,7 +108,7 @@ class OrganizationView(viewsets.ModelViewSet):
             tags = request.GET.get('tags', None)
             if tags:
                 tags = tags.split(',')
-                queryset = queryset.filter(Q(org_users__tags__in=tags) | Q(org_orgtags__tag__in=tags))
+                queryset = queryset.filter(Q(org_users__tags__in=tags) | Q(org_orgtags__tag__in=tags)).distinct()
             sortfield = request.GET.get('sort', 'createdtime')
             desc = request.GET.get('desc', 1)
             queryset = mySortQuery(queryset, sortfield, desc)
@@ -1721,49 +1721,53 @@ def makeExportOrgExcel():
 @checkRequestToken()
 def fulltextsearch(request):
     try:
-        searchText = request.GET.get('text')
-        if not searchText:
-            raise InvestError(20072, msg='全库搜索机构失败', detail='搜索参数不能为空')
         page_index = int(request.GET.get('page_index', 1))
         page_size = int(request.GET.get('page_size', 10))
         lang = request.GET.get('lang', 'cn')
         queryset = organization.objects.filter(is_deleted=False)
         queryset = OrganizationFilter(request.query_params, queryset=queryset, request=request).qs
-        es = Elasticsearch({HAYSTACK_CONNECTIONS['default']['URL']})
-        ret = es.search(index=HAYSTACK_CONNECTIONS['default']['INDEX_NAME'],
-                        body={
-                            "query": {
-                                "bool": {
-                                    "should": [
-                                        {"match_phrase": {"fileContent": searchText}},
-                                        {"match_phrase": {"remark": searchText}},
-                                    ]
-                                }
-                            },
-                            "_source": ["id", "org", "remark", "fileContent"]
-                        })
-        orgId_list = set()
-        for source in ret["hits"]["hits"]:
-            orgid = source['_source'].get('org')
-            if orgid:
-                orgId_list.add(orgid)
-        org_qs = queryset.filter(id__in=orgId_list)
+        q = Q()
+        q.connector = 'or'
+        searchText = request.GET.get('text')
+        if searchText:
+            es = Elasticsearch({HAYSTACK_CONNECTIONS['default']['URL']})
+            ret = es.search(index=HAYSTACK_CONNECTIONS['default']['INDEX_NAME'],
+                            body={
+                                "query": {
+                                    "bool": {
+                                        "should": [
+                                            {"match_phrase": {"fileContent": searchText}},
+                                            {"match_phrase": {"remark": searchText}},
+                                        ]
+                                    }
+                                },
+                                "_source": ["id", "org", "remark", "fileContent"]
+                            })
+            orgId_list = set()
+            for source in ret["hits"]["hits"]:
+                orgid = source['_source'].get('org')
+                if orgid:
+                    orgId_list.add(orgid)
+            q.children.append(('id__in', orgId_list))
+        tags = request.GET.get('tags', None)
+        if tags:
+            tags = tags.split(',')
+            q.children.append(('org_users__tags__in', tags))
+            q.children.append(('org_orgtags__tag__in', tags))
+        searchname = request.GET.get('search', None)
+        if searchname:
+            q.children.append(('orgnameC__icontains', searchname))
+            q.children.append(('orgnameE__icontains', searchname))
+            q.children.append(('stockcode__icontains', searchname))
+            q.children.append(('orgfullname__icontains', searchname))
+        org_qs = queryset.filter(q).distinct()
         try:
             count = org_qs.count()
             org_qs = Paginator(org_qs, page_size)
             org_qs = org_qs.page(page_index)
         except EmptyPage:
             return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
-        if request.user.is_anonymous:
-            serializerclass = OrgCommonSerializer
-        else:
-            serializerclass = OrgListSerializer
-        responselist = []
-        for instance in org_qs:
-            instancedata = serializerclass(instance).data
-            instancedata['user_count'] = 0
-            responselist.append(instancedata)
-        return JSONResponse(SuccessResponse({'count': count, 'data': returnListChangeToLanguage(responselist, lang)}))
+        return JSONResponse(SuccessResponse({'count': count, 'data': returnListChangeToLanguage(OrgListSerializer(org_qs, many=True).data, lang)}))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
     except Exception:
