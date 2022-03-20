@@ -604,6 +604,6 @@ def sendmessage_workReportDonotWrite(receiver):
 def checkReceiverToSendMsg(receiver):
     if receiver is not None:
         if isinstance(receiver, MyUser):
-            if getattr(receiver, 'datasource_id') in [1, 3, 4] and receiver.is_active:
+            if getattr(receiver, 'datasource_id') in [1, 3, 4, 5] and receiver.is_active:
                 return True
     return False
