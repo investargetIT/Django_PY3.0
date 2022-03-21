@@ -1721,7 +1721,6 @@ def makeExportOrgExcel():
 @checkRequestToken()
 def fulltextsearch(request):
     try:
-        alldata = int(request.GET.get('alldata', 0))
         page_index = int(request.GET.get('page_index', 1))
         page_size = int(request.GET.get('page_size', 10))
         lang = request.GET.get('lang', 'cn')
@@ -1773,13 +1772,12 @@ def fulltextsearch(request):
             q.children.append(('stockcode__icontains', searchname))
             q.children.append(('orgfullname__icontains', searchname))
         org_qs = queryset.filter(q).distinct()
-        count = org_qs.count()
-        if not alldata:
-            try:
-                org_qs = Paginator(org_qs, page_size)
-                org_qs = org_qs.page(page_index)
-            except EmptyPage:
-                return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
+        try:
+            count = org_qs.count()
+            org_qs = Paginator(org_qs, page_size)
+            org_qs = org_qs.page(page_index)
+        except EmptyPage:
+            return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
         return JSONResponse(SuccessResponse({'count': count, 'data': returnListChangeToLanguage(OrgListSerializer(org_qs, many=True).data, lang)}))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))

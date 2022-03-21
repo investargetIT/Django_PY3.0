@@ -32,6 +32,6 @@ urlpatterns = [
     url(r'^selectUpload$', others.selectUpload, name='selectFromUploadRecord',),
     url(r'^cancelUpload$', others.cancelUpload, name='cancelUploadRecord',),
     url(r'^deleteUpload$', others.deleteUpload, name='deleteUploadRecord',),
-    url(r'^audioTranslate/$', audioTrans, name='deleteUploadRecord',),
+    url(r'^audioTranslate/$', audioTrans, name='audioTranslate',),
     url(r'^audioTranslate/(?P<pk>\d+)/$', audioTrans_detail, name='getAudioFileTranslateToWordTaskResult',),
 ]
