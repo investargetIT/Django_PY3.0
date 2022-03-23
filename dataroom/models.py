@@ -113,6 +113,8 @@ class dataroom_User_file(MyModel):
     dataroom = MyForeignKey(dataroom, blank=True, null=True, related_name='dataroom_users')
     user = MyForeignKey(MyUser, blank=True, null=True, related_name='user_datarooms', help_text='投资人')
     lastgettime = models.DateTimeField(blank=True, null=True, help_text='最近获取日期')
+    lastdowntime = models.DateTimeField(blank=True, null=True, help_text='最近下载日期')
+    lastdownsize = models.FloatField(blank=True, null=True, help_text='最近下载文件大小(M)')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_userdatarooms')
     createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_userdatarooms')
     datasource = MyForeignKey(DataSource, blank=True, null=True, help_text='数据源')

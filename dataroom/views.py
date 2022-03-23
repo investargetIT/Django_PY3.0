@@ -269,6 +269,8 @@ class DataroomView(viewsets.ModelViewSet):
                     watermarkcontent = None if nowater else str(request.GET.get('water', '').replace('@', '[at]')).split(',')
                     directory_qs = dataroominstance.dataroom_directories.all().filter(is_deleted=False, isFile=False)
                     startMakeDataroomZipThread(directory_qs, file_qs, direcpath, watermarkcontent, password)
+                    if dataroom_User_file.objects.filter(dataroom=dataroominstance, user=request.user, is_deleted=False).exists():
+                        dataroom_User_file.objects.filter(dataroom=dataroominstance, user=request.user, is_deleted=False).update(lastdowntime=datetime.datetime.now(), lastdownsize=None)
                     response = JSONResponse(SuccessResponse({'code': 8002, 'msg': '文件不存在', 'seconds': 999}))
             return response
         except InvestError as err:
@@ -307,6 +309,8 @@ class DataroomView(viewsets.ModelViewSet):
                 fn = open(zipFilepath, 'rb')
                 response = StreamingHttpResponse(file_iterator(fn))
                 zipFileSize = os.path.getsize(zipFilepath)
+                if dataroom_User_file.objects.filter(dataroom=dataroominstance, user=request.user, is_deleted=False).exists():
+                    dataroom_User_file.objects.filter(dataroom=dataroominstance, user=request.user, is_deleted=False).update(lastdownsize=zipFileSize/(1024 * 1024))
                 response['Content-Length'] = zipFileSize
                 response['Content-Type'] = 'application/octet-stream'
                 response["content-disposition"] = 'attachment;filename=%s' % path

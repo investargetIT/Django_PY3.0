@@ -1577,9 +1577,7 @@ def makeExportOrgExcel():
                                     userData_list = []
                                     investorList = org.org_users.all().filter(is_deleted=False, datasource=taskdatasource)
                                     if isinstance(tagidlist, list) and len(tagidlist) > 0:
-                                        investorList = investorList.filter(Q(tags__in=tagidlist) | Q(title__score__gte=7))
-                                    else:
-                                        investorList = investorList.filter(title__score__gte=7)
+                                        investorList = investorList.filter(tags__in=tagidlist)
                                     relation_qs = UserRelation.objects.filter(investoruser__in=investorList, is_deleted=False)
                                     for investor in investorList:
                                         if starUserMobile:
