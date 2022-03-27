@@ -71,14 +71,14 @@ class User_DataroomSerializer(serializers.ModelSerializer):
     user = UserInfoSerializer()
     class Meta:
         model = dataroom_User_file
-        fields = ('id', 'dataroom', 'user', 'lastgettime')
+        fields = ('id', 'dataroom', 'user', 'lastgettime', 'lastdowntime', 'lastdownsize')
 
 class User_DataroomfileSerializer(serializers.ModelSerializer):
     files = serializers.SerializerMethodField()
 
     class Meta:
         model = dataroom_User_file
-        fields = ('id', 'dataroom', 'user', 'files', 'lastgettime')
+        fields = ('id', 'dataroom', 'user', 'files', 'lastgettime', 'lastdowntime', 'lastdownsize')
 
     def get_files(self, obj):
         seefiles = dataroomUserSeeFiles.objects.filter(is_deleted=False, dataroomUserfile=obj)
@@ -92,7 +92,7 @@ class User_DataroomfileFileIdsSerializer(serializers.ModelSerializer):
     files = serializers.SerializerMethodField()
     class Meta:
         model = dataroom_User_file
-        fields = ('id', 'dataroom', 'user', 'files', 'lastgettime')
+        fields = ('id', 'dataroom', 'user', 'files', 'lastgettime', 'lastdowntime', 'lastdownsize')
     def get_files(self, obj):
         seefiles = dataroomUserSeeFiles.objects.filter(is_deleted=False, dataroomUserfile=obj)
         if seefiles.exists():
