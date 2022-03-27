@@ -21,7 +21,7 @@ class ProjTradersCreateSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class ProjTradersSerializer(serializers.ModelSerializer):
-    user = UserNameSerializer()
+    user = UserCommenSerializer()
     class Meta:
         model = projTraders
         fields = '__all__'
