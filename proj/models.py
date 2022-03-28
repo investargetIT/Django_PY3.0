@@ -34,6 +34,7 @@ class project(MyModel):
     p_introducteE = models.TextField(blank=True, null=True, default='project introduction')
     isoverseasproject = models.BooleanField(blank=True,default=True,help_text='是否是海外项目')
     supportUser = MyForeignKey(MyUser,blank=True,null=True,related_name='usersupport_projs',help_text='项目方(上传方)')
+    sponsor = MyForeignKey(MyUser, blank=True, null=True, related_name='usersponsor_projs', help_text='项目发起人')
     PM = MyForeignKey(MyUser, blank=True, null=True, related_name='userPM_projs', help_text='项目PM')
     isHidden = models.BooleanField(blank=True,default=False)
     financeAmount = models.BigIntegerField(blank=True,null=True)
