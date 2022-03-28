@@ -52,7 +52,7 @@ class UserCommenSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MyUser
-        fields = ('id', 'usernameC', 'usernameE', 'tags', 'userstatus', 'photourl', 'title', 'onjob', 'mobile',
+        fields = ('id', 'usernameC', 'usernameE', 'tags', 'userstatus', 'photourl', 'title', 'onjob', 'mobile', 'workType',
                   'mobileAreaCode', 'email', 'is_active', 'org', 'indGroup', 'entryTime', 'bornTime', 'isMarried',
                   'directSupervisor', 'mentor', 'school', 'specialty', 'education', 'specialtyhobby', 'others')
 
@@ -112,7 +112,7 @@ class UserInfoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MyUser
-        fields = ('usernameC', 'usernameE', 'org', 'department', 'mobile', 'mobileAreaCode', 'mobiletrue', 'email', 'wechat', 'title',
+        fields = ('usernameC', 'usernameE', 'org', 'department', 'mobile', 'mobileAreaCode', 'mobiletrue', 'email', 'wechat', 'title', 'workType',
                   'id', 'tags', 'userstatus', 'photourl', 'is_active', 'orgarea', 'country', 'onjob', 'hasIM', 'last_login', 'entryTime', 'bornTime', 'isMarried')
         depth = 1
 
@@ -140,7 +140,7 @@ class InvestorUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MyUser
-        fields = ('usernameC', 'usernameE', 'org', 'department', 'mobile', 'mobileAreaCode', 'mobiletrue', 'email', 'wechat', 'title',
+        fields = ('usernameC', 'usernameE', 'org', 'department', 'mobile', 'mobileAreaCode', 'mobiletrue', 'email', 'wechat', 'title', 'workType',
                   'id', 'tags', 'userstatus', 'photourl', 'is_active', 'orgarea', 'country', 'onjob', 'last_login', 'familiar', 'entryTime', 'bornTime', 'isMarried')
         depth = 1
 
@@ -309,7 +309,7 @@ class UserListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MyUser
-        fields = ('id','groups','tags','country', 'usernameC', 'usernameE', 'mobile', 'mobileAreaCode','mobiletrue', 'indGroup', 'trader_relations',
+        fields = ('id','groups','tags','country', 'usernameC', 'usernameE', 'mobile', 'mobileAreaCode','mobiletrue', 'indGroup', 'trader_relations', 'workType',
                   'email', 'title', 'userstatus', 'org', 'trader_relation', 'photourl','is_active', 'wechat', 'directSupervisor', 'mentor', 'entryTime', 'bornTime', 'isMarried',
                   'school', 'specialty', 'education', 'specialtyhobby', 'others')
 
@@ -358,7 +358,7 @@ class UserListCommenSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = ('id', 'usernameC', 'usernameE', 'tags', 'userstatus', 'photourl', 'title', 'onjob', 'mobile', 'mobileAreaCode', 'trader_relation', 'trader_relations',
-                  'mobiletrue', 'email', 'is_active', 'org', 'indGroup', 'entryTime', 'bornTime', 'isMarried', 'directSupervisor', 'mentor')
+                  'mobiletrue', 'email', 'is_active', 'org', 'indGroup', 'entryTime', 'bornTime', 'isMarried', 'directSupervisor', 'mentor', 'workType')
 
 
     def get_photourl(self, obj):

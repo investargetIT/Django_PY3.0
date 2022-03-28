@@ -45,6 +45,62 @@ class TagView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def create(self, request, *args, **kwargs):
+        try:
+            with transaction.atomic():
+                data = request.data
+                data['datasource'] = request.user.datasource_id
+                if not data.get('nameC') and data.get('nameE'):
+                    data['nameC'] = data['nameE']
+                elif not data.get('nameE') and data.get('nameC'):
+                    data['nameE'] = data['nameC']
+                elif not data.get('nameC') and not data.get('nameE'):
+                    raise InvestError(20071, msg='新建标签失败，名称不能为空', detail='新建标签名称不能为空')
+                serializer = self.serializer_class(data=data)
+                if serializer.is_valid():
+                    instance = serializer.save()
+                else:
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
+                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def update(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            with transaction.atomic():
+                data = request.data
+                serializer = self.serializer_class(instance, data=data)
+                if serializer.is_valid():
+                    instance = serializer.save()
+                else:
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
+                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def destroy(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            instance.is_deleted = True
+            instance.save(update_fields=['is_deleted'])
+            return JSONResponse(SuccessResponse({'is_deleted': instance.is_deleted}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+
 class OrgBdResponseView(viewsets.ModelViewSet):
     """
         list:获取所有反馈结果类型

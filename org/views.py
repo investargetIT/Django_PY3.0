@@ -1727,66 +1727,64 @@ def makeExportOrgExcel():
 @checkRequestToken()
 def fulltextsearch(request):
     try:
-        searchText = request.GET.get('text')
-        if not searchText:
-            raise InvestError(20072, msg='全库搜索机构失败', detail='搜索参数不能为空')
         page_index = int(request.GET.get('page_index', 1))
         page_size = int(request.GET.get('page_size', 10))
         lang = request.GET.get('lang', 'cn')
         queryset = organization.objects.filter(is_deleted=False)
         queryset = OrganizationFilter(request.query_params, queryset=queryset, request=request).qs
-        search_body = {
-            "query": {
-                "bool": {
-                    "must": [
-                        {
-                            "bool": {
-                                "must": {"terms": {"django_ct": ["org.orgremarks", "org.orgattachments"]}}
+        q = Q()
+        q.connector = 'or'
+        searchText = request.GET.get('text', None)
+        if searchText: # 匹配机构备注和附件内容
+            search_body = {
+                "query": {
+                    "bool": {
+                        "must": [
+                            {
+                                "bool": {
+                                    "must": {"terms": {"django_ct": ["org.orgremarks", "org.orgattachments"]}}
+                                },
                             },
-                        },
-                        {
-                            "bool": {
-                                "should": [
-                                    {"match_phrase": {"remark": searchText}},
-                                    {"match_phrase": {"fileContent": searchText}}
-                                ]
+                            {
+                                "bool": {
+                                    "should": [
+                                        {"match_phrase": {"remark": searchText}},
+                                        {"match_phrase": {"fileContent": searchText}}
+                                    ]
+                                }
                             }
-                        }
-                    ]
-                }
-            },
-            "_source": ["id", "org", "django_ct"]
-        }
+                        ]
+                    }
+                },
+                "_source": ["id", "org", "django_ct"]
+            }
 
-        results = getEsScrollResult(search_body)
-        orgId_list = set()
-        for source in results:
-            orgid = source['_source'].get('org')
-            if orgid:
-                orgId_list.add(orgid)
-        org_qs = queryset.filter(id__in=orgId_list)
+            results = getEsScrollResult(search_body)
+            orgId_list = set()
+            for source in results:
+                orgid = source['_source'].get('org')
+                if orgid:
+                    orgId_list.add(orgid)
+            q.children.append(('id__in', orgId_list))
+        tags = request.GET.get('tags', None)
+        if tags:  # 匹配机构标签和机构下用户标签
+            tags = tags.split(',')
+            q.children.append(('org_users__tags__in', tags))
+            q.children.append(('org_orgtags__tag__in', tags))
+        searchname = request.GET.get('search', None)
+        if searchname:  # 匹配机构名称和机构代码
+            q.children.append(('orgnameC__icontains', searchname))
+            q.children.append(('orgnameE__icontains', searchname))
+            q.children.append(('stockcode__icontains', searchname))
+            q.children.append(('orgfullname__icontains', searchname))
+        org_qs = queryset.filter(q).distinct()
         try:
             count = org_qs.count()
             org_qs = Paginator(org_qs, page_size)
             org_qs = org_qs.page(page_index)
         except EmptyPage:
             return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
-        if request.user.is_anonymous:
-            serializerclass = OrgCommonSerializer
-        else:
-            serializerclass = OrgListSerializer
-        responselist = []
-        for instance in org_qs:
-            user_count = 0
-            if request.user.is_anonymous:
-                pass
-            else:
-                if instance.orglevel_id == 1 or instance.orglevel_id == 2:
-                    user_count = checkOrgUserContactInfoTruth(instance, request.user.datasource)
-            instancedata = serializerclass(instance).data
-            instancedata['user_count'] = user_count
-            responselist.append(instancedata)
-        return JSONResponse(SuccessResponse({'count': count, 'data': returnListChangeToLanguage(responselist, lang)}))
+        return JSONResponse(SuccessResponse({'count': count, 'data': returnListChangeToLanguage(OrgListSerializer(org_qs, many=True).data, lang)}))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
     except Exception:

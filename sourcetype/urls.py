@@ -4,7 +4,12 @@ from sourcetype import views
 
 tag = views.TagView.as_view({
         'get': 'list',
-        # 'post':'create',
+        'post':'create',
+})
+
+tag_detail = views.TagView.as_view({
+        'put': 'update',
+        'delete':'destroy',
 })
 
 projstatus = views.ProjectStatusView.as_view({
@@ -159,6 +164,8 @@ AndroidVersion_detail = views.AndroidAppVersionView.as_view({
 
 urlpatterns = [
     url(r'^tag$', tag,name='tagsource',),
+
+    url(r'^tag/(?P<pk>\d+)/$', tag_detail,name='tag_detail',),
 
     url(r'^service', service,name='servicesource',),
 
