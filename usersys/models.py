@@ -414,6 +414,7 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
 
         if not self.photoKey:
             if self.usernameC:
+                self.photoBucket = 'image'
                 self.photoKey = makeAvatar(self.usernameC[0:1])
         self.exchangeUnreachuserToMyUser()
         super(MyUser,self).save(*args,**kwargs)
