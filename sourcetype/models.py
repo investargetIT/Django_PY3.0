@@ -252,7 +252,7 @@ class Tag(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.is_deleted:
-            if Tag.objects.exclude(pk=self.pk).filter(nameC=self.nameC, datasource=self.datasource).exists():
+            if Tag.objects.exclude(pk=self.pk).filter(nameC=self.nameC, datasource=self.datasource, is_deleted=self.is_deleted).exists():
                 raise InvestError(6101, msg='编辑标签失败，已存在相同标签', detail='已存在相同标签')
         super(Tag, self).save(*args, **kwargs)
 
