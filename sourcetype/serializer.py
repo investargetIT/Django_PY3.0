@@ -3,7 +3,7 @@ from rest_framework import serializers
 from sourcetype.models import TransactionType, TransactionPhases, OrgArea, Tag, Industry, \
     CurrencyType, \
     AuditStatus, ProjectStatus, OrgType, ClientType, TitleType, Country, \
-    DataSource, TransactionStatus, webmenu, CharacterType, orgtitletable, Service, OrgAttribute, BDStatus, \
+    DataSource, webmenu, CharacterType, orgtitletable, Service, OrgAttribute, BDStatus, \
     AndroidAppVersion, OrgBdResponse, \
     OrgLevelType, FamiliarLevel, IndustryGroup, DidiOrderType, Education, PerformanceAppraisalLevel, TrainingType, \
     TrainingStatus
@@ -175,12 +175,6 @@ class transactionPhasesSerializer(serializers.ModelSerializer):
 class transactionTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = TransactionType
-        exclude = ('is_deleted',)
-
-
-class transactionStatuSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TransactionStatus
         exclude = ('is_deleted',)
 
 
