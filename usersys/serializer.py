@@ -57,7 +57,7 @@ class UserCommenSerializer(serializers.ModelSerializer):
                   'directSupervisor', 'mentor', 'school', 'specialty', 'education', 'specialtyhobby', 'others')
 
     def get_tags(self, obj):
-        qs = obj.tags.filter(tag_usertags__is_deleted=False)
+        qs = obj.tags.filter(tag_usertags__is_deleted=False, is_deleted=False)
         if qs.exists():
             return tagSerializer(qs, many=True).data
         return None
@@ -117,7 +117,7 @@ class UserInfoSerializer(serializers.ModelSerializer):
         depth = 1
 
     def get_tags(self, obj):
-        qs = obj.tags.filter(tag_usertags__is_deleted=False)
+        qs = obj.tags.filter(tag_usertags__is_deleted=False, is_deleted=False)
         if qs.exists():
             return tagSerializer(qs,many=True).data
         return None
@@ -145,7 +145,7 @@ class InvestorUserSerializer(serializers.ModelSerializer):
         depth = 1
 
     def get_tags(self, obj):
-        qs = obj.tags.filter(tag_usertags__is_deleted=False)
+        qs = obj.tags.filter(tag_usertags__is_deleted=False, is_deleted=False)
         if qs.exists():
             return tagSerializer(qs,many=True).data
         return None
@@ -265,7 +265,7 @@ class UserSerializer(serializers.ModelSerializer):
         depth = 1
 
     def get_tags(self, obj):
-        qs = obj.tags.filter(tag_usertags__is_deleted=False)
+        qs = obj.tags.filter(tag_usertags__is_deleted=False, is_deleted=False)
         if qs.exists():
             return tagSerializer(qs,many=True).data
         return None
@@ -299,6 +299,7 @@ class UpdateUserSerializer(serializers.ModelSerializer):
 # 用户列表显示信息
 class UserListSerializer(serializers.ModelSerializer):
     org = OrgCommonSerializer()
+    tags = serializers.SerializerMethodField()
     indGroup = industryGroupSerializer()
     mobiletrue = serializers.SerializerMethodField()
     trader_relation = serializers.SerializerMethodField()
@@ -312,6 +313,13 @@ class UserListSerializer(serializers.ModelSerializer):
         fields = ('id','groups','tags','country', 'usernameC', 'usernameE', 'mobile', 'mobileAreaCode','mobiletrue', 'indGroup', 'trader_relations', 'workType',
                   'email', 'title', 'userstatus', 'org', 'trader_relation', 'photourl','is_active', 'wechat', 'directSupervisor', 'mentor', 'entryTime', 'bornTime', 'isMarried',
                   'school', 'specialty', 'education', 'specialtyhobby', 'others')
+
+    def get_tags(self, obj):
+        qs = obj.tags.filter(tag_usertags__is_deleted=False, is_deleted=False)
+        if qs.exists():
+            return qs.values_list('id', flat=True)
+        return None
+
 
     def get_mobiletrue(self, obj):
         return checkMobileTrue(obj.mobile, obj.mobileAreaCode)
@@ -346,6 +354,7 @@ class UserTraderSimpleSerializer(serializers.ModelSerializer):
 class UserListCommenSerializer(serializers.ModelSerializer):
     photourl = serializers.SerializerMethodField()
     mobile = serializers.SerializerMethodField()
+    tags = serializers.SerializerMethodField()
     indGroup = industryGroupSerializer()
     directSupervisor = UserNameSerializer()
     mentor = UserNameSerializer()
@@ -360,6 +369,11 @@ class UserListCommenSerializer(serializers.ModelSerializer):
         fields = ('id', 'usernameC', 'usernameE', 'tags', 'userstatus', 'photourl', 'title', 'onjob', 'mobile', 'mobileAreaCode', 'trader_relation', 'trader_relations',
                   'mobiletrue', 'email', 'is_active', 'org', 'indGroup', 'entryTime', 'bornTime', 'isMarried', 'directSupervisor', 'mentor', 'workType')
 
+    def get_tags(self, obj):
+        qs = obj.tags.filter(tag_usertags__is_deleted=False, is_deleted=False)
+        if qs.exists():
+            return qs.values_list('id', flat=True)
+        return None
 
     def get_photourl(self, obj):
         if obj.photoKey:
