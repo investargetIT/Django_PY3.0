@@ -2,7 +2,7 @@
 from rest_framework import serializers
 from org.models import organization, orgRemarks, orgTransactionPhase, orgBuyout, orgContact, orgInvestEvent, \
     orgCooperativeRelationship, orgManageFund, orgExportExcelTask, orgAttachments
-from sourcetype.serializer import transactionPhasesSerializer
+from sourcetype.serializer import transactionPhasesSerializer, tagSerializer
 from third.views.qiniufile import getUrlWithBucketAndKey
 
 
@@ -52,11 +52,18 @@ class OrgTransactionPhaseSerializer(serializers.ModelSerializer):
 
 class OrgListSerializer(serializers.ModelSerializer):
     orgtransactionphase = serializers.SerializerMethodField()
+    tags = serializers.SerializerMethodField()
 
     class Meta:
         model = organization
         depth = 1
         exclude = ('datasource', 'createdtime', 'is_deleted', 'deleteduser', 'deletedtime', 'lastmodifyuser', 'lastmodifytime',)
+
+    def get_tags(self, obj):
+        qs = obj.tags.filter(tag_orgtags__is_deleted=False, is_deleted=False)
+        if qs.exists():
+            return tagSerializer(qs, many=True).data
+        return None
 
     def get_orgtransactionphase(self, obj):
         phase = obj.orgtransactionphase.filter(transactionPhase_orgs__is_deleted=False)
@@ -67,6 +74,7 @@ class OrgListSerializer(serializers.ModelSerializer):
 
 class OrgDetailSerializer(serializers.ModelSerializer):
     orgtransactionphase = serializers.SerializerMethodField()
+    tags = serializers.SerializerMethodField()
 
     class Meta:
         model = organization
@@ -79,6 +87,11 @@ class OrgDetailSerializer(serializers.ModelSerializer):
             return transactionPhasesSerializer(phase, many=True).data
         return None
 
+    def get_tags(self, obj):
+        qs = obj.tags.filter(tag_orgtags__is_deleted=False, is_deleted=False)
+        if qs.exists():
+            return tagSerializer(qs, many=True).data
+        return None
 
 class OrgRemarkCreateSerializer(serializers.ModelSerializer):
 

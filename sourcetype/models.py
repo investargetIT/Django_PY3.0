@@ -251,10 +251,10 @@ class Tag(models.Model):
         return self.nameC
 
     def save(self, *args, **kwargs):
-        if Tag.objects.exclude(pk=self.pk).filter(nameC=self.nameC).exists():
-            raise InvestError(6101, msg='编辑标签失败，已存在相同标签', detail='已存在相同标签')
-        else:
-            super(Tag, self).save(*args, **kwargs)
+        if not self.is_deleted:
+            if Tag.objects.exclude(pk=self.pk).filter(nameC=self.nameC, datasource=self.datasource).exists():
+                raise InvestError(6101, msg='编辑标签失败，已存在相同标签', detail='已存在相同标签')
+        super(Tag, self).save(*args, **kwargs)
 
 
 class OrgArea(models.Model):
