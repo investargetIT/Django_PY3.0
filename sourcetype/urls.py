@@ -103,10 +103,6 @@ transactionPhases = views.TransactionPhasesView.as_view({
         # 'post':'create',
 })
 
-transactionStatus = views.TransactionStatusView.as_view({
-        'get': 'list',
-        # 'post':'create',
-})
 
 educationType = views.EducationView.as_view({
         'get': 'list',
@@ -198,8 +194,6 @@ urlpatterns = [
     url(r'^transactionType$', transactionType,name='transactionTypesource',),
 
     url(r'^transactionPhases$', transactionPhases,name='transactionPhasessource',),
-
-    url(r'^transactionStatus$', transactionStatus, name='transactionStatussource', ),
 
     url(r'^currencyType$', currencyType,name='currencyTypesource',),
 

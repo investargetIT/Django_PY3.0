@@ -332,19 +332,6 @@ class TransactionType(models.Model):
         return self.nameC
 
 
-class TransactionStatus(models.Model):
-    '''
-    项目进程（时间轴）状态：11个step
-    '''
-    id = models.AutoField(primary_key=True)
-    nameC = models.CharField(max_length=16,blank=True,null=True)
-    nameE = models.CharField(max_length=32,blank=True,null=True)
-    index = models.PositiveSmallIntegerField(blank=True, default=0)
-    is_deleted = models.BooleanField(blank=True, default=False)
-
-    def __str__(self):
-        return self.nameC
-
 class DidiOrderType(models.Model):
     '''
     项目进程（时间轴）状态：11个step
