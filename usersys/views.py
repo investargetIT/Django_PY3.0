@@ -50,7 +50,7 @@ class UserFilter(FilterSet):
     directSupervisor = RelationFilter(filterstr='directSupervisor', lookup_method='in')
     mentor = RelationFilter(filterstr='mentor', lookup_method='in')
     orgarea = RelationFilter(filterstr='orgarea', lookup_method='in')
-    tags = RelationFilter(filterstr='tags',lookup_method='in',relationName='user_usertags__is_deleted')
+    # tags = RelationFilter(filterstr='tags',lookup_method='in',relationName='user_usertags__is_deleted')
     userstatus = RelationFilter(filterstr='userstatus',lookup_method='in')
     currency = RelationFilter(filterstr='org__currency', lookup_method='in')
     orgtransactionphases = RelationFilter(filterstr='org__orgtransactionphase', lookup_method='in',relationName='org__org_orgTransactionPhases__is_deleted')
@@ -58,7 +58,7 @@ class UserFilter(FilterSet):
     investor = RelationFilter(filterstr='trader_relations__investoruser', lookup_method='in', relationName='trader_relations__is_deleted')
     class Meta:
         model = MyUser
-        fields = ('id', 'onjob', 'groups', 'indGroup', 'org','tags','userstatus','currency','orgtransactionphases','orgarea','usercode','title','trader','investor','usernameC')
+        fields = ('id', 'onjob', 'groups', 'indGroup', 'org','userstatus','currency','orgtransactionphases','orgarea','usercode','title','trader','investor','usernameC')
 
 
 class UserView(viewsets.ModelViewSet):
@@ -119,6 +119,10 @@ class UserView(viewsets.ModelViewSet):
             page_index = request.GET.get('page_index', 1) #从第一页开始
             lang = request.GET.get('lang', 'cn')
             queryset = self.filter_queryset(self.get_queryset())
+            tags = request.GET.get('tags', None)
+            if tags:  # 匹配机构标签和机构下用户标签
+                tags = tags.split(',')
+                queryset = queryset.filter(user_usertags__tag__in=tags, user_usertags__is_deleted=False).annotate(num_tags=Count('tags')).filter(num_tags=len(tags))
             sortfield = request.GET.get('sort', 'createdtime')
             desc = request.GET.get('desc', 1)
             queryset = mySortQuery(queryset, sortfield, desc, True)
