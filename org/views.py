@@ -3,10 +3,9 @@ import os
 import threading
 import traceback
 import datetime
-
 import xlwt
 from django.core.paginator import Paginator, EmptyPage
-from django.db.models import Q, FieldDoesNotExist
+from django.db.models import Q, FieldDoesNotExist, Count
 from django.http import StreamingHttpResponse
 from rest_framework import filters , viewsets
 from rest_framework.decorators import api_view
@@ -25,13 +24,13 @@ from org.serializer import OrgCommonSerializer, OrgDetailSerializer, OrgRemarkDe
     OrgExportExcelTaskDetailSerializer, OrgAttachmentSerializer, OrgRemarkCreateSerializer
 from sourcetype.models import TransactionPhases, TagContrastTable
 from third.views.qiniufile import deleteqiniufile, downloadFileToPath
-from usersys.models import UserRelation
+from usersys.models import UserRelation, MyUser
 from utils.customClass import InvestError, JSONResponse, RelationFilter, MySearchFilter
 from utils.logicJudge import is_orgUserTrader
 from utils.somedef import file_iterator, getEsScrollResult
 from utils.util import loginTokenIsAvailable, catchexcption, read_from_cache, write_to_cache, \
     returnListChangeToLanguage, \
-    returnDictChangeToLanguage, SuccessResponse, InvestErrorResponse, ExceptionResponse, setrequestuser, add_perm, \
+    returnDictChangeToLanguage, SuccessResponse, InvestErrorResponse, ExceptionResponse, setrequestuser, \
     cache_delete_key, mySortQuery, checkrequesttoken, logexcption, china_mobile, hongkong_mobile, hongkong_telephone, \
     checkRequestToken, checkrequestpagesize
 from django.db import transaction,models
@@ -1766,17 +1765,21 @@ def fulltextsearch(request):
                 if orgid:
                     orgId_list.add(orgid)
             q.children.append(('id__in', orgId_list))
-        tags = request.GET.get('tags', None)
-        if tags:  # 匹配机构标签和机构下用户标签
-            tags = tags.split(',')
-            q.children.append(('org_users__tags__in', tags))
-            q.children.append(('org_orgtags__tag__in', tags))
         searchname = request.GET.get('search', None)
         if searchname:  # 匹配机构名称和机构代码
             q.children.append(('orgnameC__icontains', searchname))
             q.children.append(('orgnameE__icontains', searchname))
             q.children.append(('stockcode__icontains', searchname))
             q.children.append(('orgfullname__icontains', searchname))
+        tags = request.GET.get('tags', None)
+        tags_type = request.GET.get('tags_type', 'and')
+        if tags:  # 匹配机构标签和机构下用户标签
+            tags = tags.split(',')
+            if tags_type == 'and':
+                user_queryset = MyUser.objects.filter(user_usertags__tag__in=tags, user_usertags__is_deleted=False).annotate(num_tags=Count('tags')).filter(num_tags=len(tags))
+            else:
+                user_queryset = MyUser.objects.filter(user_usertags__tag__in=tags, user_usertags__is_deleted=False)
+            q.children.append(('id__in', user_queryset.values_list('org_id', flat=True)))
         org_qs = queryset.filter(q).distinct()
         try:
             count = org_qs.count()
