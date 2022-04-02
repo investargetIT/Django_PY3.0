@@ -408,7 +408,7 @@ class ProjectView(viewsets.ModelViewSet):
                             for user_id in addlist:
                                 makeUserList.append(projTraders(proj=pro, user_id=user_id, createuser=request.user, type=1, createdtime=datetime.datetime.now()))
                             pro.proj_traders.bulk_create(makeUserList)
-                    if tagsdata:
+                    if tagsdata is not None:
                         taglist = Tag.objects.in_bulk(tagsdata)
                         addlist = [item for item in taglist if item not in pro.tags.all()]
                         removelist = [item for item in pro.tags.all() if item not in taglist]
@@ -419,7 +419,7 @@ class ProjectView(viewsets.ModelViewSet):
                         for tag in addlist:
                             usertaglist.append(projectTags(proj=pro, tag_id=tag, createuser=request.user))
                         pro.project_tags.bulk_create(usertaglist)
-                    if servicedata:
+                    if servicedata is not None:
                         if not isinstance(servicedata, list) or len(servicedata) == 0:
                             raise InvestError(20071, msg='修改项目信息失败', detail='service must be a list')
                         servicelist = Service.objects.in_bulk(servicedata)
@@ -433,7 +433,7 @@ class ProjectView(viewsets.ModelViewSet):
                             projservicelist.append(projServices(proj=pro, service_id=serviceid,createuser=request.user))
                         pro.proj_services.bulk_create(projservicelist)
 
-                    if industrydata:
+                    if industrydata is not None:
                         if not isinstance(industrydata, list) or len(industrydata) == 0:
                             raise InvestError(20071, msg='修改项目信息失败', detail='industrydata must be a list')
                         pro.project_industries.filter(is_deleted=False).update(is_deleted=True, deletedtime=datetime.datetime.now(), deleteduser=request.user)
@@ -443,7 +443,7 @@ class ProjectView(viewsets.ModelViewSet):
                             if industrydataSerializer.is_valid():
                                 industrydataSerializer.save()
 
-                    if transactiontypedata:
+                    if transactiontypedata is not None:
                         transactionTypelist = TransactionType.objects.in_bulk(transactiontypedata)
                         addlist = [item for item in transactionTypelist if item not in pro.transactionType.all()]
                         removelist = [item for item in pro.transactionType.all() if item not in transactionTypelist]
@@ -455,7 +455,7 @@ class ProjectView(viewsets.ModelViewSet):
                             projtransactiontypelist.append(projectTransactionType(proj=pro, transactionType_id=transactionPhase, createuser=request.user))
                         pro.project_TransactionTypes.bulk_create(projtransactiontypelist)
 
-                    if projAttachmentdata:
+                    if projAttachmentdata is not None:
                         if not isinstance(projAttachmentdata, list) or len(projAttachmentdata) == 0:
                             raise InvestError(20071, msg='修改项目信息失败', detail='transactionType must be a list')
                         pro.proj_attachment.filter(is_deleted=False).update(is_deleted=True, deletedtime=datetime.datetime.now(), deleteduser=request.user)
@@ -465,7 +465,7 @@ class ProjectView(viewsets.ModelViewSet):
                             if projAttachmentSerializer.is_valid():
                                 projAttachmentSerializer.save()
 
-                    if financedata:
+                    if financedata is not None:
                         if not isinstance(financedata, list):
                             raise InvestError(20071, msg='修改项目信息失败', detail='transactionType must be a list')
                         pro.proj_finances.filter(is_deleted=False).update(is_deleted=True, deletedtime=datetime.datetime.now(), deleteduser=request.user)

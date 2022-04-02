@@ -120,9 +120,13 @@ class UserView(viewsets.ModelViewSet):
             lang = request.GET.get('lang', 'cn')
             queryset = self.filter_queryset(self.get_queryset())
             tags = request.GET.get('tags', None)
+            tags_type = request.GET.get('tags_type', 'and')
             if tags:  # 匹配机构标签和机构下用户标签
                 tags = tags.split(',')
-                queryset = queryset.filter(user_usertags__tag__in=tags, user_usertags__is_deleted=False).annotate(num_tags=Count('tags')).filter(num_tags=len(tags))
+                if tags_type == 'and':
+                    queryset = queryset.filter(user_usertags__tag__in=tags, user_usertags__is_deleted=False).annotate(num_tags=Count('tags')).filter(num_tags=len(tags))
+                else:
+                    queryset = queryset.filter(user_usertags__tag__in=tags, user_usertags__is_deleted=False)
             sortfield = request.GET.get('sort', 'createdtime')
             desc = request.GET.get('desc', 1)
             queryset = mySortQuery(queryset, sortfield, desc, True)
@@ -474,7 +478,7 @@ class UserView(viewsets.ModelViewSet):
                         userserializer = UpdateUserSerializer(user, data=data)
                         if userserializer.is_valid():
                             user = userserializer.save()
-                            if tags:
+                            if tags is not None:
                                 taglist = Tag.objects.in_bulk(tags)
                                 addlist = [item for item in taglist if item not in user.tags.all()]
                                 removelist = [item for item in user.tags.all() if item not in taglist]
