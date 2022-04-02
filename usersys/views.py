@@ -298,7 +298,7 @@ class UserView(viewsets.ModelViewSet):
                 userserializer = CreatUserSerializer(user, data=data)
                 if userserializer.is_valid():
                     user = userserializer.save()
-                    if tags:
+                    if tags is not None:
                         usertaglist = []
                         for tag in tags:
                             usertaglist.append(userTags(user=user, tag_id=tag, createdtime=datetime.datetime.now()))
@@ -354,7 +354,7 @@ class UserView(viewsets.ModelViewSet):
                 userserializer = CreatUserSerializer(user, data=data)
                 if userserializer.is_valid():
                     user = userserializer.save()
-                    if tags:
+                    if tags is not None:
                         usertaglist = []
                         for tag in tags:
                             usertaglist.append(userTags(user=user, tag_id=tag, ))
@@ -474,7 +474,7 @@ class UserView(viewsets.ModelViewSet):
                         userserializer = UpdateUserSerializer(user, data=data)
                         if userserializer.is_valid():
                             user = userserializer.save()
-                            if tags:
+                            if tags is not None:
                                 taglist = Tag.objects.in_bulk(tags)
                                 addlist = [item for item in taglist if item not in user.tags.all()]
                                 removelist = [item for item in user.tags.all() if item not in taglist]

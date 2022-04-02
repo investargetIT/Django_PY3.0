@@ -214,7 +214,7 @@ class OrganizationView(viewsets.ModelViewSet):
                 orgupdateserializer = OrgUpdateSerializer(org, data=data)
                 if orgupdateserializer.is_valid():
                     org = orgupdateserializer.save()
-                    if orgTransactionPhases:
+                    if orgTransactionPhases is not None:
                         transactionPhaselist = TransactionPhases.objects.filter(is_deleted=False).in_bulk(orgTransactionPhases)
                         addlist = [item for item in transactionPhaselist if item not in org.orgtransactionphase.all()]
                         removelist = [item for item in org.orgtransactionphase.all() if item not in transactionPhaselist]
@@ -223,7 +223,7 @@ class OrganizationView(viewsets.ModelViewSet):
                         for transactionPhase in addlist:
                             usertaglist.append(orgTransactionPhase(org=org, transactionPhase_id=transactionPhase, createuser=request.user,createdtime=datetime.datetime.now()))
                         org.org_orgTransactionPhases.bulk_create(usertaglist)
-                    if tags:
+                    if tags is not None:
                         org.org_orgtags.all().delete()
                         orgtaglist = []
                         for tag in tags:
