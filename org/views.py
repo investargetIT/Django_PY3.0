@@ -1776,7 +1776,7 @@ def fulltextsearch(request):
         if tags:  # 匹配机构标签和机构下用户标签
             tags = tags.split(',')
             if tags_type == 'and':
-                user_queryset = MyUser.objects.filter(user_usertags__tag__in=tags, user_usertags__is_deleted=False).annotate(num_tags=Count('tags')).filter(num_tags=len(tags))
+                user_queryset = MyUser.objects.filter(user_usertags__tag__in=tags, user_usertags__is_deleted=False).annotate(num_tags=Count('tags', distinct=True)).filter(num_tags=len(tags))
             else:
                 user_queryset = MyUser.objects.filter(user_usertags__tag__in=tags, user_usertags__is_deleted=False)
             q.children.append(('id__in', user_queryset.values_list('org_id', flat=True)))

@@ -124,7 +124,7 @@ class UserView(viewsets.ModelViewSet):
             if tags:  # 匹配机构标签和机构下用户标签
                 tags = tags.split(',')
                 if tags_type == 'and':
-                    queryset = queryset.filter(user_usertags__tag__in=tags, user_usertags__is_deleted=False).annotate(num_tags=Count('tags')).filter(num_tags=len(tags))
+                    queryset = queryset.filter(user_usertags__tag__in=tags, user_usertags__is_deleted=False).annotate(num_tags=Count('tags', distinct=True)).filter(num_tags=len(tags))
                 else:
                     queryset = queryset.filter(user_usertags__tag__in=tags, user_usertags__is_deleted=False)
             sortfield = request.GET.get('sort', 'createdtime')
