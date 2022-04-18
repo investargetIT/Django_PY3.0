@@ -1052,24 +1052,34 @@ class User_DataroomSeefilesView(viewsets.ModelViewSet):
 # dataroom 公共函数
 # 创建public模板
 def creatpublicdataroomdirectorywithtemplate(user, publicdataroomid):
-    templatequery = publicdirectorytemplate.objects.all()
-    topdirectories = templatequery.filter(parent=None)
-    if topdirectories.exists():
-        for directory in topdirectories:
-            create_diractory(user, directoryname=directory.name, dataroom=publicdataroomid,
-                             templatedirectoryID=directory.id, orderNO=directory.orderNO, parent=None)
+    class creatpublicdataroomdirectory_Thread(threading.Thread):
+        def __init__(self, user, publicdataroomid):
+            self.user = user
+            self.publicdataroomid = publicdataroomid
+            threading.Thread.__init__(self)
 
+        def create_diractory(self, user, directoryname, dataroom, templatedirectoryID, orderNO, parent=None):
+            directoryobj = dataroomdirectoryorfile(filename=directoryname, dataroom_id=dataroom, orderNO=orderNO,
+                                                   parent_id=parent, createdtime=datetime.datetime.now(),
+                                                   createuser_id=user.id, datasource_id=user.datasource_id)
+            directoryobj.save()
+            sondirectoryquery = publicdirectorytemplate.objects.filter(parent=templatedirectoryID)
+            if sondirectoryquery.exists():
+                for sondirectory in sondirectoryquery:
+                    self.create_diractory(user, directoryname=sondirectory.name, dataroom=dataroom,
+                                     templatedirectoryID=sondirectory.id, orderNO=sondirectory.orderNO,
+                                     parent=directoryobj.id)
 
-def create_diractory(user, directoryname, dataroom, templatedirectoryID, orderNO, parent=None):
-    directoryobj = dataroomdirectoryorfile(filename=directoryname, dataroom_id=dataroom, orderNO=orderNO,
-                                           parent_id=parent, createdtime=datetime.datetime.now(), createuser_id=user.id,
-                                           datasource_id=user.datasource_id)
-    directoryobj.save()
-    sondirectoryquery = publicdirectorytemplate.objects.filter(parent=templatedirectoryID)
-    if sondirectoryquery.exists():
-        for sondirectory in sondirectoryquery:
-            create_diractory(user, directoryname=sondirectory.name, dataroom=dataroom,
-                             templatedirectoryID=sondirectory.id, orderNO=sondirectory.orderNO, parent=directoryobj.id)
+        def run(self):
+            templatequery = publicdirectorytemplate.objects.all()
+            topdirectories = templatequery.filter(parent=None)
+            if topdirectories.exists():
+                for directory in topdirectories:
+                    self.create_diractory(self.user, directoryname=directory.name, dataroom=self.publicdataroomid,
+                                     templatedirectoryID=directory.id, orderNO=directory.orderNO, parent=None)
+
+    creatpublicdataroomdirectory_Thread(user, publicdataroomid).start()
+
 
 
 def pulishProjectCreateDataroom(proj, user):
