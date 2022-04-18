@@ -46,11 +46,13 @@ class ProjectBDFilter(FilterSet):
     source = RelationFilter(filterstr='source',lookup_method='icontains')
     bd_status = RelationFilter(filterstr='bd_status', lookup_method='in')
     source_type = RelationFilter(filterstr='source_type', lookup_method='in')
-    stime = RelationFilter(filterstr='createdtime', lookup_method='gt')
+    stime = RelationFilter(filterstr='createdtime', lookup_method='gte')
     etime = RelationFilter(filterstr='createdtime', lookup_method='lt')
+    stimeM = RelationFilter(filterstr='lastmodifytime', lookup_method='gte')
+    etimeM = RelationFilter(filterstr='lastmodifytime', lookup_method='lt')
     class Meta:
         model = ProjectBD
-        fields = ('com_name', 'createuser', 'location', 'contractors', 'isimportant', 'bduser', 'indGroup', 'country', 'username', 'usermobile', 'source', 'bd_status', 'source_type', 'stime', 'etime')
+        fields = ('com_name', 'createuser', 'location', 'contractors', 'isimportant', 'bduser', 'indGroup', 'country', 'username', 'usermobile', 'source', 'bd_status', 'source_type', 'stime', 'etime', 'stimeM', 'etimeM')
 
 
 class ProjectBDView(viewsets.ModelViewSet):
