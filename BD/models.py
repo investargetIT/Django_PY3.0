@@ -60,7 +60,7 @@ class ProjectBD(MyModel):
         self.datasource = self.createuser.datasource
         if not self.is_deleted:
             if ProjectBD.objects.exclude(pk=self.pk).filter(is_deleted=False, com_name=self.com_name).exists():
-                raise InvestError(50061, msg='同名项目bd已存在')
+                raise InvestError(5006, msg='同名项目bd已存在')
         if self.bduser:
             self.username = self.bduser.usernameC
             self.usermobile = self.bduser.mobile
