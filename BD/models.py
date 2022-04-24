@@ -72,6 +72,7 @@ class ProjectBD(MyModel):
                 self.source = '全库搜索'
         if not self.pk and not self.manager.onjob:
             raise InvestError(2024)
+        kwargs['automodifytime'] = False
         return super(ProjectBD, self).save(*args, **kwargs)
 
 
@@ -92,6 +93,7 @@ class ProjectBDManagers(MyModel):
             if ProjectBDManagers.objects.exclude(pk=self.pk).filter(is_deleted=False, manager=self.manager, projectBD=self.projectBD).exists():
                 raise InvestError(20071, msg='负责人已存在')
         self.datasource = self.projectBD.datasource
+        kwargs['automodifytime'] = False
         return super(ProjectBDManagers, self).save(*args, **kwargs)
 
 class ProjectBDComments(MyModel):
@@ -115,6 +117,7 @@ class ProjectBDComments(MyModel):
         if self.event_date is None:
             self.event_date = datetime.datetime.now()
         self.projectBD.save()
+        kwargs['automodifytime'] = False
         return super(ProjectBDComments, self).save(*args, **kwargs)
 
 
