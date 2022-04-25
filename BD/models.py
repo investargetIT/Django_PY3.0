@@ -261,9 +261,6 @@ class WorkReport(MyModel):
 class WorkReportMarketMsg(MyModel):
     report = MyForeignKey(WorkReport, blank=True, null=True, related_name='report_marketmsg', help_text='工作报表归属人')
     marketMsg = models.TextField(blank=True, null=True, help_text='市场信息和项目信息汇报')
-    key = models.CharField(max_length=128, blank=True, null=True, help_text='文件路径')
-    bucket = models.CharField(max_length=128, blank=True, null=True, help_text='文件所在空间')
-    filename = models.CharField(max_length=128, blank=True, null=True, help_text='文件名')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_workreportmarketmsg')
     createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_workreportmarketmsg')
     lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_workreportmarketmsg')
