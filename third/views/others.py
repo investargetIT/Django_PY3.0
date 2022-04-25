@@ -12,6 +12,7 @@ from django.http import StreamingHttpResponse
 from rest_framework.decorators import api_view
 
 from invest.settings import APILOG_PATH
+from third.thirdconfig import baiduaip_appid, baiduaip_secretkey, baiduaip_appkey
 from third.views.qiniufile import deleteqiniufile
 from utils.customClass import JSONResponse, InvestError
 from utils.somedef import file_iterator
@@ -21,6 +22,7 @@ from utils.util import SuccessResponse, catchexcption, ExceptionResponse, Invest
 
 #获取汇率
 @api_view(['GET'])
+@checkRequestToken()
 def getcurrencyreat(request):
     try:
         tokenkey = request.META.get('HTTP_TOKEN')
@@ -48,6 +50,7 @@ def getcurrencyreat(request):
 
 #获取手机号码归属地
 @api_view(['GET'])
+@checkRequestToken()
 def getMobilePhoneAddress(request):
     try:
         tokenkey = request.META.get('HTTP_TOKEN')
@@ -73,21 +76,6 @@ def getMobilePhoneAddress(request):
         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
-#名片识别
-@api_view(['POST'])
-def ccupload(request):
-    try:
-        data_dict = request.FILES
-        uploaddata = None
-        for keya in data_dict.keys():
-            uploaddata = data_dict[keya]
-        urlstr = 'http://bcr2.intsig.net/BCRService/BCR_VCF2?user=summer.xia@investarget.com&pass=P8YSCG7AQLM66S7M&json=1&lang=15'
-        response = requests.post(urlstr, uploaddata)
-        return JSONResponse(SuccessResponse(response.content))
-    except InvestError as err:
-        return JSONResponse(InvestErrorResponse(err))
-    except Exception:
-        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 #百度名片识别
 import json
@@ -104,8 +92,8 @@ ssl._create_default_https_context = ssl._create_unverified_context
 """
 def fetch_token():
     params = {'grant_type': 'client_credentials',
-              'client_id': 'XkI5HwU0R5RTdPNqepqq0Le5',
-              'client_secret': 'PlqfGj0bt2XGx61gKErUFfpm72ducMEt'}
+              'client_id': baiduaip_appkey,
+              'client_secret': baiduaip_secretkey}
     post_data = urlencode(params).encode('utf-8')
     req = Request('https://aip.baidubce.com/oauth/2.0/token', post_data)
     try:
@@ -122,6 +110,8 @@ def fetch_token():
     else:
         raise InvestError(20071, msg='获取百度ocr token失败', detail='client_id/client_secret参数错误')
 
+
+@checkRequestToken()
 def ccupload_baidu(request):
     try:
         data_dict = request.FILES
@@ -155,6 +145,7 @@ def makeQRCode(content,path):
     img.save(path)
 
 @api_view(['GET'])
+@checkRequestToken()
 def getQRCode(request):
     """
     获取二维码
