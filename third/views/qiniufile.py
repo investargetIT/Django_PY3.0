@@ -1,16 +1,20 @@
 #coding=utf-8
 # Create your views here.
 import datetime
+import hashlib
 import json
 import os
 import random
+import shutil
 import string
 import threading
 import traceback
 from subprocess import TimeoutExpired
+from urllib.parse import unquote
 
 import qiniu
 import requests
+from django.core.cache import caches
 
 from qiniu import BucketManager
 from qiniu.services.storage.uploader import _Resume, put_file
@@ -18,8 +22,10 @@ from rest_framework.decorators import api_view
 from invest.settings import APILOG_PATH
 from third.thirdconfig import qiniu_url, ACCESS_KEY, SECRET_KEY
 from utils.customClass import JSONResponse, InvestError, MyUploadProgressRecorder
-from utils.util import InvestErrorResponse, ExceptionResponse, SuccessResponse, logexcption
+from utils.util import InvestErrorResponse, ExceptionResponse, SuccessResponse, logexcption, checkRequestToken
 
+# 文件分片上传最大size
+max_chunk_size = 1024 * 1024 * 4
 
 #覆盖上传
 @api_view(['POST'])
@@ -77,7 +83,7 @@ def qiniu_coverupload(request):
 @api_view(['POST'])
 def bigfileupload(request):
     """
-    分片上传
+    文件上传
     """
     try:
         isChangeToPdf = request.GET.get('topdf', True)
@@ -126,6 +132,83 @@ def bigfileupload(request):
         return JSONResponse(InvestErrorResponse(err))
     except Exception:
         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+BASE_DIR = r'C:\Users\Administrator\Desktop\pdf\excption_log\upload_files'
+
+@api_view(['POST'])
+# @checkRequestToken()
+def fileChunkUpload(request):
+    """
+    文件分片上传
+    """
+    try:
+        data = request.data
+        file = {
+            'name': unquote(data['filename']),
+            'currentSize': data['currentSize'],
+            'totalSize': data['totalSize'],
+            'currentChunk': data['currentChunk'],
+            'totalChunk': data['totalChunk'],
+            'md5': data['md5'],
+            'bucket': data['bucket'],
+            'file': request.FILES['file']
+        }
+        if data.get('temp_key'):
+            temp_key = data['temp_key']
+        else:
+            if file['currentChunk'] != '1':
+                raise InvestError(8300, msg='文件上传失败', detail='非首个文件块，temp_key不能为空')
+            temp_key = datetime.datetime.now().strftime('%Y%m%d%H%M%S') + ''.join(random.sample(string.ascii_lowercase, 6))
+        bucket_name = data.get('bucket')
+        if bucket_name not in qiniu_url.keys():
+            raise InvestError(8300, msg='文件上传失败', detail='无效的bucket')
+        filetype = file['name'].split('.')[-1]
+        file_path = os.path.join(APILOG_PATH['uploadFilePath'], '%s.%s' % (temp_key, filetype))
+        print(file_path)
+        file_path_temp = file_path + '.temp'
+        if file['currentChunk'] == '1' and caches['default'].get(file_path):  # 同名文件上传冲突，不进行其它操作
+            raise InvestError(8300, msg='文件上传失败', detail='同名文件正在上传')
+        else:  # 标记文件正在上传
+            caches['default'].set(file_path, 'uploading', 2)
+
+        checkresponse = check_file(file, file_path, file_path_temp)
+        # 文件上传失败或者上传完毕后，清理暂存文件和缓存
+        if checkresponse['code'] != '0' or checkresponse['is_end']:
+            remove_file(file_path_temp)
+            caches['default'].delete_pattern(file_path + '*')
+        if checkresponse['code'] == '0':
+            if checkresponse['is_end']:
+                if os.path.exists(file_path):
+                    isChangeToPdf = data.get('topdf', True)
+                    inputFileKey = temp_key + '.' + filetype
+                    outputFileKey = temp_key + '.' + 'pdf'
+                    success, url, key = qiniuuploadfile(file_path, bucket_name, inputFileKey)
+                    if success:
+                        if filetype in ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'] and isChangeToPdf in ['true', True, '1', 1, u'true']:
+                            key = outputFileKey
+                            dirpath = APILOG_PATH['uploadFilePath']
+                            if not os.path.exists(dirpath):
+                                os.makedirs(dirpath)
+                            outputFilePath = os.path.join(dirpath, outputFileKey)
+                            convertAndUploadOffice(file_path, outputFilePath, bucket_name, outputFileKey)
+                        else:
+                            remove_file(file_path)
+                            key = inputFileKey
+                        return JSONResponse(SuccessResponse({'key': key, 'url': url, 'realfilekey': inputFileKey}))
+                    else:
+                        raise InvestError(2020, msg=str(url))
+                else:
+                    raise InvestError(8300, msg='文件上传失败', detail='上传文件丢失')
+            else:
+                return JSONResponse(SuccessResponse({'temp_key': temp_key, 'nextChunk': min(int(file['currentChunk']) + 1, int(file['totalChunk']))}))
+        else:
+            raise InvestError(8300, msg='文件上传失败', detail=checkresponse['msg'])
+    except InvestError as err:
+        return JSONResponse(InvestErrorResponse(err))
+    except Exception:
+        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
 
 @api_view(['POST'])
 def qiniu_uploadtoken(request):
@@ -203,7 +286,7 @@ def qiniuuploadfile(filepath, bucket_name, bucket_key=None):
         filetype = filepath.split('.')[-1]
         bucket_key = datetime.datetime.now().strftime('%Y%m%d%H%M%S') + ''.join(random.sample(string.ascii_lowercase, 6)) + filetype
     token = q.upload_token(bucket_name, bucket_key, 3600, policy={}, strict_policy=True)
-    ret, info = put_file(token, bucket_key, filepath)
+    ret, info = put_file(token, bucket_key, filepath, version='v2')
     if info is not None:
         if info.status_code == 200:
             return True, getUrlWithBucketAndKey(bucket_name, ret["key"]),bucket_key
@@ -256,3 +339,67 @@ def convertAndUploadOffice(inputpath, outputpath, bucket_name, bucket_key):
                 os.remove(inputpath)
 
     convertAndUploadOfficeThread().start()
+
+
+def get_md5(path):
+    m = hashlib.md5()
+    with open(path, 'rb') as f:
+        for line in f:
+            m.update(line)
+    return m.hexdigest()
+
+
+def remove_file(file_path):
+    if not os.path.isfile(file_path):
+        return
+    os.remove(file_path)
+
+
+def write_file(file_path_temp, file):
+    if not os.path.isdir(os.path.dirname(file_path_temp)):
+        os.makedirs(os.path.dirname(file_path_temp))
+    try:
+        with open(file_path_temp,  "ab") as destination:
+            for chunk in file['file'].chunks():
+                destination.write(chunk)
+    except OSError as exc:
+        return exc.errno
+
+
+def check_file(file, file_path, file_path_temp):
+    # is_end表示传输完毕了
+
+    if file['currentChunk'] == '1' and os.path.exists(file_path_temp):
+        remove_file(file_path_temp)  # 开始上传时删除已有的暂存文件
+    elif file['currentChunk'] != '1' and not os.path.exists(file_path_temp):
+        # 上传过程中暂存文件丢失
+        return {'code': '1', 'msg': '暂存文件丢失，上传失败', 'is_end': True}
+
+    # 校验文件内容及大小
+    if not file['file']:
+        return {'code': '1', 'msg': '不能上传空文件'}
+    if not 0 < int(file['currentSize']) <= max_chunk_size:
+        return {'code': '1', 'msg': '文件大小不符合要求'}
+    # 校验文件大小
+    file_size = len(file['file'])
+    if not 0 < file_size <= max_chunk_size:
+        return {'code': '1', 'msg': '文件大小不符合要求'}
+    # 获得已传输的文件大小
+    if os.path.exists(file_path_temp):
+        file_size += os.path.getsize(file_path_temp)
+    if (file['currentChunk'] == file['totalChunk'] and file_size != int(file['totalSize'])) or file_size > int(file['totalSize']):
+        return {'code': '1', 'msg': '文件大小校验失败'}
+
+
+    if file['currentChunk'] == file['totalChunk'] or file_size == int(file['totalSize']):  # 传输完毕的状态
+        if write_file(file_path_temp, file) == 36:
+            return {'code': '1', 'msg': '文件名过长'}
+        shutil.move(file_path_temp, file_path)
+        # 校验md5值，保证内容一致性
+        if file['md5'] != get_md5(file_path):
+            return {'code': '1', 'msg': '文件校验失败'}
+        return {'code': '0', 'msg': '上传并提交成功', 'is_end': True}
+    else:
+        if write_file(file_path_temp, file) == 36:
+            return {'code': '1', 'msg': '文件名过长'}
+        return {'code': '0', 'msg': '上传并提交文件块成功', 'is_end': False}

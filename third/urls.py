@@ -33,4 +33,5 @@ urlpatterns = [
     url(r'^deleteUpload$', others.deleteUpload, name='deleteUploadRecord',),
     url(r'^audioTranslate/$', audioTrans, name='audioTranslate',),
     url(r'^audioTranslate/(?P<pk>\d+)/$', audioTrans_detail, name='getAudioFileTranslateToWordTaskResult',),
+    url(r'^uploaddata/$', qiniufile.fileChunkUpload, name='fileChunkUpload', ),
 ]

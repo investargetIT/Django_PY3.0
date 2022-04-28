@@ -145,7 +145,6 @@ def makeQRCode(content,path):
     img.save(path)
 
 @api_view(['GET'])
-@checkRequestToken()
 def getQRCode(request):
     """
     获取二维码
