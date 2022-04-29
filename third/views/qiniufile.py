@@ -20,12 +20,9 @@ from qiniu import BucketManager
 from qiniu.services.storage.uploader import _Resume, put_file
 from rest_framework.decorators import api_view
 from invest.settings import APILOG_PATH
-from third.thirdconfig import qiniu_url, ACCESS_KEY, SECRET_KEY
+from third.thirdconfig import qiniu_url, ACCESS_KEY, SECRET_KEY, max_chunk_size
 from utils.customClass import JSONResponse, InvestError, MyUploadProgressRecorder
 from utils.util import InvestErrorResponse, ExceptionResponse, SuccessResponse, logexcption, checkRequestToken
-
-# 文件分片上传最大size
-max_chunk_size = 1024 * 1024 * 4
 
 #覆盖上传
 @api_view(['POST'])
@@ -134,10 +131,9 @@ def bigfileupload(request):
         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
-BASE_DIR = r'C:\Users\Administrator\Desktop\pdf\excption_log\upload_files'
 
 @api_view(['POST'])
-# @checkRequestToken()
+@checkRequestToken()
 def fileChunkUpload(request):
     """
     文件分片上传
