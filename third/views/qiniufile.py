@@ -17,12 +17,14 @@ import requests
 from django.core.cache import caches
 
 from qiniu import BucketManager
-from qiniu.services.storage.uploader import _Resume, put_file
+from qiniu.services.storage.uploader import _Resume, put_file, put_stream
 from rest_framework.decorators import api_view
 from invest.settings import APILOG_PATH
 from third.thirdconfig import qiniu_url, ACCESS_KEY, SECRET_KEY, max_chunk_size
 from utils.customClass import JSONResponse, InvestError, MyUploadProgressRecorder
-from utils.util import InvestErrorResponse, ExceptionResponse, SuccessResponse, logexcption, checkRequestToken
+from utils.util import InvestErrorResponse, ExceptionResponse, SuccessResponse, logexcption, checkRequestToken, \
+    catchexcption
+
 
 #覆盖上传
 @api_view(['POST'])
@@ -34,22 +36,14 @@ def qiniu_coverupload(request):
         if not bucket_name or not key or bucket_name not in qiniu_url.keys():
             raise InvestError(2020,msg='bucket/key error')
         deleteqiniufile(bucket_name, key)
-        data_dict = request.FILES
-        uploaddata = None
-        for key in data_dict.keys():
-            uploaddata = data_dict[key]
+        uploaddata = request.FILES['file']
         q = qiniu.Auth(ACCESS_KEY, SECRET_KEY)
         filetype = str(uploaddata.name).split('.')[-1]
         randomPrefix = datetime.datetime.now().strftime('%Y%m%d%H%M%S') + ''.join(random.sample(string.ascii_lowercase, 6))
         inputFileKey = randomPrefix + '.' + filetype
         outputFileKey = randomPrefix + '.' + 'pdf'
-        params = {'x:a': 'a'}
-        mime_type = uploaddata.content_type
         token = q.upload_token(bucket_name, inputFileKey, 3600)
-        progress_handler = lambda progress, total: progress / total
-        uploader = _Resume(token, inputFileKey, uploaddata, uploaddata.size, params, mime_type, progress_handler,
-                           upload_progress_recorder=MyUploadProgressRecorder(), modify_time=None, file_name=uploaddata.name)
-        ret, info = uploader.upload()
+        ret, info = put_stream(token, inputFileKey, uploaddata, uploaddata.name, uploaddata.size)
         if info is not None:
             if info.status_code == 200:
                 return_url = getUrlWithBucketAndKey(bucket_name, ret['key'])
@@ -74,6 +68,7 @@ def qiniu_coverupload(request):
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
     except Exception:
+        catchexcption(request)
         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
@@ -87,23 +82,15 @@ def bigfileupload(request):
         bucket_name = request.GET.get('bucket')
         if bucket_name not in qiniu_url.keys():
             raise InvestError(2020,msg='bucket error')
-        data_dict = request.FILES
-        uploaddata = None
-        for key in data_dict.keys():
-            uploaddata = data_dict[key]
+        uploaddata = request.FILES['file']
         q = qiniu.Auth(ACCESS_KEY, SECRET_KEY)
         filetype = str(uploaddata.name).split('.')[-1]
         randomPrefix = datetime.datetime.now().strftime('%Y%m%d%H%M%S') + ''.join(
             random.sample(string.ascii_lowercase, 6))
         inputFileKey = randomPrefix + '.' + filetype
         outputFileKey = randomPrefix + '.' + 'pdf'
-        params = {'x:a': 'a'}
-        mime_type = uploaddata.content_type
         token = q.upload_token(bucket_name, inputFileKey, 3600)
-        progress_handler = lambda progress, total: progress / total
-        uploader = _Resume(token, inputFileKey, uploaddata, uploaddata.size, params, mime_type, progress_handler,
-                           upload_progress_recorder=MyUploadProgressRecorder(), modify_time=None, file_name=uploaddata.name)
-        ret, info = uploader.upload()
+        ret, info = put_stream(token, inputFileKey, uploaddata, uploaddata.name, uploaddata.size)
         if info is not None:
             if info.status_code == 200:
                 return_url = getUrlWithBucketAndKey(bucket_name, ret['key'])
@@ -128,6 +115,7 @@ def bigfileupload(request):
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
     except Exception:
+        catchexcption(request)
         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
@@ -203,6 +191,7 @@ def fileChunkUpload(request):
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
     except Exception:
+        catchexcption(request)
         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
