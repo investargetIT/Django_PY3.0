@@ -93,6 +93,9 @@ class ProjectBDManagers(MyModel):
             if ProjectBDManagers.objects.exclude(pk=self.pk).filter(is_deleted=False, manager=self.manager, projectBD=self.projectBD).exists():
                 raise InvestError(20071, msg='负责人已存在')
         self.datasource = self.projectBD.datasource
+        if self.projectBD and not self.projectBD.is_deleted:
+            self.projectBD.lastmodifytime = self.lastmodifytime if self.lastmodifytime else datetime.datetime.now()
+            self.projectBD.save(update_fields=['lastmodifytime',])
         kwargs['automodifytime'] = False
         return super(ProjectBDManagers, self).save(*args, **kwargs)
 
@@ -116,7 +119,9 @@ class ProjectBDComments(MyModel):
         self.datasource = self.projectBD.datasource
         if self.event_date is None:
             self.event_date = datetime.datetime.now()
-        self.projectBD.save()
+        if self.projectBD and not self.projectBD.is_deleted:
+            self.projectBD.lastmodifytime = self.lastmodifytime if self.lastmodifytime else datetime.datetime.now()
+            self.projectBD.save(update_fields=['lastmodifytime',])
         kwargs['automodifytime'] = False
         return super(ProjectBDComments, self).save(*args, **kwargs)
 
