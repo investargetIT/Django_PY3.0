@@ -61,7 +61,7 @@ def qiniu_coverupload(request):
             with open(inputFilePath, 'wb+') as destination:
                 for chunk in uploaddata.chunks():
                     destination.write(chunk)
-            convertAndUploadOffice(inputFilePath, outputFilePath, bucket_name, outputFileKey)
+            convertAndUploadOfficeInThread(inputFilePath, outputFilePath, bucket_name, outputFileKey)
         else:
             key = inputFileKey
         return JSONResponse(SuccessResponse({'key': key, 'url': return_url, 'realfilekey': inputFileKey}))
@@ -108,7 +108,7 @@ def bigfileupload(request):
             with open(inputFilePath, 'wb+') as destination:
                 for chunk in uploaddata.chunks():
                     destination.write(chunk)
-            convertAndUploadOffice(inputFilePath, outputFilePath, bucket_name, outputFileKey)
+            convertAndUploadOfficeInThread(inputFilePath, outputFilePath, bucket_name, outputFileKey)
         else:
             key = inputFileKey
         return JSONResponse(SuccessResponse({'key':key,'url':return_url,'realfilekey':inputFileKey}))
@@ -164,24 +164,18 @@ def fileChunkUpload(request):
         if checkresponse['code'] == '0':
             if checkresponse['is_end']:
                 if os.path.exists(file_path):
-                    isChangeToPdf = data.get('topdf', True)
                     inputFileKey = temp_key + '.' + filetype
                     outputFileKey = temp_key + '.' + 'pdf'
-                    success, url, key = qiniuuploadfile(file_path, bucket_name, inputFileKey)
-                    if success:
-                        if filetype in ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'] and isChangeToPdf in ['true', True, '1', 1, u'true']:
-                            key = outputFileKey
-                            dirpath = APILOG_PATH['uploadFilePath']
-                            if not os.path.exists(dirpath):
-                                os.makedirs(dirpath)
-                            outputFilePath = os.path.join(dirpath, outputFileKey)
-                            convertAndUploadOffice(file_path, outputFilePath, bucket_name, outputFileKey)
-                        else:
-                            remove_file(file_path)
-                            key = inputFileKey
-                        return JSONResponse(SuccessResponse({'key': key, 'url': url, 'realfilekey': inputFileKey}))
+                    if filetype in ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'] and data.get('topdf', True) in ['true', True, '1', 1, u'true']:
+                        changeToPdf = True
+                        outputFilePath = os.path.join(APILOG_PATH['uploadFilePath'], outputFileKey)
+                        key = outputFileKey
                     else:
-                        raise InvestError(2020, msg=str(url))
+                        changeToPdf = False
+                        outputFilePath = None
+                        key = inputFileKey
+                    qiniuuploadfileInThread(file_path, bucket_name, inputFileKey, changeToPdf, outputFilePath)
+                    return JSONResponse(SuccessResponse({'key': key, 'url': getUrlWithBucketAndKey(bucket_name, key), 'realfilekey': inputFileKey, 'bucket':bucket_name}))
                 else:
                     raise InvestError(8300, msg='文件上传失败', detail='上传文件丢失')
             else:
@@ -280,6 +274,34 @@ def qiniuuploadfile(filepath, bucket_name, bucket_key=None):
     else:
         return False,None,None
 
+
+#子线程上传本地文件
+def qiniuuploadfileInThread(filepath, bucket_name, bucket_key, changeToPdf, outputFilePath):
+    class qiniuuploadfileThread(threading.Thread):
+        def run(self):
+            try:
+                q = qiniu.Auth(ACCESS_KEY, SECRET_KEY)
+                uploading = True
+                retry_times = 1
+                while uploading and retry_times <= 3:
+                    retry_times += 1
+                    token = q.upload_token(bucket_name, bucket_key, 3600, policy={}, strict_policy=True)
+                    ret, info = put_file(token, bucket_key, filepath, version='v2')
+                    if info is not None:
+                        if info.status_code == 200:
+                            uploading = False
+            except Exception:
+                logexcption(msg='文件上传七牛服务器失败')
+            if changeToPdf:
+                convertAndUploadOffice(filepath, outputFilePath, bucket_name, bucket_key)
+            if os.path.exists(filepath):
+                os.remove(filepath)
+
+    qiniuuploadfileThread().start()
+
+
+
+
 #下载文件到本地
 def downloadFileToPath(key,bucket,path):
     try:
@@ -299,7 +321,7 @@ def downloadFileToPath(key,bucket,path):
 
 
 
-def convertAndUploadOffice(inputpath, outputpath, bucket_name, bucket_key):
+def convertAndUploadOfficeInThread(inputpath, outputpath, bucket_name, bucket_key):
     """
     :param inputpath: 源文件路径
     :param outputpath: 转化后文件路径
@@ -307,23 +329,28 @@ def convertAndUploadOffice(inputpath, outputpath, bucket_name, bucket_key):
     """
     class convertAndUploadOfficeThread(threading.Thread):
         def run(self):
-            try:
-                import subprocess
-                subprocess.check_output(['python3', '/var/www/DocumentConverter.py', inputpath, outputpath], timeout=300)  #执行完毕程序才会往下进行
-            except ImportError:
-                logexcption(msg='引入模块失败')
-            except TimeoutExpired:
-                logexcption(msg='文件转换超时')
-            except Exception:
-                logexcption(msg='文件转换失败')
-            if os.path.exists(outputpath):
-                success, url, key = qiniuuploadfile(outputpath, bucket_name, bucket_key)
-                print(success,url,key)
-                os.remove(outputpath)
-            if os.path.exists(inputpath):
-                os.remove(inputpath)
+            convertAndUploadOffice(inputpath, outputpath, bucket_name, bucket_key)
+
 
     convertAndUploadOfficeThread().start()
+
+
+def convertAndUploadOffice(inputpath, outputpath, bucket_name, bucket_key):
+    try:
+        import subprocess
+        subprocess.check_output(['python3', '/var/www/DocumentConverter.py', inputpath, outputpath], timeout=300)  # 执行完毕程序才会往下进行
+    except ImportError:
+        logexcption(msg='引入模块失败')
+    except TimeoutExpired:
+        logexcption(msg='文件转换超时')
+    except Exception:
+        logexcption(msg='文件转换失败')
+    if os.path.exists(outputpath):
+        success, url, key = qiniuuploadfile(outputpath, bucket_name, bucket_key)
+        print(success, url, key)
+        os.remove(outputpath)
+    if os.path.exists(inputpath):
+        os.remove(inputpath)
 
 
 def get_md5(path):
