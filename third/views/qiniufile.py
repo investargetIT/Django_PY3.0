@@ -174,7 +174,7 @@ def fileChunkUpload(request):
                         changeToPdf = False
                         outputFilePath = None
                         key = inputFileKey
-                    qiniuuploadfileInThread(file_path, bucket_name, inputFileKey, changeToPdf, outputFilePath)
+                    qiniuuploadfileInThread(file_path, bucket_name, inputFileKey, changeToPdf, outputFilePath, outputFileKey)
                     return JSONResponse(SuccessResponse({'key': key, 'url': getUrlWithBucketAndKey(bucket_name, key), 'realfilekey': inputFileKey, 'bucket':bucket_name}))
                 else:
                     raise InvestError(8300, msg='文件上传失败', detail='上传文件丢失')
@@ -276,7 +276,7 @@ def qiniuuploadfile(filepath, bucket_name, bucket_key=None):
 
 
 #子线程上传本地文件
-def qiniuuploadfileInThread(filepath, bucket_name, bucket_key, changeToPdf, outputFilePath):
+def qiniuuploadfileInThread(filepath, bucket_name, bucket_key, changeToPdf, outputFilePath, outputFileKey):
     class qiniuuploadfileThread(threading.Thread):
         def run(self):
             try:
@@ -293,7 +293,7 @@ def qiniuuploadfileInThread(filepath, bucket_name, bucket_key, changeToPdf, outp
             except Exception:
                 logexcption(msg='文件上传七牛服务器失败')
             if changeToPdf:
-                convertAndUploadOffice(filepath, outputFilePath, bucket_name, bucket_key)
+                convertAndUploadOffice(filepath, outputFilePath, bucket_name, outputFileKey)
             if os.path.exists(filepath):
                 os.remove(filepath)
 
