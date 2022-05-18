@@ -1688,17 +1688,6 @@ def makeExportOrgExcel():
                 self.executeTask(task_qs)
                 self.doTask()
 
-        def expireTasks(self):
-            task_qs = orgExportExcelTask.objects.filter(status__in=[3, 4, 5], is_deleted=False,
-                                                 completetime__lt=(
-                                                     datetime.datetime.now() - datetime.timedelta(days=1)))
-
-            if task_qs.exists():
-                for task in task_qs:
-                    fullpath = APILOG_PATH['orgExportPath'] + task.filename
-                    if os.path.exists(fullpath):
-                        os.remove(fullpath)
-                    task.delete()
 
         def run(self):
             self.doTask()

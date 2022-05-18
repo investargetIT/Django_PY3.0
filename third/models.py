@@ -10,6 +10,9 @@ import random
 from django.db import models
 
 # Create your models here.
+from utils.customClass import InvestError
+
+
 class MobileAuthCode(models.Model):
     mobileareacode = models.CharField(max_length=8,blank=True,default='86')
     mobile = models.CharField(help_text='手机号',max_length=32)
@@ -57,3 +60,38 @@ class AudioTranslateTaskRecord(models.Model):
         if not self.createTime:
             self.createTime = datetime.datetime.now()
         return super(AudioTranslateTaskRecord, self).save(*args, **kwargs)
+
+
+taskstatuschoice = (
+    (1, '未开始'),
+    (2, '正在进行'),
+    (3, '已完成'),
+)
+
+class QiNiuFileUploadRecord(models.Model):
+    filename = models.CharField(max_length=40, blank=True, null=True)
+    filesize = models.IntegerField(blank=True, null=True, help_text='文件大小')
+    fileMD5 = models.TextField(blank=True, null=True, help_text='文件MD5值')
+    key = models.CharField(max_length=128, blank=True)
+    bucket = models.CharField(max_length=40, blank=True)
+    convertToPDF = models.BooleanField(blank=True, default=False)
+    convertKey = models.CharField(max_length=128, blank=True, null=True)
+    status = models.PositiveSmallIntegerField(blank=True, choices=taskstatuschoice, default=1, help_text='上传任务当前状态')
+    msg = models.TextField(blank=True, null=True, help_text='上传任务当前状态信息')
+    success1 = models.BooleanField(blank=True, default=False, help_text='原文件上传结果')
+    success2 = models.BooleanField(blank=True, default=False, help_text='转换文件上传结果')
+    info1 = models.TextField(blank=True, null=True, help_text='原文件上传返回信息')
+    info2 = models.TextField(blank=True, null=True, help_text='转换文件上传返回信息')
+    starttime = models.DateTimeField(blank=True, null=True, help_text='任务开始时间')
+    endtime = models.DateTimeField(blank=True, null=True, help_text='任务结束时间')
+    cretateUserId = models.BigIntegerField(blank=True, null=True, help_text='上传任务创建人id')
+    createTime = models.DateTimeField(blank=True, null=True, help_text='上传任务创建时间')
+    is_deleted = models.BooleanField(blank=True, default=False)
+
+    def save(self,  *args, **kwargs):
+        if not self.is_deleted:
+            if not self.createTime:
+                self.createTime = datetime.datetime.now()
+        if QiNiuFileUploadRecord.objects.exclude(pk=self.pk).filter(key=self.key, is_deleted=False).exists():
+            raise InvestError(8300, msg='上传文件key已存在', detail='已存在相同key的上传记录')
+        super(QiNiuFileUploadRecord, self).save(*args, **kwargs)

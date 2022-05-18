@@ -18,8 +18,6 @@ audioTrans_detail = audioTransfer.AudioTranslateTaskRecordView.as_view({
 
 urlpatterns = [
     url(r'^sms$', submail.sendSmscode, name='sendsmscode', ),
-    url(r'^qiniubigupload$', qiniufile.bigfileupload, name='qiniubig', ),
-    url(r'^qiniucoverupload$', qiniufile.qiniu_coverupload, name='qiniucover', ),
     url(r'^currencyrate$', others.getcurrencyreat, name='getcurrencyrate', ),
     url(r'^phoneAddress$', others.getMobilePhoneAddress, name='getMobilePhoneAddress', ),
     url(r'^ccuploadbaidu$', others.ccupload_baidu, name='ccupload_baidu', ),
