@@ -120,12 +120,7 @@ class OrganizationView(viewsets.ModelViewSet):
                 queryset = queryset.page(page_index)
             except EmptyPage:
                 return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
-            responselist = []
-            for instance in queryset:
-                instancedata = serializerclass(instance).data
-                instancedata['user_count'] = 0
-                responselist.append(instancedata)
-            return JSONResponse(SuccessResponse({'count':count,'data':returnListChangeToLanguage(responselist,lang)}))
+            return JSONResponse(SuccessResponse({'count':count,'data':returnListChangeToLanguage(serializerclass(queryset, many=True).data, lang)}))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
