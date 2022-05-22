@@ -69,7 +69,7 @@ taskstatuschoice = (
 )
 
 class QiNiuFileUploadRecord(models.Model):
-    filename = models.CharField(max_length=40, blank=True, null=True)
+    filename = models.CharField(max_length=80, blank=True, null=True)
     filesize = models.IntegerField(blank=True, null=True, help_text='文件大小')
     fileMD5 = models.TextField(blank=True, null=True, help_text='文件MD5值')
     key = models.CharField(max_length=128, blank=True)
@@ -89,6 +89,8 @@ class QiNiuFileUploadRecord(models.Model):
     is_deleted = models.BooleanField(blank=True, default=False)
 
     def save(self,  *args, **kwargs):
+        if self.filename and len(self.filename) > 80:
+            raise InvestError(8300, msg='文件名称长度超限', detail='文件名称长度超限， 最大长度80, 当前为%s' % len(self.filename))
         if not self.is_deleted:
             if not self.createTime:
                 self.createTime = datetime.datetime.now()
