@@ -7,6 +7,8 @@ from org.serializer import OrgCommonSerializer
 from sourcetype.serializer import tagSerializer, countrySerializer, titleTypeSerializer, \
     PerformanceAppraisalLevelSerializer, TrainingStatusSerializer, TrainingTypeSerializer, industryGroupSerializer, \
     EducationSerializer, AuditStatusSerializer
+from third.models import QiNiuFileUploadRecord
+from third.serializer import QiNiuFileUploadRecordSerializer
 from third.views.qiniufile import getUrlWithBucketAndKey
 from utils.util import checkMobileTrue
 from .models import MyUser, UserRelation, UnreachUser, UserRemarks, userAttachments, userEvents, \
@@ -168,9 +170,17 @@ class InvestorUserSerializer(serializers.ModelSerializer):
 
 
 class UserAttachmentSerializer(serializers.ModelSerializer):
+    uploadstatus = serializers.SerializerMethodField()
     class Meta:
         model = userAttachments
         fields = '__all__'
+
+    def get_uploadstatus(self, obj):
+        if obj.bucket and obj.key:
+            qs = QiNiuFileUploadRecord.objects.filter(key=obj.key, is_deleted=False)
+            if qs.exists():
+                return QiNiuFileUploadRecordSerializer(qs, many=True).data
+        return None
 
 
 class UserEventSerializer(serializers.ModelSerializer):

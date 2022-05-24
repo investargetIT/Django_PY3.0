@@ -557,7 +557,8 @@ class OrgBDView(viewsets.ModelViewSet):
                     sortfield = '-sortfield2'
                 else:
                     sortfield = 'sortfield2'
-                queryset = queryset.annotate(sortfield1=Max('isimportant'), sortfield2=Max('response__sort'), sortfield3=Max('lastmodifytime')).values('org', 'proj', 'sortfield1', 'sortfield2', 'sortfield3').annotate(orgcount=Count('org'), projcount=Count('proj')).order_by('-sortfield1', sortfield, '-sortfield3')
+                queryset = queryset.annotate(sortfield1=Max('isimportant'), sortfield2=Max('response__sort'), sortfield3=Max('lastmodifytime')).values('org', 'proj', 'sortfield1','sortfield2','sortfield3').annotate(
+                    orgcount=Count('org'), projcount=Count('proj')).order_by('-sortfield1', sortfield, '-sortfield3')
             else:
                 sortfield = 'sortfield'
                 if desc in ('1', u'1', 1):

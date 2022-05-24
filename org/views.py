@@ -41,7 +41,6 @@ class OrganizationFilter(FilterSet):
     proj = RelationFilter(filterstr='org_orgBDs__proj', relationName='org_orgBDs__is_deleted', lookup_method='in')
     orgfullname = RelationFilter(filterstr='orgfullname')
     ids = RelationFilter(filterstr='id', lookup_method='in')
-    lv = RelationFilter(filterstr='orglevel', lookup_method='in')
     stockcode = RelationFilter(filterstr='stockcode',lookup_method='in')
     stockshortname = RelationFilter(filterstr='stockshortname',lookup_method='in')
     issub = RelationFilter(filterstr='issub', lookup_method='exact')
@@ -57,7 +56,7 @@ class OrganizationFilter(FilterSet):
     trader = RelationFilter(filterstr='org_users__investor_relations__traderuser',lookup_method='in',relationName='org_users__investor_relations__is_deleted')
     class Meta:
         model = organization
-        fields = ['orgname', 'proj','orgfullname', 'orgstatus','currencys','industrys','orgtransactionphases','orgtypes','area','trader','stockcode','stockshortname','issub','investoverseasproject', 'ids', 'lv']
+        fields = ['orgname', 'proj','orgfullname', 'orgstatus','currencys','industrys','orgtransactionphases','orgtypes','area','trader','stockcode','stockshortname','issub','investoverseasproject', 'ids']
 
 class OrganizationView(viewsets.ModelViewSet):
     """
@@ -108,7 +107,7 @@ class OrganizationView(viewsets.ModelViewSet):
             tags = request.GET.get('tags', None)
             if tags:
                 tags = tags.split(',')
-                queryset = queryset.filter(Q(org_users__tags__in=tags) | Q(org_orgtags__tag__in=tags))
+                queryset = queryset.filter(Q(org_users__tags__in=tags) | Q(org_orgtags__tag__in=tags)).distinct()
             sortfield = request.GET.get('sort', 'createdtime')
             desc = request.GET.get('desc', 1)
             queryset = mySortQuery(queryset, sortfield, desc)
@@ -122,18 +121,7 @@ class OrganizationView(viewsets.ModelViewSet):
                 queryset = queryset.page(page_index)
             except EmptyPage:
                 return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
-            responselist = []
-            for instance in queryset:
-                user_count = 0
-                if request.user.is_anonymous:
-                    pass
-                else:
-                    if instance.orglevel_id == 1 or instance.orglevel_id == 2:
-                        user_count = checkOrgUserContactInfoTruth(instance, request.user.datasource)
-                instancedata = serializerclass(instance).data
-                instancedata['user_count'] = user_count
-                responselist.append(instancedata)
-            return JSONResponse(SuccessResponse({'count':count,'data':returnListChangeToLanguage(responselist,lang)}))
+            return JSONResponse(SuccessResponse({'count':count,'data':returnListChangeToLanguage(serializerclass(queryset, many=True).data, lang)}))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
@@ -1697,17 +1685,6 @@ def makeExportOrgExcel():
                 self.executeTask(task_qs)
                 self.doTask()
 
-        def expireTasks(self):
-            task_qs = orgExportExcelTask.objects.filter(status__in=[3, 4, 5], is_deleted=False,
-                                                 completetime__lt=(
-                                                     datetime.datetime.now() - datetime.timedelta(days=1)))
-
-            if task_qs.exists():
-                for task in task_qs:
-                    fullpath = APILOG_PATH['orgExportPath'] + task.filename
-                    if os.path.exists(fullpath):
-                        os.remove(fullpath)
-                    task.delete()
 
         def run(self):
             self.doTask()
@@ -1734,7 +1711,7 @@ def fulltextsearch(request):
         q = Q()
         q.connector = 'or'
         searchText = request.GET.get('text', None)
-        if searchText: # 匹配机构备注和附件内容
+        if searchText:  # 匹配机构备注和附件内容
             search_body = {
                 "query": {
                     "bool": {

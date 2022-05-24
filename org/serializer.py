@@ -3,6 +3,8 @@ from rest_framework import serializers
 from org.models import organization, orgRemarks, orgTransactionPhase, orgBuyout, orgContact, orgInvestEvent, \
     orgCooperativeRelationship, orgManageFund, orgExportExcelTask, orgAttachments
 from sourcetype.serializer import transactionPhasesSerializer, tagSerializer
+from third.models import QiNiuFileUploadRecord
+from third.serializer import QiNiuFileUploadRecordSerializer
 from third.views.qiniufile import getUrlWithBucketAndKey
 
 
@@ -186,6 +188,14 @@ class OrgManageFundSerializer(serializers.ModelSerializer):
         exclude = ('createuser', 'deleteduser', 'createdtime', 'is_deleted', 'deletedtime', 'lastmodifytime')
 
 class OrgAttachmentSerializer(serializers.ModelSerializer):
+    uploadstatus = serializers.SerializerMethodField()
     class Meta:
         model = orgAttachments
         fields = '__all__'
+
+    def get_uploadstatus(self, obj):
+        if obj.bucket and obj.key:
+            qs = QiNiuFileUploadRecord.objects.filter(key=obj.key, is_deleted=False)
+            if qs.exists():
+                return QiNiuFileUploadRecordSerializer(qs, many=True).data
+        return None

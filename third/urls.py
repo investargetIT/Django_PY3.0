@@ -3,10 +3,10 @@ from django.conf.urls import url
 from third.views import submail
 from third.views import qiniufile
 from third.views import others
+
+
 urlpatterns = [
     url(r'^sms$', submail.sendSmscode, name='sendsmscode', ),
-    url(r'^qiniubigupload$', qiniufile.bigfileupload, name='qiniubig', ),
-    url(r'^qiniucoverupload$', qiniufile.qiniu_coverupload, name='qiniucover', ),
     url(r'^currencyrate$', others.getcurrencyreat, name='getcurrencyrate', ),
     url(r'^phoneAddress$', others.getMobilePhoneAddress, name='getMobilePhoneAddress', ),
     url(r'^ccuploadbaidu$', others.ccupload_baidu, name='ccupload_baidu', ),
@@ -18,4 +18,5 @@ urlpatterns = [
     url(r'^selectUpload$', others.selectUpload, name='selectFromUploadRecord',),
     url(r'^cancelUpload$', others.cancelUpload, name='cancelUploadRecord',),
     url(r'^deleteUpload$', others.deleteUpload, name='deleteUploadRecord',),
+    url(r'^uploaddata/$', qiniufile.fileChunkUpload, name='fileChunkUpload', ),
 ]

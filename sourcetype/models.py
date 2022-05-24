@@ -334,7 +334,7 @@ class TransactionType(models.Model):
 
 class DidiOrderType(models.Model):
     '''
-    项目进程（时间轴）状态：11个step
+    didi订单类型
     '''
     id = models.AutoField(primary_key=True)
     nameC = models.CharField(max_length=16,blank=True,null=True)
@@ -344,6 +344,7 @@ class DidiOrderType(models.Model):
 
     def __str__(self):
         return self.nameC
+
 
 
 class webmenu(models.Model):

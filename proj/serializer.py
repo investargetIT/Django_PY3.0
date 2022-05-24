@@ -5,6 +5,8 @@ from proj.models import project, finance, attachment, projServices, projectIndus
 from sourcetype.serializer import tagSerializer, transactionTypeSerializer, serviceSerializer, countrySerializer, \
     industryWithPIndustrySerializer, countryWithContinentSerializer, DidiOrderTypeSerializer, currencyTypeSerializer, \
     ProjectStatusSerializer
+from third.models import QiNiuFileUploadRecord
+from third.serializer import QiNiuFileUploadRecordSerializer
 from third.views.qiniufile import getUrlWithBucketAndKey
 from usersys.serializer import UserCommenSerializer, UserNameSerializer
 
@@ -91,17 +93,29 @@ class ProjFinanceSerializer(serializers.ModelSerializer):
 
 
 class ProjAttachmentCreateSerializer(serializers.ModelSerializer):
+    uploadstatus = serializers.SerializerMethodField()
     class Meta:
         model = attachment
         fields = '__all__'
-
+    def get_uploadstatus(self, obj):
+        if obj.bucket and obj.key:
+            qs = QiNiuFileUploadRecord.objects.filter(key=obj.key, is_deleted=False)
+            if qs.exists():
+                return QiNiuFileUploadRecordSerializer(qs, many=True).data
+        return None
 
 class ProjAttachmentSerializer(serializers.ModelSerializer):
+    uploadstatus = serializers.SerializerMethodField()
     class Meta:
         model = attachment
         exclude = ('deleteduser', 'deletedtime', 'createuser', 'createdtime', 'lastmodifyuser', 'lastmodifytime',)
 
-
+    def get_uploadstatus(self, obj):
+        if obj.bucket and obj.key:
+            qs = QiNiuFileUploadRecord.objects.filter(key=obj.key, is_deleted=False)
+            if qs.exists():
+                return QiNiuFileUploadRecordSerializer(qs, many=True).data
+        return None
 class ProjSerializer(serializers.ModelSerializer):
     supportUser = UserCommenSerializer()
     PM = UserCommenSerializer()

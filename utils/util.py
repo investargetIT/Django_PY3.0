@@ -203,12 +203,12 @@ def checkrequesttoken(token):
         try:
             token = MyToken.objects.get(key=token, is_deleted=False)
         except MyToken.DoesNotExist:
-            raise InvestError(3000, msg='token不存在')
+            raise InvestError(3000, msg='请重新登录')
         else:
             if token.timeout():
-                raise InvestError(3000, msg='token过期')
+                raise InvestError(3000, msg='请重新登录')
             if token.user.is_deleted:
-                raise InvestError(3000, msg='用户不存在')
+                raise InvestError(3000, msg='请重新登录')
             if token.user.userstatus_id == 3:
                 raise InvestError(2022, msg='用户审核未通过，如有疑问请咨询相关工作人员。')
             return token.user
