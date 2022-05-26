@@ -32,4 +32,5 @@ urlpatterns = [
     url(r'^audioTranslate/$', audioTrans, name='audioTranslate',),
     url(r'^audioTranslate/(?P<pk>\d+)/$', audioTrans_detail, name='getAudioFileTranslateToWordTaskResult',),
     url(r'^uploaddata/$', qiniufile.fileChunkUpload, name='fileChunkUpload', ),
+    url(r'^uploadres/$', qiniufile.getQiniuUploadRecordResponse, name='getQiniuUploadRecordResponse', ),
 ]
