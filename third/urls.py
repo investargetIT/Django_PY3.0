@@ -19,4 +19,5 @@ urlpatterns = [
     url(r'^cancelUpload$', others.cancelUpload, name='cancelUploadRecord',),
     url(r'^deleteUpload$', others.deleteUpload, name='deleteUploadRecord',),
     url(r'^uploaddata/$', qiniufile.fileChunkUpload, name='fileChunkUpload', ),
+    url(r'^uploadres/$', qiniufile.getQiniuUploadRecordResponse, name='getQiniuUploadRecordResponse', ),
 ]

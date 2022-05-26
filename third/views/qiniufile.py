@@ -15,12 +15,14 @@ from urllib.parse import unquote
 import qiniu
 import requests
 from django.core.cache import caches
+from django.db.models import Q
 
 from qiniu import BucketManager
 from qiniu.services.storage.uploader import  put_file
 from rest_framework.decorators import api_view
 from invest.settings import APILOG_PATH
 from third.models import QiNiuFileUploadRecord
+from third.serializer import QiNiuFileUploadRecordSerializer
 from third.thirdconfig import qiniu_url, ACCESS_KEY, SECRET_KEY, max_chunk_size
 from utils.customClass import JSONResponse, InvestError
 from utils.util import InvestErrorResponse, ExceptionResponse, SuccessResponse, logexcption, checkRequestToken, \
@@ -355,3 +357,20 @@ def uploadFileToQiniu():
         f.close()
         d = startdotaskthread()
         d.start()
+
+
+# 获取七牛文件上传记录
+@api_view(['GET'])
+@checkRequestToken()
+def getQiniuUploadRecordResponse(request):
+    try:
+        key = request.GET.get('key')
+        if not key:
+            raise InvestError(20071, msg='key不能为空', detail='查询上传结果，key不能为空')
+        queryset = QiNiuFileUploadRecord.objects.filter(Q(key=key) | Q(convertKey=key))
+        serializer = QiNiuFileUploadRecordSerializer(queryset, many=True)
+        return JSONResponse(SuccessResponse(serializer.data))
+    except InvestError as err:
+        return JSONResponse(InvestErrorResponse(err))
+    except Exception:
+        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
