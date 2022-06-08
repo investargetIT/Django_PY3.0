@@ -14,12 +14,13 @@ import traceback
 
 import requests
 from django.core.paginator import Paginator, EmptyPage
+from django.db import transaction
 from rest_framework import viewsets
 from rest_framework import filters
 
 from invest.settings import APILOG_PATH
 from third.models import AudioTranslateTaskRecord
-from third.serializer import AudioTranslateTaskRecordSerializer
+from third.serializer import AudioTranslateTaskRecordSerializer, AudioTranslateTaskRecordUpdateSerializer
 from third.thirdconfig import xunfei_appid, xunfei_secret_key
 from utils.customClass import JSONResponse, InvestError
 from utils.util import SuccessResponse, InvestErrorResponse, catchexcption, ExceptionResponse, \
@@ -247,6 +248,7 @@ class AudioTranslateTaskRecordView(viewsets.ModelViewSet):
         list:        获取所有转换记录
         audioFileTranslateToWord: 创建转换任务
         getAudioFileTranslateToWordTaskResult: 获取转换结果
+        update: 编辑 转换结果内容、发言人数量
     """
     filter_backends = (filters.SearchFilter, filters.DjangoFilterBackend,)
     filter_fields = ('cretateUserId', 'taskStatus')
@@ -279,19 +281,21 @@ class AudioTranslateTaskRecordView(viewsets.ModelViewSet):
             speaker_number = request.data.get('speaker_number', 0)
             uploaddata = request.FILES.get('file')
             dirpath = APILOG_PATH['audioTranslateFile']
-            filetype = str(uploaddata.name).split('.')[-1]
-            randomPrefix = datetime.datetime.now().strftime('%Y%m%d%H%M%S') + ''.join(
-                random.sample(string.ascii_lowercase, 6))
-            inputFileKey = randomPrefix + '.' + filetype
+            file_key = request.data.get('key')
+            if not file_key:
+                filetype = str(uploaddata.name).split('.')[-1]
+                randomPrefix = datetime.datetime.now().strftime('%Y%m%d%H%M%S') + ''.join(
+                    random.sample(string.ascii_lowercase, 6))
+                file_key = randomPrefix + '.' + filetype
             if not os.path.exists(dirpath):
                 os.makedirs(dirpath)
-            inputFilePath = os.path.join(dirpath, inputFileKey)
-            with open(inputFilePath, 'wb+') as destination:
+            file_Path = os.path.join(dirpath, file_key)
+            with open(file_Path, 'wb+') as destination:
                 for chunk in uploaddata.chunks():
                     destination.write(chunk)
-            api = TransferRequestApi(upload_file_path=inputFilePath, speaker_number=speaker_number)
+            api = TransferRequestApi(upload_file_path=file_Path, speaker_number=speaker_number)
             task_id = api.all_api_request()
-            instance = AudioTranslateTaskRecord(task_id=task_id, file_key=inputFileKey, file_name=uploaddata.name,
+            instance = AudioTranslateTaskRecord(task_id=task_id, file_key=file_key, file_name=uploaddata.name,
                                      speaker_number=speaker_number, cretateUserId=request.user.id)
             instance.save()
             return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
@@ -314,6 +318,24 @@ class AudioTranslateTaskRecordView(viewsets.ModelViewSet):
                     instance.onebest = res['result']['data']
                 instance.save()
             return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable()
+    def update(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            with transaction.atomic():
+                data = request.data
+                serializer = AudioTranslateTaskRecordUpdateSerializer(instance, data=data)
+                if serializer.is_valid():
+                    instance = serializer.save()
+                else:
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
+                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:

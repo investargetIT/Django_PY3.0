@@ -105,7 +105,6 @@ class ProjectBDComments(MyModel):
     key = models.CharField(max_length=128, blank=True, null=True, help_text='文件路径')
     bucket = models.CharField(max_length=128, blank=True, null=True, help_text='文件所在空间')
     filename =  models.CharField(max_length=128, blank=True, null=True, help_text='文件名')
-    onebest = models.TextField(blank=True, null=True, help_text='语音转写内容')
     transid = models.TextField('third.AudioTranslateTaskRecord', blank=True, null=True, help_text='语音转写任务id')
     projectBD = MyForeignKey(ProjectBD, blank=True, null=True, help_text='bd项目', related_name='ProjectBD_comments')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_ProjectBDComments')

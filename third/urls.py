@@ -14,6 +14,7 @@ audioTrans = audioTransfer.AudioTranslateTaskRecordView.as_view({
 
 audioTrans_detail = audioTransfer.AudioTranslateTaskRecordView.as_view({
         'get': 'getAudioFileTranslateToWordTaskResult',
+        'put': 'update',
 })
 
 urlpatterns = [
