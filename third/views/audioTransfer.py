@@ -275,7 +275,7 @@ class AudioTranslateTaskRecordView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable()
+    @loginTokenIsAvailable(['third.addaudiotranslatetask'])
     def audioFileTranslateToWord(self, request, *args, **kwargs):
         try:
             speaker_number = request.data.get('speaker_number', 0)
@@ -328,6 +328,8 @@ class AudioTranslateTaskRecordView(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
+            if instance.cretateUserId != request.user.id:
+                raise InvestError(2009, msg='没有权限编辑', detail='非创建人无法编辑文字内容')
             with transaction.atomic():
                 data = request.data
                 serializer = AudioTranslateTaskRecordUpdateSerializer(instance, data=data)

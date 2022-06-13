@@ -55,6 +55,9 @@ class AudioTranslateTaskRecord(models.Model):
     class Meta:
         db_table = 'audiotranslaterecord'
         ordering = ['-createTime']
+        permissions = (
+            ('addaudiotranslatetask', u'新建语音转换任务'),
+        )
 
     def save(self, *args, **kwargs):
         if not self.createTime:
