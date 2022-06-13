@@ -328,7 +328,9 @@ class AudioTranslateTaskRecordView(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
-            if instance.cretateUserId != request.user.id:
+            if instance.cretateUserId == request.user.id or request.user.is_superuser:
+                pass
+            else:
                 raise InvestError(2009, msg='没有权限编辑', detail='非创建人无法编辑文字内容')
             with transaction.atomic():
                 data = request.data
