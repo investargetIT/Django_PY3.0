@@ -251,7 +251,7 @@ class AudioTranslateTaskRecordView(viewsets.ModelViewSet):
         update: 编辑 转换结果内容、发言人数量
     """
     filter_backends = (filters.SearchFilter, filters.DjangoFilterBackend,)
-    filter_fields = ('cretateUserId', 'taskStatus')
+    filter_fields = ('cretateUserId', 'taskStatus', 'file_key')
     search_fields = ('file_name',)
     queryset = AudioTranslateTaskRecord.objects.all().filter(is_deleted=False)
     serializer_class = AudioTranslateTaskRecordSerializer
