@@ -4,6 +4,20 @@ from third.views import submail
 from third.views import qiniufile
 from third.views import others
 
+from third.views import audioTransfer
+
+audioTrans = audioTransfer.AudioTranslateTaskRecordView.as_view({
+        'get': 'list',
+        'post': 'audioFileTranslateToWord',
+})
+
+
+
+audioTrans_detail = audioTransfer.AudioTranslateTaskRecordView.as_view({
+        'get': 'getAudioFileTranslateToWordTaskResult',
+        'put': 'update',
+})
+
 
 urlpatterns = [
     url(r'^sms$', submail.sendSmscode, name='sendsmscode', ),
@@ -18,6 +32,8 @@ urlpatterns = [
     url(r'^selectUpload$', others.selectUpload, name='selectFromUploadRecord',),
     url(r'^cancelUpload$', others.cancelUpload, name='cancelUploadRecord',),
     url(r'^deleteUpload$', others.deleteUpload, name='deleteUploadRecord',),
+    url(r'^audioTranslate/$', audioTrans, name='audioTranslate',),
+    url(r'^audioTranslate/(?P<pk>\d+)/$', audioTrans_detail, name='getAudioFileTranslateToWordTaskResult',),
     url(r'^uploaddata/$', qiniufile.fileChunkUpload, name='fileChunkUpload', ),
     url(r'^uploadres/$', qiniufile.getQiniuUploadRecordResponse, name='getQiniuUploadRecordResponse', ),
 ]

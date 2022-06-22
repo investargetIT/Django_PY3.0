@@ -102,10 +102,11 @@ class ProjectBDManagers(MyModel):
 class ProjectBDComments(MyModel):
     comments = models.TextField(blank=True, default=False, help_text='内容')
     event_date = models.DateTimeField(blank=True, null=True)
-    projectBD = MyForeignKey(ProjectBD,blank=True,null=True,help_text='bd项目',related_name='ProjectBD_comments')
     key = models.CharField(max_length=128, blank=True, null=True, help_text='文件路径')
     bucket = models.CharField(max_length=128, blank=True, null=True, help_text='文件所在空间')
     filename =  models.CharField(max_length=128, blank=True, null=True, help_text='文件名')
+    transid = models.TextField('third.AudioTranslateTaskRecord', blank=True, null=True, help_text='语音转写任务id')
+    projectBD = MyForeignKey(ProjectBD, blank=True, null=True, help_text='bd项目', related_name='ProjectBD_comments')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_ProjectBDComments')
     createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_ProjectBDComments')
     datasource = MyForeignKey(DataSource, help_text='数据源', blank=True, default=1)

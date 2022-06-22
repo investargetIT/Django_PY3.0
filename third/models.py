@@ -41,6 +41,30 @@ class MobileAuthCode(models.Model):
         return code
 
 
+class AudioTranslateTaskRecord(models.Model):
+    task_id = models.CharField(help_text='task_id', max_length=32, blank=True)
+    file_key = models.CharField(help_text='filekey', max_length=32, blank=True)
+    file_name = models.TextField(help_text='filename', null=True, blank=True)
+    speaker_number = models.SmallIntegerField(default=0, blank=True)
+    onebest = models.TextField(help_text='识别内容', blank=True, null=True)
+    taskStatus = models.TextField(help_text='转写任务状态', blank=True, null=True)
+    cretateUserId = models.BigIntegerField(blank=True, null=True, help_text='转换任务创建人id')
+    createTime = models.DateTimeField(blank=True, null=True)
+    is_deleted = models.BooleanField(blank=True, default=False)
+
+    class Meta:
+        db_table = 'audiotranslaterecord'
+        ordering = ['-createTime']
+        permissions = (
+            ('addaudiotranslatetask', u'新建语音转换任务'),
+        )
+
+    def save(self, *args, **kwargs):
+        if not self.createTime:
+            self.createTime = datetime.datetime.now()
+        return super(AudioTranslateTaskRecord, self).save(*args, **kwargs)
+
+
 taskstatuschoice = (
     (1, '未开始'),
     (2, '正在进行'),
