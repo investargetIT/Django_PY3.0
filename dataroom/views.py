@@ -31,7 +31,7 @@ from utils.sendMessage import sendmessage_dataroomuseradd, sendmessage_dataroomu
 from utils.somedef import file_iterator, addWaterMarkToPdfFiles, encryptPdfFilesWithPassword, getEsScrollResult
 from utils.util import returnListChangeToLanguage, loginTokenIsAvailable, \
     returnDictChangeToLanguage, catchexcption, SuccessResponse, InvestErrorResponse, ExceptionResponse, \
-    logexcption, checkrequesttoken, deleteExpireDir
+    logexcption, checkrequesttoken, deleteExpireDir, delayDeleteDownloadZipFile
 import datetime
 from django_filters import FilterSet
 import os
@@ -312,6 +312,8 @@ class DataroomView(viewsets.ModelViewSet):
                     dataroom_User_file.objects.filter(dataroom=dataroominstance, user=request.user, is_deleted=False).update(lastdowntime=datetime.datetime.now(), lastdownsize=zipFileSize / (1024 * 1024))
                 response['Content-Type'] = 'application/octet-stream'
                 response["content-disposition"] = 'attachment;filename=%s' % path
+                if (zipFileSize < 10 * 1024 * 1024) or ispart in ['1', 1, u'1']:
+                    threading.Thread(target=delayDeleteDownloadZipFile, args=(zipFilepath, direcpath, 60 * 5)).start()
             else:
                 if os.path.exists(direcpath):
                     response = JSONResponse(SuccessResponse({'code':8004, 'msg': '压缩中'}))

@@ -3,6 +3,8 @@ import os
 import re
 
 import shutil
+import time
+
 from django.core.cache import cache
 import datetime
 import traceback
@@ -85,6 +87,12 @@ def deleteExpireDir(rootpath, expire=1):
                 if os.path.exists(m):
                     os.remove(m)
 
+def delayDeleteDownloadZipFile(zipFilepath, direcpath, sleep_time):
+    if os.path.exists(zipFilepath):
+        time.sleep(sleep_time)
+        os.remove(zipFilepath)  # 删除压缩包
+        if os.path.exists(direcpath):  # 删除源文件
+            shutil.rmtree(direcpath)
 
 def checkDirCtimeExpire(path, expire=1):
     filePath = str(path)
