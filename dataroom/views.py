@@ -307,17 +307,11 @@ class DataroomView(viewsets.ModelViewSet):
                 fn = open(zipFilepath, 'rb')
                 response = StreamingHttpResponse(file_iterator(fn))
                 zipFileSize = os.path.getsize(zipFilepath)
-                if dataroom_User_file.objects.filter(dataroom=dataroominstance, user=request.user, is_deleted=False).exists():
-                    dataroom_User_file.objects.filter(dataroom=dataroominstance, user=request.user, is_deleted=False).update(lastdowntime=datetime.datetime.now(), lastdownsize=zipFileSize/(1024 * 1024))
                 response['Content-Length'] = zipFileSize
                 if dataroom_User_file.objects.filter(dataroom=dataroominstance, user=request.user, is_deleted=False).exists():
                     dataroom_User_file.objects.filter(dataroom=dataroominstance, user=request.user, is_deleted=False).update(lastdowntime=datetime.datetime.now(), lastdownsize=zipFileSize / (1024 * 1024))
                 response['Content-Type'] = 'application/octet-stream'
                 response["content-disposition"] = 'attachment;filename=%s' % path
-                if (zipFileSize < 10 * 1024 * 1024) or ispart in ['1', 1, u'1']:
-                    os.remove(zipFilepath)            # 删除压缩包
-                    if os.path.exists(direcpath):  # 删除源文件
-                        shutil.rmtree(direcpath)
             else:
                 if os.path.exists(direcpath):
                     response = JSONResponse(SuccessResponse({'code':8004, 'msg': '压缩中'}))
