@@ -91,7 +91,7 @@ class dataroomdirectoryorfile(MyModel):
                 raise InvestError(7007,msg='非目录结构不能存储文件')
         if self.filename is None:
             raise InvestError(20072,msg='名称不能为空')
-        if not self.is_deleted and self.isFile and not self.pk:
+        if not self.is_deleted and self.isFile:
             dataroomPath = os.path.join(APILOG_PATH['es_dataroomPDFPath'], 'dataroom_{}'.format(self.dataroom.id))
             if not os.path.exists(dataroomPath):
                 os.makedirs(dataroomPath)
