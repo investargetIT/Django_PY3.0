@@ -1397,7 +1397,6 @@ class ProjCommentsView(viewsets.ModelViewSet):
             with transaction.atomic():
                 data = request.data
                 data['datasource'] = request.user.datasource_id
-
                 serializer = ProjCommentsCreateSerializer(data=data)
                 if serializer.is_valid():
                     instance = serializer.save()
@@ -1430,6 +1429,8 @@ class ProjCommentsView(viewsets.ModelViewSet):
             with transaction.atomic():
                 data = request.data
                 data["lastmodifyuser"] = request.user.id
+                if not data.get('commenttime'):
+                    data['commenttime'] = datetime.datetime.now()
                 serializer = ProjCommentsCreateSerializer(instance, data=data)
                 if serializer.is_valid():
                     instance = serializer.save()

@@ -293,6 +293,7 @@ class ShareToken(models.Model):
 class projcomments(MyModel):
     comment = models.TextField(blank=True, null=True, help_text='项目进展')
     proj = MyForeignKey(project, related_name='proj_comments', help_text='项目的分享token')
+    commenttime =  models.DateTimeField(blank=True, null=True, help_text="备注时间")
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_projcomments')
     createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_projcomments')
     lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_projcomments')
@@ -303,6 +304,8 @@ class projcomments(MyModel):
 
 
     def save(self, *args, **kwargs):
+        if not self.commenttime:
+            self.commenttime = datetime.datetime.now()
         if self.datasource != self.proj.datasource:
             raise InvestError(code=8888,msg='来源不匹配')
         return super(projcomments, self).save(*args, **kwargs)
