@@ -31,16 +31,34 @@ def getcurrencyreat(request):
         tcur = request.GET.get('tcur', None)  # 目标币种
         if not tcur or not scur:
             raise InvestError(20072)
-        response = requests.get('http://op.juhe.cn/onebox/exchange/currency?from={}&to={}&key=92ad022726cff74d15d1d3b761701fa4'.format(scur, tcur)).content
-        response = json.loads(response.decode())
-        if isinstance(response, dict):
-            error_code = response.get('error_code')
-            if error_code == 0:
-                result = response.get('result',{})
-            else:
-                raise InvestError(20071,msg=response.get('reason',None))
+        if scur == tcur:
+            result = [
+                {
+                    "currencyF": scur,
+                    "currencyT": tcur,
+                    "currencyFD": "1",
+                    "exchange": "1",
+                    "result": "1",
+                },
+                {
+                    "currencyF": tcur,
+                    "currencyT": scur,
+                    "currencyFD": "1",
+                    "exchange": "1",
+                    "result": "1",
+                },
+            ]
         else:
-            raise InvestError(20071,msg=response)
+            response = requests.get('http://op.juhe.cn/onebox/exchange/currency?from={}&to={}&key=92ad022726cff74d15d1d3b761701fa4'.format(scur, tcur)).content
+            response = json.loads(response.decode())
+            if isinstance(response, dict):
+                error_code = response.get('error_code')
+                if error_code == 0:
+                    result = response.get('result',{})
+                else:
+                    raise InvestError(20071,msg=response.get('reason',None))
+            else:
+                raise InvestError(20071,msg=response)
         return JSONResponse(SuccessResponse(result))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
