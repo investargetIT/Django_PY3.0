@@ -65,7 +65,16 @@ getprojpdf = views.ProjectView.as_view({
         'get':'sendPDF'
 })
 
+projcomments_list = views.ProjCommentsView.as_view({
+        'get': 'list',
+        'post': 'create'
+})
 
+projcomments_detail = views.ProjCommentsView.as_view({
+        'get': 'retrieve',
+        'put': 'update',
+        'delete': 'destroy'
+})
 
 urlpatterns = [
         url(r'^$', proj_list , name='proj_list'),
@@ -79,6 +88,8 @@ urlpatterns = [
         url(r'^didi/$', proj_didiRecord, name='proj_didiRecord'),
         url(r'^share/(?P<pk>\d+)/$',getshareprojtoken,name='getshareprojtoken'),
         url(r'^shareproj/$',getshareproj,name='getshareprojdetail'),
+        url(r'^comment/$', projcomments_list, name='projcomments-list'),
+        url(r'^comment/(?P<pk>\d+)/$', projcomments_detail, name='projcomments-detail'),
         url(r'^pdf/(?P<pk>\d+)/$',getprojpdf,name='getprojpdf'),
         url(r'^test/$',views.testPdf),
 ]

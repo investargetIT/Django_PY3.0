@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from proj.models import project, finance, attachment, projServices, projectIndustries, projTraders, \
-    projectDiDiRecord
+    projectDiDiRecord, projcomments
 from sourcetype.serializer import tagSerializer, transactionTypeSerializer, serviceSerializer, countrySerializer, \
     industryWithPIndustrySerializer, countryWithContinentSerializer, DidiOrderTypeSerializer, currencyTypeSerializer, \
     ProjectStatusSerializer
@@ -402,4 +402,16 @@ class TaxiRecordCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = projectDiDiRecord
+        fields = '__all__'
+
+class ProjCommentsSerializer(serializers.ModelSerializer):
+    proj = ProjSimpleSerializer()
+    class Meta:
+        model = projcomments
+        exclude = ('deleteduser', 'datasource', 'is_deleted', 'deletedtime')
+
+class ProjCommentsCreateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = projcomments
         fields = '__all__'

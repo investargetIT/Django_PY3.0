@@ -287,3 +287,22 @@ class ShareToken(models.Model):
 
     def __str__(self):
         return self.key
+
+
+# 项目进度
+class projcomments(MyModel):
+    comment = models.TextField(blank=True, null=True, help_text='项目进展')
+    proj = MyForeignKey(project, related_name='proj_comments', help_text='项目的分享token')
+    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_projcomments')
+    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_projcomments')
+    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_projcomments')
+    datasource = MyForeignKey(DataSource, blank=True, help_text='数据源')
+
+    class Meta:
+        db_table = 'project_comments'
+
+
+    def save(self, *args, **kwargs):
+        if self.datasource != self.proj.datasource:
+            raise InvestError(code=8888,msg='来源不匹配')
+        return super(projcomments, self).save(*args, **kwargs)
