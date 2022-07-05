@@ -1,7 +1,12 @@
 #coding=utf-8
 import os
+import subprocess
+
+import chardet
+import docx
+
 from invest.settings import APILOG_PATH
-from utils.somedef import getPdfWordContent
+from utils.somedef import getPdfWordContent, BaiDuAipGetImageWord
 from haystack import indexes
 from utils.util import logexcption
 from .models import dataroomdirectoryorfile
@@ -38,14 +43,26 @@ class dataroomdirectoryorfileIndex(indexes.SearchIndex, indexes.Indexable):
     def prepare_fileContent(self, obj):
         """obj 是django里的model实例"""
         filecontent = None
-        if obj.isFile and obj.realfilekey:
+        if obj.isFile and obj.key:
             dataroomPath = os.path.join(APILOG_PATH['es_dataroomPDFPath'], 'dataroom_{}'.format(obj.dataroom_id))
-            file_path = os.path.join(dataroomPath, obj.realfilekey)
+            file_path = os.path.join(dataroomPath, obj.key)
             try:
                 if os.path.exists(file_path):
                     filename, type = os.path.splitext(file_path)
-                    if type == '.pdf':
+                    if type == '.docx':
+                        doc = docx.Document(file_path)
+                        filecontent = '\n'.join([paragraph.text for paragraph in doc.paragraphs])
+                    elif type == '.doc':
+                        filecontent = subprocess.check_output(["antiword", file_path])
+                    elif type == '.pdf':
                         filecontent = getPdfWordContent(file_path)
+                    elif type in ['.png', '.jpg', '.jpeg']:
+                        filecontent = BaiDuAipGetImageWord(file_path)
+                    elif type == '.txt':
+                        with open(file_path, "r") as f:
+                            text = f.read()
+                            type = chardet.detect(text)
+                            filecontent = text.decode(type["encoding"], 'ignore')
             except Exception:
                 logexcption(msg='dataroom文件pdf内容提取失败')
         return filecontent

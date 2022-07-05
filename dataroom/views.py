@@ -464,10 +464,10 @@ def downloadDataroomPDFs():
             dataroomPath = os.path.join(APILOG_PATH['es_dataroomPDFPath'], 'dataroom_{}'.format(fileInstance.dataroom_id))
             if not os.path.exists(dataroomPath):
                 os.makedirs(dataroomPath)
-            file_path = os.path.join(dataroomPath,  fileInstance.realfilekey)
+            file_path = os.path.join(dataroomPath,  fileInstance.key)
             filename, type = os.path.splitext(file_path)
-            if type == '.pdf' and not os.path.exists(file_path):
-                downloadFileToPath(key=fileInstance.realfilekey, bucket=fileInstance.bucket, path=file_path)
+            if type in ['.pdf', '.docx', '.doc', '.png', '.jpg', '.jpeg', '.txt'] and not os.path.exists(file_path):
+                downloadFileToPath(key=fileInstance.key, bucket=fileInstance.bucket, path=file_path)
                 fileInstance.save()
         except Exception:
             logexcption()
