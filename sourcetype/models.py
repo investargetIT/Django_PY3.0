@@ -387,6 +387,17 @@ class TagContrastTable(models.Model):
         return self.cat_name
 
 
+class ProjProgressContrastTable(models.Model):
+    '''
+    项目进度对照表
+    '''
+    id = models.AutoField(primary_key=True)
+    status_id = models.IntegerField(blank=True, null=True, help_text='status_id')
+    proj_or_org = models.BooleanField(blank=True, default=True, help_text="(True\projbd, Flase\orgbd)")
+    feishu_status = models.CharField(max_length=128, blank=True, null=True)
+    is_deleted = models.BooleanField(blank=True, default=False)
+
+
 class IndustryGroup(models.Model):
     '''
     行业组

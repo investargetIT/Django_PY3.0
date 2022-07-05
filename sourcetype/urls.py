@@ -145,6 +145,10 @@ Webmenu = views.WebmenuView.as_view({
         'get': 'list',
 })
 
+ProjProgressContrast = views.ProjProgressContrastTableView.as_view({
+        'get': 'list',
+})
+
 AndroidVersion = views.AndroidAppVersionView.as_view({
         'get': 'list',
         'post':'create',
@@ -207,6 +211,8 @@ urlpatterns = [
     url(r'^trainingStatus$', TrainingStatus,name='TrainingStatusSource',),
 
     url(r'^education$', educationType,name='EducationSource',),
+
+    url(r'^projProgressContrast$', ProjProgressContrast, name='projProgressContrast', ),
 
     url(r'^webmenu$', Webmenu, name='WebmenuSource', ),
 
