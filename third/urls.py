@@ -4,6 +4,7 @@ from third.views import submail
 from third.views import qiniufile
 from third.views import others
 from third.views import audioTransfer
+from third.views import feishuyun
 
 audioTrans = audioTransfer.AudioTranslateTaskRecordView.as_view({
         'get': 'list',
@@ -34,4 +35,7 @@ urlpatterns = [
     url(r'^audioTranslate/(?P<pk>\d+)/$', audioTrans_detail, name='getAudioFileTranslateToWordTaskResult',),
     url(r'^uploaddata/$', qiniufile.fileChunkUpload, name='fileChunkUpload', ),
     url(r'^uploadres/$', qiniufile.getQiniuUploadRecordResponse, name='getQiniuUploadRecordResponse', ),
+    url(r'^feishu/accesstoken/$', feishuyun.get_access_token, name='feishu_get_access_token', ),
+    url(r'^feishu/useride/$', feishuyun.get_login_user_identity, name='feishu_get_access_token', ),
+    url(r'^feishu/jsticket/$', feishuyun.get_jsapi_ticket, name='feishu_get_access_token', ),
 ]
