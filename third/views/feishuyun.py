@@ -35,6 +35,30 @@ def get_access_token(request):
         catchexcption(request)
         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
+@api_view(['POST'])
+def refresh_access_token(request):
+    """
+       刷新 飞书access_token
+    """
+    try:
+        data = request.data
+        Authorization = data.get('Authorization')
+        refresh_token = data.get('refresh_token')
+        if not Authorization or not refresh_token:
+            raise InvestError(20072, msg='Authorization/refresh_token  是必传参数', detail='Authorization/refresh_token 不能为空')
+        url = "https://open.feishu.cn/open-apis/authen/v1/refresh_access_token"
+        post_data = {"grant_type": "refresh_token", "refresh_token": refresh_token}
+        headers = {"Authorization": "Bearer {}".format(Authorization),
+                   "Content-Type": "application/json; charset=utf-8"}
+        r = requests.post(url, data=post_data, headers=headers)
+        return JSONResponse(SuccessResponse(r.json()))
+    except InvestError as err:
+        return JSONResponse(InvestErrorResponse(err))
+    except Exception:
+        catchexcption(request)
+        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
 
 @api_view(['POST'])
 def get_login_user_identity(request):
@@ -44,13 +68,13 @@ def get_login_user_identity(request):
     try:
         data = request.data
         Authorization = data.get('Authorization')
-        grant_type = data.get('grant_type')
         code = data.get('code')
-        if not Authorization or not grant_type or not code:
-            raise InvestError(20072, msg='Authorization/grant_type/code  是必传参数', detail='Authorization/grant_type/code 不能为空')
+        if not Authorization  or not code:
+            raise InvestError(20072, msg='Authorization/code  是必传参数', detail='Authorization/code 不能为空')
         url = "https://open.feishu.cn/open-apis/authen/v1/access_token"
-        post_data = {"grant_type": grant_type, "code": code}
-        headers = {"Authorization": "Bearer {}".format(Authorization), "Content-Type":"application/json; charset=utf-8"}
+        post_data = {"grant_type": "authorization_code", "code": code}
+        headers = {"Authorization": "Bearer {}".format(Authorization),
+                   "Content-Type":"application/json; charset=utf-8"}
         r = requests.post(url, data=post_data, headers=headers)
         return JSONResponse(SuccessResponse(r.json()))
     except InvestError as err:
