@@ -11,7 +11,7 @@ from django.db import models
 # Create your models here.
 
 from sourcetype.models import ProjectStatus, CurrencyType, Tag, Country, TransactionType, Industry, \
-    DataSource, CharacterType, Service, IndustryGroup, DidiOrderType
+    DataSource, CharacterType, Service, IndustryGroup, DidiOrderType, OrgBdResponse
 from usersys.models import MyUser
 
 from utils.customClass import InvestError, MyForeignKey, MyModel
@@ -27,6 +27,7 @@ class project(MyModel):
     projtitleC = models.CharField(max_length=128,db_index=True,default='标题')
     projtitleE = models.CharField(max_length=256,blank=True,null=True,db_index=True)
     projstatus = MyForeignKey(ProjectStatus,help_text='项目状态',default=2)
+    response = MyForeignKey(OrgBdResponse, blank=True, null=True, related_name='proj_response')
     realname = models.CharField(max_length=128,default='名称',blank=True,null=True)
     c_descriptionC = models.TextField(blank=True, null=True, default='公司介绍')
     c_descriptionE = models.TextField(blank=True, null=True, default='company description')
