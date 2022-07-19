@@ -117,7 +117,7 @@ class project(MyModel):
 class projTraders(MyModel):
     proj = MyForeignKey(project, blank=True, null=True, related_name='proj_traders')
     user = MyForeignKey(MyUser, blank=True, null=True, related_name='user_projects')
-    type = models.PositiveSmallIntegerField(blank=True, null=True, help_text='承揽0、承做1')
+    type = models.PositiveSmallIntegerField(blank=True, null=True, help_text='承揽0、承做1、承做-PM2、承做-参与人员3、承销-主要人员4、承销-参与人员5')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_projTraders')
     createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_projTraders')
     datasource = MyForeignKey(DataSource, help_text='数据源', blank=True, default=1)
