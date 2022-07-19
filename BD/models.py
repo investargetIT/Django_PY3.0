@@ -79,6 +79,7 @@ class ProjectBD(MyModel):
 class ProjectBDManagers(MyModel):
     manager = MyForeignKey(MyUser, blank=True, default=False, help_text='负责人', related_name='managers_ProjectBD')
     projectBD = MyForeignKey(ProjectBD,blank=True, null=True, help_text='bd项目', related_name='ProjectBD_managers')
+    type = models.PositiveSmallIntegerField(blank=True, default=0, help_text='线索提供0、主要人员1、参与或材料提供人员2')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_ProjectBDManagers')
     createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_ProjectBDManagers')
     datasource = MyForeignKey(DataSource, help_text='数据源', blank=True, default=1)
