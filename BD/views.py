@@ -2006,7 +2006,7 @@ def sendWorkReportMessage():
 def feishu_update_projbd_status(projbd_id, response_id, requsetuser):
     try:
         proj_bd = ProjectBD.objects.get(id=projbd_id)
-        proj_bd.bd_status = response_id
+        proj_bd.bd_status_id = response_id
         proj_bd.lastmodifyuser = requsetuser
         proj_bd.save(update_fields=['bd_status', 'lastmodifyuser'])
     except ProjectBD.DoesNotExist:

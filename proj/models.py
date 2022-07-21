@@ -307,6 +307,5 @@ class projcomments(MyModel):
     def save(self, *args, **kwargs):
         if not self.commenttime:
             self.commenttime = datetime.datetime.now()
-        if self.datasource != self.proj.datasource:
-            raise InvestError(code=8888,msg='来源不匹配')
+        self.datasource = self.proj.datasource
         return super(projcomments, self).save(*args, **kwargs)

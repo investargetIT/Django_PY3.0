@@ -1461,7 +1461,7 @@ class ProjCommentsView(viewsets.ModelViewSet):
 def feishu_update_proj_response(proj_id, response_id, requsetuser):
     try:
         proj = project.objects.get(id=proj_id)
-        proj.response = response_id
+        proj.response_id = response_id
         proj.lastmodifyuser = requsetuser
         proj.save(update_fields=['response', 'lastmodifyuser'])
     except project.DoesNotExist:
