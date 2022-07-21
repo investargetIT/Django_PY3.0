@@ -21,8 +21,11 @@ def is_dataroomTrader(user, dataroom):
         return True
     elif dataroom.proj and dataroom.proj.PM == user:
         return True
-    elif dataroom.isCompanyFile and user.has_perm('usersys.as_trader') and dataroom.proj and dataroom.proj.indGroup and dataroom.proj.indGroup == user.indGroup:
-        return True
+    elif dataroom.isCompanyFile and user.has_perm('usersys.as_trader') and dataroom.proj:
+        if dataroom.proj.indGroup and dataroom.proj.indGroup == user.indGroup:
+            return True
+        elif not dataroom.proj.indGroup:
+            return True
     return False
 
 
