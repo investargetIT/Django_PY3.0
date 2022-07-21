@@ -20,7 +20,7 @@ from third.views.weixinlogin import get_openid
 from usersys.models import MyUser, UserRelation, userTags, MyToken, UnreachUser, UserRemarks, \
     userAttachments, userEvents, UserContrastThirdAccount, registersourcechoice, UserPerformanceAppraisalRecord, \
     UserPersonnelRelations, UserTrainingRecords, UserMentorTrackingRecords, UserWorkingPositionRecords, \
-    UserGetStarInvestor
+    UserGetStarInvestor, TraderNameIdContrast
 from usersys.serializer import UserSerializer, UserListSerializer, UserRelationSerializer, \
     CreatUserSerializer, UserCommenSerializer, UserRelationCreateSerializer, GroupSerializer, GroupDetailSerializer, \
     GroupCreateSerializer, PermissionSerializer, \
@@ -31,7 +31,7 @@ from usersys.serializer import UserSerializer, UserListSerializer, UserRelationS
     UserTrainingRecordsCreateSerializer, UserMentorTrackingRecordsSerializer, UserMentorTrackingRecordsCreateSerializer, \
     UserWorkingPositionRecordsSerializer, UserWorkingPositionRecordsCreateSerializer, UserInfoSerializer, \
     UserGetStarInvestorCreateSerializer, UserGetStarInvestorSerializer
-from sourcetype.models import Tag, DataSource, TagContrastTable, IndustryGroup
+from sourcetype.models import Tag, DataSource, TagContrastTable, IndustryGroup, ProjProgressContrastTable
 from utils.customClass import JSONResponse, InvestError, RelationFilter, MySearchFilter
 from utils.logicJudge import is_userInvestor, is_userTrader, is_dataroomTrader
 from utils.sendMessage import sendmessage_userauditstatuchange, sendmessage_userregister, sendmessage_traderadd
@@ -526,11 +526,11 @@ class UserView(viewsets.ModelViewSet):
                                      'manager_beschedule', 'user_webexUser', 'user_dataroomTemp',
                                      'user_usertags', 'user_remarks', 'userreceive_msgs', 'user_workreport',
                                      'usersend_msgs', 'user_datarooms', 'user_userAttachments', 'user_userEvents',
-                                     'contractors_projBDs', 'user_sharetoken', 'user_projects',
+                                     'user_sharetoken', 'user_projects',
                                      'user_beschedule', 'user_orgBDs', 'userPM_projs']:
                         if link in ['usersupport_projs', 'investor_relations', 'trader_relations', 'userPM_projs',
                                     'user_userEvents', 'user_orgBDs', 'user_projects', 'user_remarks',
-                                    'user_userAttachments', 'user_dataroomTemp', 'user_datarooms', 'contractors_projBDs']:
+                                    'user_userAttachments', 'user_dataroomTemp', 'user_datarooms']:
                             manager = getattr(instance, link, None)
                             if not manager:
                                 continue
@@ -2662,3 +2662,19 @@ class UserGetStarInvestorView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
+
+def get_trader_by_name(name):
+    queryset = TraderNameIdContrast.objects.filter(is_deleted=False, name=name)
+    if queryset.exists():
+        return queryset.first().trader
+    else:
+        return None
+
+def get_traders_by_names(names):
+    name_list = names.split(', ')
+    traders = []
+    for name in name_list:
+        trader = get_trader_by_name(name)
+        if trader:
+            traders.append(trader)
+    return traders

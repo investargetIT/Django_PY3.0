@@ -2000,3 +2000,43 @@ def sendWorkReportMessage():
     for user in user_qs:
         if not WorkReport.objects.filter(user=user, startTime__gte=this_week_start, startTime__lte=this_week_end, is_deleted=False).exists():
             sendmessage_workReportDonotWrite(user)
+
+
+
+def feishu_update_projbd_status(projbd_id, response_id, requsetuser):
+    try:
+        proj_bd = ProjectBD.objects.get(id=projbd_id)
+        proj_bd.bd_status = response_id
+        proj_bd.lastmodifyuser = requsetuser
+        proj_bd.save(update_fields=['bd_status', 'lastmodifyuser'])
+    except ProjectBD.DoesNotExist:
+        logexcption('飞书项目BD id：%s,未找到对应项目BD' % projbd_id)
+    except Exception as err:
+        logexcption('飞书项目BD导入失败: %s' % str(err))
+
+def feishu_update_projbd_manager(projbd_id, traders, type, requsetuser):
+    try:
+        proj_bd = ProjectBD.objects.get(id=projbd_id)
+        for trader in traders:
+            if not ProjectBDManagers.objects.filter(projectBD=proj_bd, manager=trader, type=type, is_deleted=False).exists():
+                ins = ProjectBDManagers(projectBD=proj_bd, manager=trader, type=type,
+                                  createuser=requsetuser, createdtime=datetime.datetime.now())
+                ins.save()
+    except ProjectBD.DoesNotExist:
+        logexcption('飞书项目BD id：%s,未找到对应项目BD' % projbd_id)
+    except Exception as err:
+        logexcption('飞书项目BD 交易师导入失败: %s，type：%s' % (str(err), type))
+
+
+def feishu_update_projbd_comments(projbd_id, comments, requsetuser):
+    try:
+        proj_bd = ProjectBD.objects.get(id=projbd_id)
+        for comment in comments:
+            if not ProjectBDComments.objects.filter(projectBD=proj_bd, comments=comment, is_deleted=False).exists():
+                ins = ProjectBDComments(projectBD=proj_bd, comments=comment,
+                                  createuser=requsetuser, createdtime=datetime.datetime.now())
+                ins.save()
+    except ProjectBD.DoesNotExist:
+        logexcption('飞书项目BD id：%s,未找到对应项目BD' % projbd_id)
+    except Exception as err:
+        logexcption('飞书项目BD 最新进展备注导入失败: %s' % str(err))

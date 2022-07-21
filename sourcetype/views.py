@@ -734,7 +734,12 @@ class WebmenuView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-
+def get_response_id_by_text(text, type):
+    queryset = ProjProgressContrastTable.objects.filter(is_deleted=False, proj_or_org=type, feishu_status=text)
+    if queryset.exists():
+        return queryset.first().status_id
+    else:
+        return None
 
 def getmenulist(user):
     allmenuobj = webmenu.objects.all()

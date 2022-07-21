@@ -393,7 +393,7 @@ class ProjProgressContrastTable(models.Model):
     '''
     id = models.AutoField(primary_key=True)
     status_id = models.IntegerField(blank=True, null=True, help_text='status_id')
-    proj_or_org = models.BooleanField(blank=True, default=True, help_text="(True\projbd, Flase\orgbd)")
+    proj_or_org = models.BooleanField(blank=True, default=True, help_text="(0\projbd, 1\orgbd)")
     feishu_status = models.CharField(max_length=128, blank=True, null=True)
     is_deleted = models.BooleanField(blank=True, default=False)
 
