@@ -91,6 +91,19 @@ class organization(MyModel):
                     raise InvestError(code=5001,msg='同名机构已存在，无法新增')
         super(organization,self).save(*args, **kwargs)
 
+
+class orgalias(MyModel):
+    org =  MyForeignKey(organization,related_name='org_orgalias')
+    alias = models.CharField(max_length=128, blank=True, null=True, help_text='机构别名')
+
+    class Meta:
+        db_table = "org_alias"
+
+    def save(self, *args, **kwargs):
+        if orgalias.objects.exclude(pk=self.pk).filter(is_deleted=False, alias=self.alias, org=self.org).exists():
+            raise InvestError(code=5001, msg='同名机构已存在, 无法编辑')
+        return super(orgalias, self).save(*args, **kwargs)
+
 class orgTags(MyModel):
     org = MyForeignKey(organization,related_name='org_orgtags')
     tag = MyForeignKey(Tag, related_name='tag_orgtags')
