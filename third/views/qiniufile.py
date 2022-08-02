@@ -313,32 +313,33 @@ def uploadFileToQiniu():
         def executeTask(self, task_qs):
 
             for uploadtask in task_qs:
-                uploadtask.status = 2
-                uploadtask.starttime = datetime.datetime.now()
-                uploadtask.save()
-                try:
-                    file_path = os.path.join(APILOG_PATH['uploadFilePath'], uploadtask.key)
-                    if os.path.exists(file_path):
-                        ret1, info1 = self.qiniuuploadfile(filepath=file_path, bucket_name=uploadtask.bucket, bucket_key=uploadtask.key)
-                        uploadtask.success1 = ret1
-                        uploadtask.info1 = info1
-                        if uploadtask.convertToPDF:
-                            converfile_path = os.path.join(APILOG_PATH['uploadFilePath'], uploadtask.convertKey)
-                            self.convertAndUploadOffice(file_path, converfile_path)
-                            if os.path.exists(converfile_path):
-                                ret2, info2 = self.qiniuuploadfile(filepath=converfile_path, bucket_name=uploadtask.bucket, bucket_key=uploadtask.convertKey)
-                                uploadtask.success2 = ret2
-                                uploadtask.info2 = info2
-                            else:
-                                uploadtask.msg = '文件转换格式失败'
-                    else:
-                        uploadtask.msg = '上传文件不存在'
-                except Exception:
-                    logexcption(msg='文件上传七牛服务器失败')
-                    uploadtask.msg = traceback.format_exc()
-                uploadtask.status = 3
-                uploadtask.endtime = datetime.datetime.now()
-                uploadtask.save()
+                if uploadtask.status == 1:
+                    uploadtask.status = 2
+                    uploadtask.starttime = datetime.datetime.now()
+                    uploadtask.save()
+                    try:
+                        file_path = os.path.join(APILOG_PATH['uploadFilePath'], uploadtask.key)
+                        if os.path.exists(file_path):
+                            ret1, info1 = self.qiniuuploadfile(filepath=file_path, bucket_name=uploadtask.bucket, bucket_key=uploadtask.key)
+                            uploadtask.success1 = ret1
+                            uploadtask.info1 = info1
+                            if uploadtask.convertToPDF:
+                                converfile_path = os.path.join(APILOG_PATH['uploadFilePath'], uploadtask.convertKey)
+                                self.convertAndUploadOffice(file_path, converfile_path)
+                                if os.path.exists(converfile_path):
+                                    ret2, info2 = self.qiniuuploadfile(filepath=converfile_path, bucket_name=uploadtask.bucket, bucket_key=uploadtask.convertKey)
+                                    uploadtask.success2 = ret2
+                                    uploadtask.info2 = info2
+                                else:
+                                    uploadtask.msg = '文件转换格式失败'
+                        else:
+                            uploadtask.msg = '上传文件不存在'
+                    except Exception:
+                        logexcption(msg='文件上传七牛服务器失败')
+                        uploadtask.msg = traceback.format_exc()
+                    uploadtask.status = 3
+                    uploadtask.endtime = datetime.datetime.now()
+                    uploadtask.save()
 
         def doTask(self):
             task_qs = self.getTask()
@@ -355,7 +356,12 @@ def uploadFileToQiniu():
         f.close()
         d = startdotaskthread()
         d.start()
-
+    elif QiNiuFileUploadRecord.objects.filter(status=2, is_deleted=False).exists():
+        quesys = QiNiuFileUploadRecord.objects.filter(status=2, is_deleted=False)
+        if quesys.first().starttime < (datetime.datetime.now() - datetime.timedelta(minutes=10)):
+            quesys.update(status=1, success1=None, success2=None, info1=None, info2=None, msg=None, starttime=None, endtime=None)
+            d = startdotaskthread()
+            d.start()
 
 # 获取七牛文件上传记录
 @api_view(['GET'])

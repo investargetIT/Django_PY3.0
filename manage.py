@@ -2,6 +2,8 @@
 import os
 import sys
 
+from invest.settings import APILOG_PATH
+
 if __name__ == "__main__":
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "invest.settings")
     try:
@@ -20,4 +22,9 @@ if __name__ == "__main__":
                 "forget to activate a virtual environment?"
             )
         raise
+    if 'runserver' in sys.argv:
+        if os.path.exists(APILOG_PATH['qiniumarkFilePath']):
+            os.remove(APILOG_PATH['qiniumarkFilePath'])
+        if os.path.exists(APILOG_PATH['markFilePath']):
+            os.remove(APILOG_PATH['markFilePath'])
     execute_from_command_line(sys.argv)
