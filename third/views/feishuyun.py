@@ -36,7 +36,7 @@ def get_access_token(request):
         if not app_id or not app_secret:
             raise InvestError(20072, msg='app_id/app_secret  是必传参数', detail='app_id/app_secret 不能为空')
         post_data = {"app_id": app_id, "app_secret": app_secret}
-        r = requests.post(url, data=post_data)
+        r = requests.post(url, data=json.dumps(post_data))
         return JSONResponse(SuccessResponse(r.json()))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
@@ -59,7 +59,7 @@ def refresh_access_token(request):
         post_data = {"grant_type": "refresh_token", "refresh_token": refresh_token}
         headers = {"Authorization": "Bearer {}".format(Authorization),
                    "Content-Type": "application/json; charset=utf-8"}
-        r = requests.post(url, data=post_data, headers=headers)
+        r = requests.post(url, data=json.dumps(post_data), headers=headers)
         return JSONResponse(SuccessResponse(r.json()))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
@@ -84,7 +84,7 @@ def get_login_user_identity(request):
         post_data = {"grant_type": "authorization_code", "code": code}
         headers = {"Authorization": "Bearer {}".format(Authorization),
                    "Content-Type":"application/json; charset=utf-8"}
-        r = requests.post(url, data=post_data, headers=headers)
+        r = requests.post(url, data=json.dumps(post_data), headers=headers)
         return JSONResponse(SuccessResponse(r.json()))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
