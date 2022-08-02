@@ -6,15 +6,15 @@ import traceback
 
 import requests
 from rest_framework.decorators import api_view
-
+from usersys.models import MyUser
 from BD.views import feishu_update_projbd_status, feishu_update_projbd_manager, feishu_update_projbd_comments
 from proj.views import feishu_update_proj_response, feishu_update_proj_traders, feishu_update_proj_comments
-from sourcetype.views import get_response_id_by_text
-from usersys.views import get_traders_by_names
+from sourcetype.views import get_response_id_by_text, getmenulist
+from usersys.views import get_traders_by_names, maketoken
 from utils.customClass import InvestError, JSONResponse
 from utils.somedef import excel_table_byindex
 from utils.util import catchexcption, ExceptionResponse, InvestErrorResponse, SuccessResponse, checkRequestToken, \
-    logexcption, logfeishuexcptiontofile
+    logexcption, logfeishuexcptiontofile, returnDictChangeToLanguage
 
 
 @api_view(['POST'])
@@ -85,7 +85,16 @@ def get_login_user_identity(request):
         headers = {"Authorization": "Bearer {}".format(Authorization),
                    "Content-Type":"application/json; charset=utf-8"}
         r = requests.post(url, data=json.dumps(post_data), headers=headers)
-        return JSONResponse(SuccessResponse(r.json()))
+        mobile = r.json()['mobile'].replace('+86','')
+        user =  MyUser.objects.get(is_deleted=False, mobile=mobile)
+        clienttype = request.META.get('HTTP_CLIENTTYPE')
+        perimissions = user.get_all_permissions()
+        menulist = getmenulist(user)
+        response = maketoken(user, clienttype)
+        response['permissions'] = perimissions
+        response['menulist'] = menulist
+        response['is_superuser'] = user.is_superuser
+        return JSONResponse(SuccessResponse({'feishu': r.json(), 'investarget': returnDictChangeToLanguage(response, 'cn')}))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
     except Exception:
