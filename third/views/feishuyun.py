@@ -85,7 +85,7 @@ def get_login_user_identity(request):
         headers = {"Authorization": "Bearer {}".format(Authorization),
                    "Content-Type":"application/json; charset=utf-8"}
         r = requests.post(url, data=json.dumps(post_data), headers=headers)
-        mobile = r.json()['mobile'].replace('+86','')
+        mobile = r.json()['data']['mobile'].replace('+86','')
         user =  MyUser.objects.get(is_deleted=False, mobile=mobile)
         clienttype = request.META.get('HTTP_CLIENTTYPE')
         perimissions = user.get_all_permissions()
