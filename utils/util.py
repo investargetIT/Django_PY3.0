@@ -72,6 +72,16 @@ def logexcption(msg=None):
     f.writelines(now.strftime('%H:%M:%S')+'\n'+ traceback.format_exc() + errmsg + '\n\n')
     f.close()
 
+#记录error
+def logfeishuexcptiontofile(msg=None):
+    errmsg = msg if msg else ''
+    now = datetime.datetime.now()
+    filepath = APILOG_PATH['excptionlogpath'] + '/' + 'feishu' + now.strftime('%Y-%m-%d')
+    f = open(filepath, 'a')
+    f.writelines(now.strftime('%H:%M:%S')+'\n'+ errmsg + '\n\n')
+    f.writelines('\n'+ traceback.format_exc() + '\n\n')
+    f.close()
+
 
 def deleteExpireDir(rootpath, expire=1):
     #删除过期的文件夹/文件
