@@ -36,6 +36,7 @@ class project(MyModel):
     isoverseasproject = models.BooleanField(blank=True,default=True,help_text='是否是海外项目')
     supportUser = MyForeignKey(MyUser,blank=True,null=True,related_name='usersupport_projs',help_text='项目方(上传方)')
     PM = MyForeignKey(MyUser, blank=True, null=True, related_name='userPM_projs', help_text='项目PM')
+    feishuurl = models.CharField(max_length=200, blank=True, null=True)
     isHidden = models.BooleanField(blank=True,default=False)
     financeAmount = models.BigIntegerField(blank=True,null=True)
     financeAmount_USD = models.BigIntegerField(blank=True,null=True)
