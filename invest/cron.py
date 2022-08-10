@@ -9,6 +9,7 @@ from emailmanage.views import getAllProjectsNeedToSendMail, sendEmailToUser
 from msg.models import schedule
 from org.views import downloadOrgAttachments
 from proj.views import importDidiRecordCsvFile
+from third.views.feishuyun import update_feishu_excel
 from utils.sendMessage import sendmessage_schedulemsg
 
 
@@ -61,6 +62,11 @@ def task8_importDidiRecordCsv():
     task8_Thread().start()
 
 
+def task9_updateFeiShuExcel():
+    class task8_Thread(threading.Thread):
+        def run(self):
+            update_feishu_excel()
+    task8_Thread().start()
 
 
 
