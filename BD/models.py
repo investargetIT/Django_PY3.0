@@ -166,8 +166,8 @@ class OrgBD(MyModel):
                     raise InvestError(5006, msg='该用户已存在一条BD记录了')
             else:
                 bds = OrgBD.objects.exclude(pk=self.pk).filter(is_deleted=False, proj=self.proj, datasource=self.datasource, bduser=self.bduser, manager=self.manager, org=self.org)
-            if bds.exists():
-                raise InvestError(5006, msg='该机构已存在一条空BD记录了')
+                if bds.exists():
+                    raise InvestError(5006, msg='该机构已存在一条空BD记录了')
         if self.response:
             self.isSolved = True
         if self.is_deleted is False:

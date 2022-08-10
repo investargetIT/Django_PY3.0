@@ -14,7 +14,7 @@ from invest.settings import APILOG_PATH
 from mongoDoc.models import ProjectData, MergeFinanceData
 from org.models import organization, orgTransactionPhase, orgRemarks, orgContact, orgBuyout, orgManageFund, \
     orgInvestEvent, orgCooperativeRelationship, \
-    orgTags, orgExportExcelTask, orgAttachments
+    orgTags, orgExportExcelTask, orgAttachments, orgalias
 from org.serializer import OrgCommonSerializer, OrgDetailSerializer, OrgRemarkDetailSerializer, OrgCreateSerializer, \
     OrgUpdateSerializer, OrgBuyoutCreateSerializer, OrgContactCreateSerializer, OrgInvestEventCreateSerializer, \
     OrgManageFundCreateSerializer, OrgCooperativeRelationshipCreateSerializer, OrgBuyoutSerializer, \
@@ -1777,3 +1777,18 @@ def downloadOrgAttachments():
             downloadFileToPath(key=attInstance.key, bucket=attInstance.bucket, path=attachmentPath)
             attInstance.save()
 
+
+def get_Org_By_Alia(alia_text):
+    queryset = orgalias.objects.filter(is_deleted=False, org__is_deleted=False, alias=alia_text)
+    if queryset.exists():
+        return queryset.first().org
+    else:
+        return None
+
+def get_Org_By_Alias(alias_text):
+    alia_list = alias_text.split('\\')
+    for name in alia_list:
+        org = get_Org_By_Alia(name)
+        if org:
+            return org
+    return None

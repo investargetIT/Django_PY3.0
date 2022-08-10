@@ -2003,24 +2003,24 @@ def sendWorkReportMessage():
 
 
 
-def feishu_update_projbd_status(projbd_id, response_id, requsetuser):
+def feishu_update_projbd_status(projbd_id, response_id, requsetuser_id):
     try:
         proj_bd = ProjectBD.objects.get(id=projbd_id)
         proj_bd.bd_status_id = response_id
-        proj_bd.lastmodifyuser = requsetuser
+        proj_bd.lastmodifyuser_id = requsetuser_id
         proj_bd.save(update_fields=['bd_status', 'lastmodifyuser'])
     except ProjectBD.DoesNotExist:
         logexcption('飞书项目BD id：%s,未找到对应项目BD' % projbd_id)
     except Exception as err:
         logexcption('飞书项目BD导入失败: %s' % str(err))
 
-def feishu_update_projbd_manager(projbd_id, traders, type, requsetuser):
+def feishu_update_projbd_manager(projbd_id, traders, type, requsetuser_id):
     try:
         proj_bd = ProjectBD.objects.get(id=projbd_id)
         for trader in traders:
             if not ProjectBDManagers.objects.filter(projectBD=proj_bd, manager=trader, type=type, is_deleted=False).exists():
                 ins = ProjectBDManagers(projectBD=proj_bd, manager=trader, type=type,
-                                  createuser=requsetuser, createdtime=datetime.datetime.now())
+                                  createuser_id=requsetuser_id, createdtime=datetime.datetime.now())
                 ins.save()
     except ProjectBD.DoesNotExist:
         logexcption('飞书项目BD id：%s,未找到对应项目BD' % projbd_id)
@@ -2028,15 +2028,37 @@ def feishu_update_projbd_manager(projbd_id, traders, type, requsetuser):
         logexcption('飞书项目BD 交易师导入失败: %s，type：%s' % (str(err), type))
 
 
-def feishu_update_projbd_comments(projbd_id, comments, requsetuser):
+def feishu_update_projbd_comments(projbd_id, comments, requsetuser_id):
     try:
         proj_bd = ProjectBD.objects.get(id=projbd_id)
         for comment in comments:
             if not ProjectBDComments.objects.filter(projectBD=proj_bd, comments=comment, is_deleted=False).exists():
                 ins = ProjectBDComments(projectBD=proj_bd, comments=comment,
-                                  createuser=requsetuser, createdtime=datetime.datetime.now())
+                                  createuser_id=requsetuser_id, createdtime=datetime.datetime.now())
                 ins.save()
     except ProjectBD.DoesNotExist:
         logexcption('飞书项目BD id：%s,未找到对应项目BD' % projbd_id)
     except Exception as err:
         logexcption('飞书项目BD 最新进展备注导入失败: %s' % str(err))
+
+
+def feishu_update_orgbd(org, proj, status_id, requsetuser, manager, comment, isimportant):
+    try:
+        qs = OrgBD.objects.filter(is_deleted=False, proj=proj, bduser=None, manager=manager, org=org)
+        if qs.exists():
+            instance = qs.first()
+            instance.response_id = status_id
+            instance.lastmodifyuser = requsetuser
+            instance.save(update_fields=['response', 'lastmodifyuser'])
+        else:
+            instance = OrgBD(proj=proj, bduser=None, manager=manager, org=org, response_id=status_id, isimportant=isimportant, createuser=requsetuser)
+            instance.save()
+            if not OrgBDComments.objects.filter(is_deleted=False, comment=comment, proj=proj).exists() and len(comment) > 0:
+                ins = OrgBDComments(proj=proj, comments=comment, createuser=requsetuser,
+                                    event_date=datetime.datetime.now(),  createdtime=datetime.datetime.now())
+                ins.save()
+    except Exception as err:
+        logexcption('飞书机构看板导入失败: %s' % str(err))
+
+
+

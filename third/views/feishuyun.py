@@ -3,11 +3,17 @@ import json
 import os
 import threading
 import traceback
-
+from urllib import parse
 import requests
 from rest_framework.decorators import api_view
-from usersys.models import MyUser
-from BD.views import feishu_update_projbd_status, feishu_update_projbd_manager, feishu_update_projbd_comments
+
+from org.views import get_Org_By_Alias
+from proj.models import project
+from sourcetype.models import IndustryGroup
+from third.thirdconfig import feishu_APPID, feishu_APP_SECRET
+from usersys.models import MyUser, UserContrastThirdAccount
+from BD.views import feishu_update_projbd_status, feishu_update_projbd_manager, feishu_update_projbd_comments, \
+    feishu_update_orgbd
 from proj.views import feishu_update_proj_response, feishu_update_proj_traders, feishu_update_proj_comments
 from sourcetype.views import get_response_id_by_text, getmenulist
 from usersys.views import get_traders_by_names, maketoken
@@ -17,6 +23,15 @@ from utils.util import catchexcption, ExceptionResponse, InvestErrorResponse, Su
     logexcption, logfeishuexcptiontofile, returnDictChangeToLanguage
 
 
+# 获取app_access_token
+def get_app_access_token():
+    url = "https://open.feishu.cn/open-apis/auth/v3/app_access_token/internal"
+    post_data = {"app_id": feishu_APPID, "app_secret": feishu_APP_SECRET}
+    r = requests.post(url, data=json.dumps(post_data))
+    tat = r.json()["app_access_token"]
+    return tat
+
+
 @api_view(['POST'])
 def get_access_token(request):
     """
@@ -24,8 +39,6 @@ def get_access_token(request):
     """
     try:
         data = request.data
-        app_id = data.get('app_id')
-        app_secret = data.get('app_secret')
         token_type = data.get('token_type', 'app_access_token')
         if token_type == 'app_access_token':
             url = "https://open.feishu.cn/open-apis/auth/v3/app_access_token/internal"
@@ -33,9 +46,7 @@ def get_access_token(request):
             url = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal"
         else:
             raise InvestError(20072, msg='token_type 无效', detail='token_type 无效')
-        if not app_id or not app_secret:
-            raise InvestError(20072, msg='app_id/app_secret  是必传参数', detail='app_id/app_secret 不能为空')
-        post_data = {"app_id": app_id, "app_secret": app_secret}
+        post_data = {"app_id": feishu_APPID, "app _secret": feishu_APP_SECRET}
         r = requests.post(url, data=json.dumps(post_data))
         return JSONResponse(SuccessResponse(r.json()))
     except InvestError as err:
@@ -85,16 +96,21 @@ def get_login_user_identity(request):
         headers = {"Authorization": "Bearer {}".format(Authorization),
                    "Content-Type":"application/json; charset=utf-8"}
         r = requests.post(url, data=json.dumps(post_data), headers=headers)
-        mobile = r.json()['data']['mobile'].replace('+86','')
-        user =  MyUser.objects.get(is_deleted=False, mobile=mobile)
-        clienttype = request.META.get('HTTP_CLIENTTYPE')
-        perimissions = user.get_all_permissions()
-        menulist = getmenulist(user)
-        response = maketoken(user, clienttype)
-        response['permissions'] = perimissions
-        response['menulist'] = menulist
-        response['is_superuser'] = user.is_superuser
-        return JSONResponse(SuccessResponse({'feishu': r.json(), 'investarget': returnDictChangeToLanguage(response, 'cn')}))
+        union_id = r.json()['data']['union_id']
+        try:
+            thirdaccount = UserContrastThirdAccount.objects.get(thirdUnionID=union_id)
+        except UserContrastThirdAccount.DoesNotExist:
+            return JSONResponse(SuccessResponse({'feishu': r.json(), 'investarget': None}))
+        else:
+            user = thirdaccount.user
+            clienttype = request.META.get('HTTP_CLIENTTYPE', 3)
+            perimissions = user.get_all_permissions()
+            menulist = getmenulist(user)
+            response = maketoken(user, clienttype)
+            response['permissions'] = perimissions
+            response['menulist'] = menulist
+            response['is_superuser'] = user.is_superuser
+            return JSONResponse(SuccessResponse({'feishu': r.json(), 'investarget': returnDictChangeToLanguage(response, 'cn')}))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
     except Exception:
@@ -122,92 +138,141 @@ def get_jsapi_ticket(request):
         catchexcption(request)
         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-@api_view(['POST'])
-@checkRequestToken()
-def update_feishu_excel(request):
-    """
-        更新飞书表格数据
-    """
-    try:
-        # uploaddata = request.FILES.get('file')
-        # dirpath = APILOG_PATH['audioTranslateFile']
-        # filetype = str(uploaddata.name).split('.')[-1]
-        # randomPrefix = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-        # file_name = randomPrefix + '.' + filetype
-        # if not os.path.exists(dirpath):
-        #     os.makedirs(dirpath)
-        # file_Path = os.path.join(dirpath, file_name)
-        # with open(file_Path, 'wb+') as destination:
-        #     for chunk in uploaddata.chunks():
-        #         destination.write(chunk)
-        uploaddata = request.FILES.get('file')
-        uploaddata.open()
-        r = uploaddata.read()
-        uploaddata.close()
-        xls_datas = excel_table_byindex(file_contents=r)
-        t = threading.Thread(target=update_feishu_excel_task, args=(xls_datas, request.user))
-        t.start()  # 启动线程，即让线程开始执行
-        return JSONResponse(SuccessResponse({'isStart': True}))
 
-    except InvestError as err:
-        return JSONResponse(InvestErrorResponse(err))
+# 多维表格—-列出记录
+def getTableRecords(app_token, table_id, view_id=None, page_token=None):
+    '''
+    :param app_token: 表格token  例如：bascnnEqEJKzsOaNNJLUyQmachc
+    :param table_id: 表格table id 例如：tblJCs6ZrP9AQEPK
+    :param view_id: 表格view_id 例如：vewWlgSLiS
+    :return:
+    '''
+    url = 'https://open.feishu.cn/open-apis/bitable/v1/apps/{}/tables/{}/records'.format(app_token, table_id)
+    params = {'view': view_id, 'page_token': page_token}
+    header = {"content-type": "application/json; charset=utf-8",
+              "Authorization": "Bearer " + str(get_app_access_token())}
+    r = requests.get(url, headers=header, params=params)
+    res = json.loads(r.content)
+    return res
+
+# 多维表格—-列出表格全部记录
+def getTableAllRecords(app_token, table_id, view_id=None):
+    try:
+        res = getTableRecords(app_token, table_id, view_id)
+        records = res['data']['items']
+        while res['data']['has_more']:
+            res = getTableRecords(app_token, table_id, view_id, res['data']['page_token'])
+            records.extend(res['data']['items'])
     except Exception:
-        catchexcption(request)
-        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+        return None
+    else:
+        return records
 
 
 
-def update_feishu_excel_task(xls_datas, user):
+def update_feishu_excel():
+    """
+        更新飞书多维表格数据
+    """
     try:
-        for data in xls_datas:
+        indgroup_qs = IndustryGroup.objects.filter(is_deleted=False, ongongingurl__isnull=False)
+        for indgroup_ins in indgroup_qs:
             try:
-                if data['项目类型'] == 'On going':
-                    proj_id = int(data['系统ID'])
-                    proj_respone_text = data['项目进度']
-                    proj_respone_id = get_response_id_by_text(proj_respone_text, 1)
-                    traders_2_text = data['承做-PM']
-                    traders_2 = get_traders_by_names(traders_2_text)
-                    traders_3_text = data['承做-参与人员']
-                    traders_3 = get_traders_by_names(traders_3_text)
-                    traders_4_text = data['承销-主要人员']
-                    traders_4 = get_traders_by_names(traders_4_text)
-                    traders_5_text = data['承销-参与人员']
-                    traders_5 = get_traders_by_names(traders_5_text)
-                    comments = data['项目最新进展']
-                    if len(comments) > 0:
-                        comment_list = comments.split('；')
-                    else:
-                        comment_list = []
-                    feishu_update_proj_response(proj_id, proj_respone_id, user)
-                    feishu_update_proj_traders(proj_id, traders_2, 2, user)
-                    feishu_update_proj_traders(proj_id, traders_3, 3, user)
-                    feishu_update_proj_traders(proj_id, traders_4, 4, user)
-                    feishu_update_proj_traders(proj_id, traders_5, 5, user)
-                    feishu_update_proj_comments(proj_id, comment_list, user)
-
-                elif data['项目类型'] == 'BD中':
-                    projbd_id = int(data['系统ID'])
-                    projbd_status_text = data['项目进度']
-                    projbd_status_id = get_response_id_by_text(projbd_status_text, 0)
-                    managers_2_text = data['BD-线索提供']
-                    managers_2 = get_traders_by_names(managers_2_text)
-                    managers_3_text = data['BD-主要人员']
-                    managers_3 = get_traders_by_names(managers_3_text)
-                    managers_4_text = data['BD-参与或材料提供人员']
-                    managers_4 = get_traders_by_names(managers_4_text)
-                    comments = data['项目最新进展']
-                    if len(comments) > 0:
-                        comment_list = comments.split('；')
-                    else:
-                        comment_list = []
-                    feishu_update_projbd_status(projbd_id, projbd_status_id, user)
-                    feishu_update_projbd_manager(projbd_id, managers_2, 2, user)
-                    feishu_update_projbd_manager(projbd_id, managers_3, 3, user)
-                    feishu_update_projbd_manager(projbd_id, managers_4, 4, user)
-                    feishu_update_projbd_comments(projbd_id, comment_list, user)
+                app_token, table_id, view_id = parseFeiShuExcelUrl(indgroup_ins.ongongingurl)
+                records = getTableAllRecords(app_token, table_id, view_id)
+                update_feishu_indgroup_task(records, 1, indgroup_ins)
             except Exception:
-                logfeishuexcptiontofile(msg=str(data))
-
-
+                logfeishuexcptiontofile(msg=str(indgroup_ins.nameC))
+        project_qs = project.objects.filter(is_deleted=False, feishuurl__isnull=False)
+        for proj_ins in project_qs:
+            try:
+                app_token, table_id, view_id = parseFeiShuExcelUrl(proj_ins.feishuurl)
+                records = getTableAllRecords(app_token, table_id, view_id)
+                update_feishu_project_task(records, 1, proj_ins)
+            except Exception:
+                logfeishuexcptiontofile(msg=str(proj_ins.projtitleC))
     except Exception:
-        logexcption()
+        logfeishuexcptiontofile()
+
+def parseFeiShuExcelUrl(excelurl):
+    url = parse.urlparse(excelurl)
+    app_token = url.path.replace('/base/')
+    table_id = parse.parse_qs(url.query)['table'][0]
+    view_id = parse.parse_qs(url.query)['view'][0]
+    return app_token, table_id, view_id
+
+
+
+def update_feishu_indgroup_task(records, user_id, indgroup):
+    try:
+        for record in records:
+            try:
+                data = record['fields']
+                if data.get('系统ID'):
+                    if data['项目类型'] == 'On going':
+                        proj_id = int(data['系统ID'])
+                        proj_respone_text = data['项目进度']
+                        proj_respone_id = get_response_id_by_text(proj_respone_text, 1)
+                        traders_2_text = data['承做-PM']
+                        traders_2 = get_traders_by_names(traders_2_text)
+                        traders_3_text = data['承做-参与人员']
+                        traders_3 = get_traders_by_names(traders_3_text)
+                        traders_4_text = data['承销-主要人员']
+                        traders_4 = get_traders_by_names(traders_4_text)
+                        traders_5_text = data['承销-参与人员']
+                        traders_5 = get_traders_by_names(traders_5_text)
+                        comments = data['项目最新进展']
+                        if len(comments) > 0:
+                            comment_list = comments.split('；')
+                        else:
+                            comment_list = []
+                        feishu_update_proj_response(proj_id, proj_respone_id, user_id)
+                        feishu_update_proj_traders(proj_id, traders_2, 2, user_id)
+                        feishu_update_proj_traders(proj_id, traders_3, 3, user_id)
+                        feishu_update_proj_traders(proj_id, traders_4, 4, user_id)
+                        feishu_update_proj_traders(proj_id, traders_5, 5, user_id)
+                        feishu_update_proj_comments(proj_id, comment_list, user_id)
+                    elif data['项目类型'] == 'BD中':
+                        projbd_id = int(data['系统ID'])
+                        projbd_status_text = data['项目进度']
+                        projbd_status_id = get_response_id_by_text(projbd_status_text, 0)
+                        managers_2_text = data['BD-线索提供']
+                        managers_2 = get_traders_by_names(managers_2_text)
+                        managers_3_text = data['BD-主要人员']
+                        managers_3 = get_traders_by_names(managers_3_text)
+                        managers_4_text = data['BD-参与或材料提供人员']
+                        managers_4 = get_traders_by_names(managers_4_text)
+                        comments = data['项目最新进展']
+                        if len(comments) > 0:
+                            comment_list = comments.split('；')
+                        else:
+                            comment_list = []
+                        feishu_update_projbd_status(projbd_id, projbd_status_id, user_id)
+                        feishu_update_projbd_manager(projbd_id, managers_2, 2, user_id)
+                        feishu_update_projbd_manager(projbd_id, managers_3, 3, user_id)
+                        feishu_update_projbd_manager(projbd_id, managers_4, 4, user_id)
+                        feishu_update_projbd_comments(projbd_id, comment_list, user_id)
+            except Exception:
+                logfeishuexcptiontofile(msg=str(record))
+    except Exception:
+        logfeishuexcptiontofile(msg=str(indgroup.nameC))
+
+def update_feishu_project_task(records, user, proj):
+    try:
+        for record in records:
+            try:
+                data = record['fields']
+                orgnames = data['机构名称']
+                org = get_Org_By_Alias(orgnames)
+                status_text = data['跟进情况']
+                status_id = get_response_id_by_text(status_text, 1)
+                manager_names = data['负责IR同事']
+                managers = get_traders_by_names(manager_names)
+                important = data['优先级']
+                comment = data['机构备注']
+                for manager in managers:
+                    feishu_update_orgbd(org, proj, status_id, user, manager, comment, important)
+            except Exception:
+                logfeishuexcptiontofile(msg=str(record))
+    except Exception:
+        logfeishuexcptiontofile(msg=str(proj.projtitleC))

@@ -1458,11 +1458,11 @@ class ProjCommentsView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
-def feishu_update_proj_response(proj_id, response_id, requsetuser):
+def feishu_update_proj_response(proj_id, response_id, requsetuser_id):
     try:
         proj = project.objects.get(id=proj_id)
         proj.response_id = response_id
-        proj.lastmodifyuser = requsetuser
+        proj.lastmodifyuser_id = requsetuser_id
         proj.save(update_fields=['response', 'lastmodifyuser'])
     except project.DoesNotExist:
         logexcption('飞书项目id：%s,未找到对应项目' % proj_id)
@@ -1470,13 +1470,13 @@ def feishu_update_proj_response(proj_id, response_id, requsetuser):
         logexcption('飞书项目状态更新失败: %s' % str(err))
 
 
-def feishu_update_proj_traders(proj_id, traders, type, requsetuser):
+def feishu_update_proj_traders(proj_id, traders, type, requsetuser_id):
     try:
         proj = project.objects.get(id=proj_id)
         for trader in traders:
             if not projTraders.objects.filter(is_deleted=False, user=trader, type=type, proj=proj).exists():
                 ins = projTraders(proj=proj, user=trader, type=type,
-                            createuser=requsetuser, createdtime=datetime.datetime.now())
+                            createuser_id=requsetuser_id, createdtime=datetime.datetime.now())
                 ins.save()
     except project.DoesNotExist:
         logexcption('飞书项目id：%s,未找到对应项目' % proj_id)
@@ -1484,12 +1484,12 @@ def feishu_update_proj_traders(proj_id, traders, type, requsetuser):
         logexcption('飞书项目交易师导入失败: %s，type：%s' % (str(err), type))
 
 
-def feishu_update_proj_comments(proj_id, comments, requsetuser):
+def feishu_update_proj_comments(proj_id, comments, requsetuser_id):
     try:
         proj = project.objects.get(id=proj_id)
         for comment in comments:
             if not projcomments.objects.filter(is_deleted=False, comment=comment, proj=proj).exists():
-                ins = projcomments(proj=proj, comment=comment, createuser=requsetuser,
+                ins = projcomments(proj=proj, comment=comment, createuser_id=requsetuser_id,
                              commenttime=datetime.datetime.now(),  createdtime=datetime.datetime.now())
                 ins.save()
     except project.DoesNotExist:
