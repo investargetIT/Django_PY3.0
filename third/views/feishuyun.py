@@ -46,7 +46,7 @@ def get_access_token(request):
             url = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal"
         else:
             raise InvestError(20072, msg='token_type 无效', detail='token_type 无效')
-        post_data = {"app_id": feishu_APPID, "app _secret": feishu_APP_SECRET}
+        post_data = {"app_id": feishu_APPID, "app_secret": feishu_APP_SECRET}
         r = requests.post(url, data=json.dumps(post_data))
         return JSONResponse(SuccessResponse(r.json()))
     except InvestError as err:
