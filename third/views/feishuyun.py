@@ -196,7 +196,7 @@ def update_feishu_excel():
 
 def parseFeiShuExcelUrl(excelurl):
     url = parse.urlparse(excelurl)
-    app_token = url.path.replace('/base/')
+    app_token = url.path.replace('/base/', '')
     table_id = parse.parse_qs(url.query)['table'][0]
     view_id = parse.parse_qs(url.query)['view'][0]
     return app_token, table_id, view_id
