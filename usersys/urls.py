@@ -214,6 +214,7 @@ urlpatterns = [
     url(r'^relationship/(?P<pk>\d+)/$', detail_relationone, name='user-relationshipone'),
     url(r'^register/$', regist_user),
     url(r'^login/$', views.login),
+    url(r'^account/third/$', views.bundThirdAccount),
     url(r'^group/$', group_list, name='group-list'),
     url(r'^group/(?P<pk>\d+)/$', group_permission, name='group_permission-detail'),
     url(r'^perm/$', permission, name='permission-list'),

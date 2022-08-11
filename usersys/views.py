@@ -2500,15 +2500,22 @@ def login(request):
 
 @api_view(['POST'])
 @checkRequestToken()
-def changeThirdAccount(request):
+def bundThirdAccount(request):
+    '''
+     绑定 第三方账号
+    '''
     try:
         data = request.data
         union_id = data.get('union_id', None)
         if not union_id:
             raise InvestError(20071, msg='参数缺失', detail='union_id 不能为空')
-        thirdaccount = UserContrastThirdAccount.objects.get(user=request.user)
-        thirdaccount.thirdUnionID = union_id
-        thirdaccount.save()
+        try:
+            thirdaccount = UserContrastThirdAccount.objects.get(user=request.user)
+        except UserContrastThirdAccount.DoesNotExist:
+            UserContrastThirdAccount(thirdUnionID=union_id, user=request.user).save()
+        else:
+            thirdaccount.thirdUnionID = union_id
+            thirdaccount.save()
         return JSONResponse(SuccessResponse({'success': True}))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
