@@ -1779,7 +1779,7 @@ def downloadOrgAttachments():
 
 
 def get_Org_By_Alia(alia_text):
-    queryset = orgalias.objects.filter(is_deleted=False, org__is_deleted=False, alias=alia_text)
+    queryset = orgalias.objects.filter(is_deleted=False, alias=alia_text)
     print('搜索1:******* %s ' % len(queryset))
     if queryset.exists():
         return queryset.first().org

@@ -167,7 +167,6 @@ def getTableAllRecords(app_token, table_id, view_id=None):
         if table_id:
             res = getTableRecords(app_token, table_id, view_id)
             records = res['data']['items']
-            print(records)
             while res['data']['has_more']:
                 res = getTableRecords(app_token, table_id, view_id, res['data']['page_token'])
                 records.extend(res['data']['items'])
@@ -190,7 +189,6 @@ def getAppAllTables(app_token):
                   "Authorization": "Bearer " + str(get_tenant_access_token())}
         r = requests.get(url, headers=header, params=params)
         res = json.loads(r.content.decode())
-        print(res)
         if res['code'] != 0:
             raise InvestError(20071, msg='获取数据表失败, %s' % str(res))
         else:
@@ -223,9 +221,7 @@ def update_feishu_excel():
         for proj_ins in project_qs:
             try:
                 app_token, table_id, view_id = parseFeiShuExcelUrl(proj_ins.feishuurl)
-                print(app_token, table_id, view_id)
                 records = getTableAllRecords(app_token, table_id, view_id)
-                print('*************%s' % str(records))
                 update_feishu_project_task(records, 1, proj_ins)
             except Exception:
                 logfeishuexcptiontofile(msg=str(proj_ins.projtitleC))
@@ -234,14 +230,16 @@ def update_feishu_excel():
         logfeishuexcptiontofile()
 
 def parseFeiShuExcelUrl(excelurl):
-    table_id = None
-    view_id = None
     url = parse.urlparse(excelurl)
     app_token = url.path.replace('/base/', '')
     if parse.parse_qs(url.query).get('table'):
         table_id = parse.parse_qs(url.query)['table'][0]
+    else:
+        table_id = None
     if parse.parse_qs(url.query).get('view'):
         view_id = parse.parse_qs(url.query)['view'][0]
+    else:
+        view_id = None
     if not table_id:
         alltables = getAppAllTables(app_token)
         if len(alltables) > 0:
@@ -258,17 +256,17 @@ def update_feishu_indgroup_task(records, user_id, indgroup):
                 if data.get('系统ID'):
                     if data['项目类型'] == 'On going':
                         proj_id = int(data['系统ID'])
-                        proj_respone_text = data['项目进度']
+                        proj_respone_text = data.get('项目进度')
                         proj_respone_id = get_response_id_by_text(proj_respone_text, 1)
-                        traders_2_text = data['承做-PM']
+                        traders_2_text = data.get('承做-PM')
                         traders_2 = get_traders_by_names(traders_2_text)
-                        traders_3_text = data['承做-参与人员']
+                        traders_3_text = data.get('承做-参与人员')
                         traders_3 = get_traders_by_names(traders_3_text)
-                        traders_4_text = data['承销-主要人员']
+                        traders_4_text = data.get('承销-主要人员')
                         traders_4 = get_traders_by_names(traders_4_text)
-                        traders_5_text = data['承销-参与人员']
+                        traders_5_text = data.get('承销-参与人员')
                         traders_5 = get_traders_by_names(traders_5_text)
-                        comments = data['项目最新进展']
+                        comments = data.get('项目最新进展')
                         if len(comments) > 0:
                             comment_list = comments.split('；')
                         else:
@@ -281,15 +279,15 @@ def update_feishu_indgroup_task(records, user_id, indgroup):
                         feishu_update_proj_comments(proj_id, comment_list, user_id)
                     elif data['项目类型'] == 'BD中':
                         projbd_id = int(data['系统ID'])
-                        projbd_status_text = data['项目进度']
+                        projbd_status_text = data.get('项目进度')
                         projbd_status_id = get_response_id_by_text(projbd_status_text, 0)
-                        managers_2_text = data['BD-线索提供']
+                        managers_2_text = data.get('BD-线索提供')
                         managers_2 = get_traders_by_names(managers_2_text)
-                        managers_3_text = data['BD-主要人员']
+                        managers_3_text = data.get('BD-主要人员')
                         managers_3 = get_traders_by_names(managers_3_text)
-                        managers_4_text = data['BD-参与或材料提供人员']
+                        managers_4_text = data.get('BD-参与或材料提供人员')
                         managers_4 = get_traders_by_names(managers_4_text)
-                        comments = data['项目最新进展']
+                        comments = data.get('项目最新进展')
                         if len(comments) > 0:
                             comment_list = comments.split('；')
                         else:
@@ -304,10 +302,9 @@ def update_feishu_indgroup_task(records, user_id, indgroup):
     except Exception:
         logfeishuexcptiontofile(msg=str(indgroup.nameC))
 
-def update_feishu_project_task(records, user, proj):
+def update_feishu_project_task(records, user_id, proj):
     try:
         for record in records:
-            print('--------------%s' % str(record))
             try:
                 data = record['fields']
                 orgnames = data['机构名称']
@@ -322,17 +319,16 @@ def update_feishu_project_task(records, user, proj):
                 managers = get_traders_by_names(manager_names)
                 if len(managers) == 0:
                     raise InvestError(20071, msg='未匹配到IR')
-                important = data['优先级']
-                comment = data['机构备注']
+                important = data.get('优先级', 0)
+                comment_keys = ['备注', '机构备注', '该机构备注']
+                comment = ''
+                for comment_key in comment_keys:
+                    if comment_key in data:
+                        comment = data.get(comment_key, '')
+                        break
                 for manager in managers:
-                    feishu_update_orgbd(org, proj, status_id, user, manager, comment, important)
+                    feishu_update_orgbd(org, proj, status_id, user_id, manager, comment, important)
             except Exception:
                 logfeishuexcptiontofile(msg=str(record))
     except Exception:
         logfeishuexcptiontofile(msg=str(proj.projtitleC))
-
-
-def test(request):
-    t = threading.Thread(target=update_feishu_excel, args=())
-    t.start()  # 启动线程，即让线程开始执行
-    return JSONResponse({})

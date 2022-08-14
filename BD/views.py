@@ -2042,21 +2042,23 @@ def feishu_update_projbd_comments(projbd_id, comments, requsetuser_id):
         logexcption('飞书项目BD 最新进展备注导入失败: %s' % str(err))
 
 
-def feishu_update_orgbd(org, proj, status_id, requsetuser, manager, comment, isimportant):
+def feishu_update_orgbd(org, proj, status_id, requsetuser_id, manager, comment, isimportant):
     try:
+        if not isimportant:
+            isimportant = 0
         qs = OrgBD.objects.filter(is_deleted=False, proj=proj, bduser=None, manager=manager, org=org)
         if qs.exists():
             instance = qs.first()
             instance.response_id = status_id
-            instance.lastmodifyuser = requsetuser
+            instance.lastmodifyuser_id = requsetuser_id
             instance.save(update_fields=['response', 'lastmodifyuser'])
         else:
-            instance = OrgBD(proj=proj, bduser=None, manager=manager, org=org, response_id=status_id, isimportant=isimportant, createuser=requsetuser)
+            instance = OrgBD(proj=proj, bduser=None, manager=manager, org=org, response_id=status_id, isimportant=isimportant, createuser_id=requsetuser_id)
             instance.save()
-            if not OrgBDComments.objects.filter(is_deleted=False, comment=comment, proj=proj).exists() and len(comment) > 0:
-                ins = OrgBDComments(proj=proj, comments=comment, createuser=requsetuser,
-                                    event_date=datetime.datetime.now(),  createdtime=datetime.datetime.now())
-                ins.save()
+        if len(comment) > 0 and not OrgBDComments.objects.filter(is_deleted=False, comments=comment, orgBD=instance).exists():
+            ins = OrgBDComments(orgBD=instance, comments=comment, createuser_id=requsetuser_id,
+                                event_date=datetime.datetime.now(), createdtime=datetime.datetime.now())
+            ins.save()
     except Exception as err:
         logexcption('飞书机构看板导入失败: %s' % str(err))
 
