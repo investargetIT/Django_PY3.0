@@ -191,8 +191,8 @@ def getAppAllTables(app_token):
         r = requests.get(url, headers=header, params=params)
         res = json.loads(r.content.decode())
         print(res)
-        if res['code'] == 91403:
-            raise InvestError(20071, msg='没有添加文档权限')
+        if res['code'] != 0:
+            raise InvestError(20071, msg='获取数据表失败, %s' % str(res))
         else:
             alltables = res['data']['items']
         return alltables
