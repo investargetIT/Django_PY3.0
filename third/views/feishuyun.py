@@ -309,10 +309,16 @@ def update_feishu_project_task(records, user, proj):
                 data = record['fields']
                 orgnames = data['机构名称']
                 org = get_Org_By_Alias(orgnames)
+                if not org:
+                    raise InvestError(20071, msg='未匹配到机构')
                 status_text = data['跟进情况']
                 status_id = get_response_id_by_text(status_text, 1)
+                if not status_id:
+                    raise InvestError(20071, msg='未匹配到任务状态')
                 manager_names = data['负责IR同事']
                 managers = get_traders_by_names(manager_names)
+                if len(managers) == 0:
+                    raise InvestError(20071, msg='未匹配到IR')
                 important = data['优先级']
                 comment = data['机构备注']
                 for manager in managers:
