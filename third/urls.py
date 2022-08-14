@@ -39,4 +39,5 @@ urlpatterns = [
     url(r'^feishu/refreshtoken/$', feishuyun.refresh_access_token, name='feishu_refresh_access_token', ),
     url(r'^feishu/useridentity/$', feishuyun.get_login_user_identity, name='feishu_get_login_user_identity', ),
     url(r'^feishu/jsticket/$', feishuyun.get_jsapi_ticket, name='feishu_get_jsapi_ticket', ),
+    url(r'^test/$', feishuyun.test, name='fileChunkUpload', ),
 ]

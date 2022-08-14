@@ -30,7 +30,13 @@ def get_app_access_token():
     r = requests.post(url, data=json.dumps(post_data))
     tat = r.json()["app_access_token"]
     return tat
-
+# 获取tenant_access_token
+def get_tenant_access_token():
+    url = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal"
+    post_data = {"app_id": feishu_APPID, "app_secret": feishu_APP_SECRET}
+    r = requests.post(url, data=post_data)
+    tat = r.json()["tenant_access_token"]
+    return tat
 
 @api_view(['POST'])
 def get_access_token(request):
@@ -158,15 +164,37 @@ def getTableRecords(app_token, table_id, view_id=None, page_token=None):
 # 多维表格—-列出表格全部记录
 def getTableAllRecords(app_token, table_id, view_id=None):
     try:
-        res = getTableRecords(app_token, table_id, view_id)
-        records = res['data']['items']
-        while res['data']['has_more']:
-            res = getTableRecords(app_token, table_id, view_id, res['data']['page_token'])
-            records.extend(res['data']['items'])
+        if table_id:
+            res = getTableRecords(app_token, table_id, view_id)
+            records = res['data']['items']
+            while res['data']['has_more']:
+                res = getTableRecords(app_token, table_id, view_id, res['data']['page_token'])
+                records.extend(res['data']['items'])
+        else:
+            logexcption(msg='table_id 为空')
+            return []
     except Exception:
-        return None
+        logexcption()
+        return []
     else:
         return records
+
+
+
+# 多维表格—-列出表格全部数据表
+def getAppAllTables(app_token):
+    try:
+        url = 'https://open.feishu.cn/open-apis/bitable/v1/apps/{}/tables'.format(app_token)
+        params = {'page_size': 100}
+        header = {"content-type": "application/json; charset=utf-8",
+                  "Authorization": "Bearer " + str(get_tenant_access_token())}
+        r = requests.get(url, headers=header, params=params)
+        res = json.loads(r.content)
+        return res
+    except Exception:
+        logfeishuexcptiontofile()
+        return None
+
 
 
 
@@ -191,14 +219,23 @@ def update_feishu_excel():
                 update_feishu_project_task(records, 1, proj_ins)
             except Exception:
                 logfeishuexcptiontofile(msg=str(proj_ins.projtitleC))
+        print('jieshu')
     except Exception:
         logfeishuexcptiontofile()
 
 def parseFeiShuExcelUrl(excelurl):
+    table_id = None
+    view_id = None
     url = parse.urlparse(excelurl)
     app_token = url.path.replace('/base/', '')
-    table_id = parse.parse_qs(url.query)['table'][0]
-    view_id = parse.parse_qs(url.query)['view'][0]
+    if parse.parse_qs(url.query).get('table'):
+        table_id = parse.parse_qs(url.query)['table'][0]
+    if parse.parse_qs(url.query).get('view'):
+        view_id = parse.parse_qs(url.query)['view'][0]
+    if not table_id:
+        alltables = getAppAllTables(app_token)['data']['items']
+        if len(alltables) > 0:
+            table_id = alltables[0]['table_id']
     return app_token, table_id, view_id
 
 
@@ -276,3 +313,9 @@ def update_feishu_project_task(records, user, proj):
                 logfeishuexcptiontofile(msg=str(record))
     except Exception:
         logfeishuexcptiontofile(msg=str(proj.projtitleC))
+
+
+def test(request):
+    t = threading.Thread(target=update_feishu_excel, args=())
+    t.start()  # 启动线程，即让线程开始执行
+    return JSONResponse({})
