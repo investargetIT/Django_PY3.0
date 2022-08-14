@@ -224,6 +224,7 @@ def update_feishu_excel():
             try:
                 app_token, table_id, view_id = parseFeiShuExcelUrl(proj_ins.feishuurl)
                 records = getTableAllRecords(app_token, table_id, view_id)
+                print('*************%s' % str(records))
                 update_feishu_project_task(records, 1, proj_ins)
             except Exception:
                 logfeishuexcptiontofile(msg=str(proj_ins.projtitleC))
@@ -305,6 +306,7 @@ def update_feishu_indgroup_task(records, user_id, indgroup):
 def update_feishu_project_task(records, user, proj):
     try:
         for record in records:
+            print('--------------%s' % str(record))
             try:
                 data = record['fields']
                 orgnames = data['机构名称']
