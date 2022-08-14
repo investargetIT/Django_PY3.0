@@ -190,10 +190,14 @@ def getAppAllTables(app_token):
                   "Authorization": "Bearer " + str(get_tenant_access_token())}
         r = requests.get(url, headers=header, params=params)
         res = json.loads(r.content.decode())
-        return res
+        if res['code'] == 91403:
+            raise InvestError(2007, msg='没有添加文档权限')
+        else:
+            alltables = res['data']['items']
+        return alltables
     except Exception:
         logfeishuexcptiontofile()
-        return None
+        return []
 
 
 
@@ -233,7 +237,7 @@ def parseFeiShuExcelUrl(excelurl):
     if parse.parse_qs(url.query).get('view'):
         view_id = parse.parse_qs(url.query)['view'][0]
     if not table_id:
-        alltables = getAppAllTables(app_token)['data']['items']
+        alltables = getAppAllTables(app_token)
         if len(alltables) > 0:
             table_id = alltables[0]['table_id']
     return app_token, table_id, view_id
