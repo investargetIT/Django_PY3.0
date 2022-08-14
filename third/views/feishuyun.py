@@ -170,14 +170,13 @@ def getTableAllRecords(app_token, table_id, view_id=None):
             while res['data']['has_more']:
                 res = getTableRecords(app_token, table_id, view_id, res['data']['page_token'])
                 records.extend(res['data']['items'])
+            return records
         else:
             logexcption(msg='table_id 为空')
             return []
     except Exception:
         logexcption()
         return []
-    else:
-        return records
 
 
 
