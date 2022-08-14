@@ -189,7 +189,7 @@ def getAppAllTables(app_token):
         header = {"content-type": "application/json; charset=utf-8",
                   "Authorization": "Bearer " + str(get_tenant_access_token())}
         r = requests.get(url, headers=header, params=params)
-        res = json.loads(r.content)
+        res = json.loads(r.content.decode())
         return res
     except Exception:
         logfeishuexcptiontofile()
