@@ -1780,10 +1780,12 @@ def downloadOrgAttachments():
 
 def get_Org_By_Alia(alia_text):
     queryset = orgalias.objects.filter(is_deleted=False, org__is_deleted=False, alias=alia_text)
+    print('搜索1:******* %s ' % len(queryset))
     if queryset.exists():
         return queryset.first().org
     else:
         queryset = organization.objects.filter(is_deleted=False, orgfullname=alia_text)
+        print('搜索2: ----------%s ' % len(queryset))
         if queryset.exists():
             return queryset.first()
     return None
@@ -1791,6 +1793,7 @@ def get_Org_By_Alia(alia_text):
 def get_Org_By_Alias(alias_text):
     alia_list = alias_text.split('\\')
     for name in alia_list:
+        print('机构名称：=========%s' % name)
         org = get_Org_By_Alia(name)
         if org:
             return org

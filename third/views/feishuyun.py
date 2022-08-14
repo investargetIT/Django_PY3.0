@@ -324,7 +324,6 @@ def update_feishu_project_task(records, user, proj):
                     raise InvestError(20071, msg='未匹配到IR')
                 important = data['优先级']
                 comment = data['机构备注']
-                print('导入BD%s' % orgnames)
                 for manager in managers:
                     feishu_update_orgbd(org, proj, status_id, user, manager, comment, important)
             except Exception:
