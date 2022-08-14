@@ -167,15 +167,16 @@ def getTableAllRecords(app_token, table_id, view_id=None):
         if table_id:
             res = getTableRecords(app_token, table_id, view_id)
             records = res['data']['items']
+            print(records)
             while res['data']['has_more']:
                 res = getTableRecords(app_token, table_id, view_id, res['data']['page_token'])
                 records.extend(res['data']['items'])
             return records
         else:
-            logexcption(msg='table_id 为空')
+            logfeishuexcptiontofile(msg='table_id 为空')
             return []
     except Exception:
-        logexcption()
+        logfeishuexcptiontofile()
         return []
 
 
@@ -222,6 +223,7 @@ def update_feishu_excel():
         for proj_ins in project_qs:
             try:
                 app_token, table_id, view_id = parseFeiShuExcelUrl(proj_ins.feishuurl)
+                print(app_token, table_id, view_id)
                 records = getTableAllRecords(app_token, table_id, view_id)
                 print('*************%s' % str(records))
                 update_feishu_project_task(records, 1, proj_ins)
