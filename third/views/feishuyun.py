@@ -196,6 +196,9 @@ def getAppAllTables(app_token):
         else:
             alltables = res['data']['items']
         return alltables
+    except InvestError as err:
+        logfeishuexcptiontofile(msg=err.msg)
+        return []
     except Exception:
         logfeishuexcptiontofile()
         return []
