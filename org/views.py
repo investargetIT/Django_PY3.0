@@ -1783,7 +1783,10 @@ def get_Org_By_Alia(alia_text):
     if queryset.exists():
         return queryset.first().org
     else:
-        return None
+        queryset = organization.objects.filter(is_deleted=False, orgfullname=alia_text)
+        if queryset.exists():
+            return queryset.first()
+    return None
 
 def get_Org_By_Alias(alias_text):
     alia_list = alias_text.split('\\')

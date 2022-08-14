@@ -158,7 +158,7 @@ def getTableRecords(app_token, table_id, view_id=None, page_token=None):
     header = {"content-type": "application/json; charset=utf-8",
               "Authorization": "Bearer " + str(get_app_access_token())}
     r = requests.get(url, headers=header, params=params)
-    res = json.loads(r.content)
+    res = json.loads(r.content.decode())
     return res
 
 # 多维表格—-列出表格全部记录
@@ -324,6 +324,7 @@ def update_feishu_project_task(records, user, proj):
                     raise InvestError(20071, msg='未匹配到IR')
                 important = data['优先级']
                 comment = data['机构备注']
+                print('导入BD%s' % orgnames)
                 for manager in managers:
                     feishu_update_orgbd(org, proj, status_id, user, manager, comment, important)
             except Exception:
