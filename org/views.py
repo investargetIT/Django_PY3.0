@@ -14,7 +14,7 @@ from invest.settings import APILOG_PATH
 from mongoDoc.models import ProjectData, MergeFinanceData
 from org.models import organization, orgTransactionPhase, orgRemarks, orgContact, orgBuyout, orgManageFund, \
     orgInvestEvent, orgCooperativeRelationship, \
-    orgTags, orgExportExcelTask, orgAttachments
+    orgTags, orgExportExcelTask, orgAttachments, orgalias
 from org.serializer import OrgCommonSerializer, OrgDetailSerializer, OrgRemarkDetailSerializer, OrgCreateSerializer, \
     OrgUpdateSerializer, OrgBuyoutCreateSerializer, OrgContactCreateSerializer, OrgInvestEventCreateSerializer, \
     OrgManageFundCreateSerializer, OrgCooperativeRelationshipCreateSerializer, OrgBuyoutSerializer, \
@@ -1781,3 +1781,24 @@ def downloadOrgAttachments():
             downloadFileToPath(key=attInstance.key, bucket=attInstance.bucket, path=attachmentPath)
             attInstance.save()
 
+
+def get_Org_By_Alia(alia_text):
+    queryset = orgalias.objects.filter(is_deleted=False, alias=alia_text)
+    print('搜索1:******* %s ' % len(queryset))
+    if queryset.exists():
+        return queryset.first().org
+    else:
+        queryset = organization.objects.filter(is_deleted=False, orgfullname=alia_text)
+        print('搜索2: ----------%s ' % len(queryset))
+        if queryset.exists():
+            return queryset.first()
+    return None
+
+def get_Org_By_Alias(alias_text):
+    alia_list = alias_text.split('\\')
+    for name in alia_list:
+        print('机构名称：=========%s' % name)
+        org = get_Org_By_Alia(name)
+        if org:
+            return org
+    return None

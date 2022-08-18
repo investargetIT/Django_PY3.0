@@ -22,12 +22,13 @@ from dataroom.models import dataroom_User_file
 from dataroom.views import pulishProjectCreateDataroom
 from invest.settings import PROJECTPDF_URLPATH, APILOG_PATH
 from proj.models import project, finance, projectTags, projectIndustries, projectTransactionType, \
-    ShareToken, attachment, projServices, projTraders, projectDiDiRecord
+    ShareToken, attachment, projServices, projTraders, projectDiDiRecord, projcomments
 from proj.serializer import ProjSerializer, FinanceSerializer, ProjCreatSerializer, \
-    ProjCommonSerializer, FinanceChangeSerializer, FinanceCreateSerializer, ProjAttachmentSerializer, ProjListSerializer_admin,\
-    ProjListSerializer_user, ProjDetailSerializer_withoutsecretinfo, ProjAttachmentCreateSerializer,\
+    ProjCommonSerializer, FinanceChangeSerializer, FinanceCreateSerializer, ProjAttachmentSerializer, \
+    ProjListSerializer_admin, \
+    ProjListSerializer_user, ProjDetailSerializer_withoutsecretinfo, ProjAttachmentCreateSerializer, \
     ProjIndustryCreateSerializer, ProjDetailSerializer_all, ProjTradersCreateSerializer, ProjTradersSerializer, \
-    DiDiRecordSerializer, TaxiRecordCreateSerializer
+    DiDiRecordSerializer, TaxiRecordCreateSerializer, ProjCommentsSerializer, ProjCommentsCreateSerializer
 from sourcetype.models import Tag, TransactionType, DataSource, Service
 from third.views.qiniufile import deleteqiniufile, qiniuuploadfile
 from utils.logicJudge import is_projTrader, is_projdataroomInvestor, is_projOrgBDManager, is_companyDataroomProj
@@ -1337,3 +1338,162 @@ def importDidiRecordCsvFile():
             os.remove(csvFilePath)
         except Exception as e:
             logexcption(str(e))
+
+
+
+class ProjCommentsFilter(FilterSet):
+    proj = RelationFilter(filterstr='proj', lookup_method='in')
+    createuser = RelationFilter(filterstr='createuser', lookup_method='in')
+    class Meta:
+        model = projcomments
+        fields = ('proj', 'createuser')
+
+class ProjCommentsView(viewsets.ModelViewSet):
+    """
+        list:获取项目进展list
+        create:新增项目进展
+        retrieve:查看项目进展
+        update:修改项目进展
+        destroy:删除项目进展
+    """
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = ProjCommentsFilter
+    queryset = projcomments.objects.all().filter(is_deleted=False)
+    serializer_class = ProjCommentsSerializer
+
+    def get_object(self):
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        try:
+            obj = projcomments.objects.get(id=self.kwargs[lookup_url_kwarg], is_deleted=False)
+        except projcomments.DoesNotExist:
+            raise InvestError(code=8892, msg='项目进展不存在', detail='项目进展不存在')
+        if obj.datasource != self.request.user.datasource:
+            raise InvestError(code=8888, msg='查询项目进展失败')
+        return obj
+
+    def list(self, request, *args, **kwargs):
+        try:
+            page_size = request.GET.get('page_size', 10)
+            page_index = request.GET.get('page_index', 1)
+            lang = request.GET.get('lang', 'cn')
+            queryset = self.filter_queryset(self.get_queryset())
+            try:
+                count = queryset.count()
+                queryset = Paginator(queryset, page_size)
+                queryset = queryset.page(page_index)
+            except EmptyPage:
+                return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(
+                SuccessResponse({'count': count, 'data': returnListChangeToLanguage(serializer.data, lang)}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def create(self, request, *args, **kwargs):
+        try:
+            with transaction.atomic():
+                data = request.data
+                data['datasource'] = request.user.datasource_id
+                serializer = ProjCommentsCreateSerializer(data=data)
+                if serializer.is_valid():
+                    instance = serializer.save()
+                else:
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
+                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable()
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            lang = request.GET.get('lang')
+            instance = self.get_object()
+            serializer = self.serializer_class(instance)
+            return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data, lang)))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def update(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            with transaction.atomic():
+                data = request.data
+                data["lastmodifyuser"] = request.user.id
+                if not data.get('commenttime'):
+                    data['commenttime'] = datetime.datetime.now()
+                serializer = ProjCommentsCreateSerializer(instance, data=data)
+                if serializer.is_valid():
+                    instance = serializer.save()
+                else:
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
+                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def destroy(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            instance.is_deleted = True
+            instance.deletedtime = datetime.datetime.now()
+            instance.deleteduser = request.user
+            instance.save(update_fields=['is_deleted', 'deletedtime', 'deleteduser'])
+            return JSONResponse(SuccessResponse({'is_deleted': instance.is_deleted}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+def feishu_update_proj_response(proj_id, response_id, requsetuser_id):
+    try:
+        proj = project.objects.get(id=proj_id)
+        proj.response_id = response_id
+        proj.lastmodifyuser_id = requsetuser_id
+        proj.save(update_fields=['response', 'lastmodifyuser'])
+    except project.DoesNotExist:
+        logexcption('飞书项目id：%s,未找到对应项目' % proj_id)
+    except Exception as err:
+        logexcption('飞书项目状态更新失败: %s' % str(err))
+
+
+def feishu_update_proj_traders(proj_id, traders, type, requsetuser_id):
+    try:
+        proj = project.objects.get(id=proj_id)
+        for trader in traders:
+            if not projTraders.objects.filter(is_deleted=False, user=trader, type=type, proj=proj).exists():
+                ins = projTraders(proj=proj, user=trader, type=type,
+                            createuser_id=requsetuser_id, createdtime=datetime.datetime.now())
+                ins.save()
+    except project.DoesNotExist:
+        logexcption('飞书项目id：%s,未找到对应项目' % proj_id)
+    except Exception as err:
+        logexcption('飞书项目交易师导入失败: %s，type：%s' % (str(err), type))
+
+
+def feishu_update_proj_comments(proj_id, comments, requsetuser_id):
+    try:
+        proj = project.objects.get(id=proj_id)
+        for comment in comments:
+            if not projcomments.objects.filter(is_deleted=False, comment=comment, proj=proj).exists():
+                ins = projcomments(proj=proj, comment=comment, createuser_id=requsetuser_id,
+                             commenttime=datetime.datetime.now(),  createdtime=datetime.datetime.now())
+                ins.save()
+    except project.DoesNotExist:
+        logexcption('飞书项目id：%s,未找到对应项目' % proj_id)
+    except Exception as err:
+        logexcption('飞书项目最新进展备注导入失败: %s' % str(err))

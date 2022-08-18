@@ -383,6 +383,17 @@ class TagContrastTable(models.Model):
         return self.cat_name
 
 
+class ProjProgressContrastTable(models.Model):
+    '''
+    项目进度对照表
+    '''
+    id = models.AutoField(primary_key=True)
+    status_id = models.IntegerField(blank=True, null=True, help_text='status_id')
+    proj_or_org = models.BooleanField(blank=True, default=True, help_text="(0\projbd, 1\orgbd)")
+    feishu_status = models.CharField(max_length=128, blank=True, null=True)
+    is_deleted = models.BooleanField(blank=True, default=False)
+
+
 class IndustryGroup(models.Model):
     '''
     行业组
@@ -392,6 +403,7 @@ class IndustryGroup(models.Model):
     nameE = models.CharField(max_length=32, blank=True, null=True)
     manager = models.BigIntegerField(blank=True, null=True)
     getUserCount = models.IntegerField(blank=True, default=10)
+    ongongingurl = models.CharField(max_length=200, blank=True, null=True)
     shareInvestor = models.BooleanField(blank=True, default=False, help_text='是否共享投资人')
     datasource = MyForeignKey(DataSource, help_text='数据源', blank=True, default=1)
     is_deleted = models.BooleanField(blank=True, default=False)

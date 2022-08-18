@@ -11,7 +11,7 @@ from django.db import models
 # Create your models here.
 
 from sourcetype.models import ProjectStatus, CurrencyType, Tag, Country, TransactionType, Industry, \
-    DataSource, CharacterType, Service, IndustryGroup, DidiOrderType
+    DataSource, CharacterType, Service, IndustryGroup, DidiOrderType, OrgBdResponse
 from usersys.models import MyUser
 
 from utils.customClass import InvestError, MyForeignKey, MyModel
@@ -27,6 +27,7 @@ class project(MyModel):
     projtitleC = models.CharField(max_length=128,db_index=True,default='标题')
     projtitleE = models.CharField(max_length=256,blank=True,null=True,db_index=True)
     projstatus = MyForeignKey(ProjectStatus,help_text='项目状态',default=2)
+    response = MyForeignKey(OrgBdResponse, blank=True, null=True, related_name='proj_response')
     realname = models.CharField(max_length=128,default='名称',blank=True,null=True)
     c_descriptionC = models.TextField(blank=True, null=True, default='公司介绍')
     c_descriptionE = models.TextField(blank=True, null=True, default='company description')
@@ -35,6 +36,7 @@ class project(MyModel):
     isoverseasproject = models.BooleanField(blank=True,default=True,help_text='是否是海外项目')
     supportUser = MyForeignKey(MyUser,blank=True,null=True,related_name='usersupport_projs',help_text='项目方(上传方)')
     PM = MyForeignKey(MyUser, blank=True, null=True, related_name='userPM_projs', help_text='项目PM')
+    feishuurl = models.CharField(max_length=200, blank=True, null=True)
     isHidden = models.BooleanField(blank=True,default=False)
     financeAmount = models.BigIntegerField(blank=True,null=True)
     financeAmount_USD = models.BigIntegerField(blank=True,null=True)
@@ -116,7 +118,7 @@ class project(MyModel):
 class projTraders(MyModel):
     proj = MyForeignKey(project, blank=True, null=True, related_name='proj_traders')
     user = MyForeignKey(MyUser, blank=True, null=True, related_name='user_projects')
-    type = models.PositiveSmallIntegerField(blank=True, null=True, help_text='承揽0、承做1')
+    type = models.PositiveSmallIntegerField(blank=True, null=True, help_text='承揽0、承做1、承做-PM2、承做-参与人员3、承销-主要人员4、承销-参与人员5')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_projTraders')
     createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_projTraders')
     datasource = MyForeignKey(DataSource, help_text='数据源', blank=True, default=1)
@@ -287,3 +289,24 @@ class ShareToken(models.Model):
 
     def __str__(self):
         return self.key
+
+
+# 项目进度
+class projcomments(MyModel):
+    comment = models.TextField(blank=True, null=True, help_text='项目进展')
+    proj = MyForeignKey(project, related_name='proj_comments', help_text='项目的分享token')
+    commenttime =  models.DateTimeField(blank=True, null=True, help_text="备注时间")
+    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_projcomments')
+    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_projcomments')
+    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_projcomments')
+    datasource = MyForeignKey(DataSource, blank=True, help_text='数据源')
+
+    class Meta:
+        db_table = 'project_comments'
+
+
+    def save(self, *args, **kwargs):
+        if not self.commenttime:
+            self.commenttime = datetime.datetime.now()
+        self.datasource = self.proj.datasource
+        return super(projcomments, self).save(*args, **kwargs)

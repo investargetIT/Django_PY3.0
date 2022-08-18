@@ -747,7 +747,7 @@ class UserRelation(MyModel):
 
 class UserContrastThirdAccount(MyModel):
     user = MyForeignKey(MyUser, blank=True, on_delete=CASCADE)
-    wexinsmallapp = models.CharField(max_length=64, blank=True, null=True, unique=True, help_text='用户openid')
+    thirdUnionID = models.CharField(max_length=64, blank=True, null=True, unique=True, help_text='第三方ID')
 
     class Meta:
         db_table = "user_contrastaccount"
@@ -780,3 +780,33 @@ class UserGetStarInvestor(MyModel):
             else:
                 raise InvestError(2052, msg='查看*用户失败，该交易师没有行业组', detail='交易师没有行业组，无法判断是否超过数量限制')
         super(UserGetStarInvestor, self).save(*args, **kwargs)
+
+
+class TraderNameIdContrast(MyModel):
+    trader = MyForeignKey(MyUser, blank=True, null=True, help_text='交易师', on_delete=models.CASCADE)
+    name = models.CharField(max_length=128, blank=True, null=True, help_text='姓名')
+    datasource = MyForeignKey(DataSource, help_text='数据源', default=1)
+    class Meta:
+        db_table = 'contrast_trader_nameid'
+
+    def save(self, *args, **kwargs):
+        self.datasource = self.trader.datasource
+        if not self.is_deleted:
+            if TraderNameIdContrast.objects.exclude(id=self.id).filter(is_deleted=False, datasource=self.datasource, name=self.name).exists():
+                raise InvestError(2007, msg='一个姓名只能对应一个交易师')
+        super(TraderNameIdContrast, self).save(*args, **kwargs)
+
+class UserIndGroups(models.Model):
+    user = MyForeignKey(MyUser, blank=True, related_name='user_indgroups', on_delete=CASCADE)
+    indGroup = MyForeignKey(IndustryGroup, blank=True, help_text='行业组')
+    datasource = MyForeignKey(DataSource, help_text='数据源', default=1)
+
+    class Meta:
+        db_table = "user_indGroups"
+
+    def save(self, *args, **kwargs):
+        self.datasource = self.trader.datasource
+        if not self.is_deleted:
+            if UserIndGroups.objects.exclude(id=self.id).filter(is_deleted=False, datasource=self.datasource, indGroup=self.indGroup, user=self.user).exists():
+                raise InvestError(2007, msg='已经在行业组里了')
+        super(UserIndGroups, self).save(*args, **kwargs)

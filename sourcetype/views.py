@@ -8,7 +8,8 @@ from rest_framework import viewsets
 from sourcetype.models import Tag, TitleType, DataSource, Country, Industry, TransactionType, \
     TransactionPhases, OrgArea, CurrencyType, OrgType, CharacterType, ProjectStatus, orgtitletable, \
     webmenu, Service, OrgAttribute, BDStatus, AndroidAppVersion, OrgBdResponse, OrgLevelType, FamiliarLevel, \
-    IndustryGroup, DidiOrderType, Education, PerformanceAppraisalLevel, TrainingType, TrainingStatus
+    IndustryGroup, DidiOrderType, Education, PerformanceAppraisalLevel, TrainingType, TrainingStatus, \
+    ProjProgressContrastTable
 from sourcetype.serializer import tagSerializer, countrySerializer, industrySerializer, \
     titleTypeSerializer, DataSourceSerializer, orgAreaSerializer, transactionTypeSerializer, \
     transactionPhasesSerializer, \
@@ -16,8 +17,8 @@ from sourcetype.serializer import tagSerializer, countrySerializer, industrySeri
     OrgtitletableSerializer, WebMenuSerializer, serviceSerializer, orgAttributeSerializer, \
     BDStatusSerializer, AndroidAppSerializer, OrgBdResponseSerializer, OrgLevelTypeSerializer, FamiliarLevelSerializer, \
     industryGroupSerializer, PerformanceAppraisalLevelSerializer, EducationSerializer, TrainingTypeSerializer, \
-    TrainingStatusSerializer
-from utils.customClass import JSONResponse, InvestError, MySearchFilter
+    TrainingStatusSerializer, projProgressContrastTableSerializer
+from utils.customClass import  JSONResponse, InvestError
 from utils.util import SuccessResponse, InvestErrorResponse, ExceptionResponse, returnListChangeToLanguage, \
     catchexcption, loginTokenIsAvailable, removeDuclicates
 
@@ -220,7 +221,7 @@ class CountryView(viewsets.ModelViewSet):
         update:修改国家
         destroy:删除国家
     """
-    filter_backends = (MySearchFilter, filters.DjangoFilterBackend,)
+    filter_backends = (filters.SearchFilter, filters.DjangoFilterBackend,)
     filter_fields = ('level', 'parent', 'countryC')
     search_fields = ('countryC', 'countryE', 'areaCode')
     queryset = Country.objects.all().filter(is_deleted=False)
@@ -304,7 +305,7 @@ class TitleView(viewsets.ModelViewSet):
         update:修改职位
         destroy:删除职位
     """
-    filter_backends = (MySearchFilter,)
+    filter_backends = (filters.SearchFilter,)
     search_fields = ('nameC', 'nameE')
     queryset = TitleType.objects.all().filter(is_deleted=False)
     serializer_class = titleTypeSerializer
@@ -626,6 +627,26 @@ class TrainingStatusView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
+class ProjProgressContrastTableView(viewsets.ModelViewSet):
+    """
+        list:获取飞书项目状态对照类型
+    """
+
+    queryset = ProjProgressContrastTable.objects.all().filter(is_deleted=False)
+    serializer_class = projProgressContrastTableSerializer
+
+    def list(self, request, *args, **kwargs):
+        try:
+            lang = request.GET.get('lang')
+            queryset = self.filter_queryset(self.get_queryset())
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(SuccessResponse(returnListChangeToLanguage(serializer.data,lang)))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
 class AndroidAppVersionView(viewsets.ModelViewSet):
 
     queryset = AndroidAppVersion.objects.all().filter(is_deleted=False)
@@ -713,7 +734,12 @@ class WebmenuView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-
+def get_response_id_by_text(text, type):
+    queryset = ProjProgressContrastTable.objects.filter(is_deleted=False, proj_or_org=type, feishu_status=text)
+    if queryset.exists():
+        return queryset.first().status_id
+    else:
+        return None
 
 def getmenulist(user):
     allmenuobj = webmenu.objects.all()

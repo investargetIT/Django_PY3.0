@@ -79,6 +79,7 @@ class ProjectBD(MyModel):
 class ProjectBDManagers(MyModel):
     manager = MyForeignKey(MyUser, blank=True, default=False, help_text='负责人', related_name='managers_ProjectBD')
     projectBD = MyForeignKey(ProjectBD,blank=True, null=True, help_text='bd项目', related_name='ProjectBD_managers')
+    type = models.PositiveSmallIntegerField(blank=True, default=0, help_text='线索提供2、主要人员3、参与或材料提供人员4')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_ProjectBDManagers')
     createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_ProjectBDManagers')
     datasource = MyForeignKey(DataSource, help_text='数据源', blank=True, default=1)
@@ -88,8 +89,6 @@ class ProjectBDManagers(MyModel):
         if self.projectBD is None:
             raise InvestError(20071,msg='projectBD can`t be null')
         if not self.is_deleted:
-            if self.projectBD.manager == self.manager:
-                raise InvestError(20071, msg='主负责人已存在')
             if ProjectBDManagers.objects.exclude(pk=self.pk).filter(is_deleted=False, manager=self.manager, projectBD=self.projectBD).exists():
                 raise InvestError(20071, msg='负责人已存在')
         self.datasource = self.projectBD.datasource
@@ -167,8 +166,8 @@ class OrgBD(MyModel):
                     raise InvestError(5006, msg='该用户已存在一条BD记录了')
             else:
                 bds = OrgBD.objects.exclude(pk=self.pk).filter(is_deleted=False, proj=self.proj, datasource=self.datasource, bduser=self.bduser, manager=self.manager, org=self.org)
-            if bds.exists():
-                raise InvestError(5006, msg='该机构已存在一条空BD记录了')
+                if bds.exists():
+                    raise InvestError(5006, msg='该机构已存在一条空BD记录了')
         if self.response:
             self.isSolved = True
         if self.is_deleted is False:

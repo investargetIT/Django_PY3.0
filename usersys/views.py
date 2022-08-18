@@ -20,7 +20,7 @@ from third.views.weixinlogin import get_openid
 from usersys.models import MyUser, UserRelation, userTags, MyToken, UnreachUser, UserRemarks, \
     userAttachments, userEvents, UserContrastThirdAccount, registersourcechoice, UserPerformanceAppraisalRecord, \
     UserPersonnelRelations, UserTrainingRecords, UserMentorTrackingRecords, UserWorkingPositionRecords, \
-    UserGetStarInvestor
+    UserGetStarInvestor, TraderNameIdContrast
 from usersys.serializer import UserSerializer, UserListSerializer, UserRelationSerializer, \
     CreatUserSerializer, UserCommenSerializer, UserRelationCreateSerializer, GroupSerializer, GroupDetailSerializer, \
     GroupCreateSerializer, PermissionSerializer, \
@@ -31,7 +31,7 @@ from usersys.serializer import UserSerializer, UserListSerializer, UserRelationS
     UserTrainingRecordsCreateSerializer, UserMentorTrackingRecordsSerializer, UserMentorTrackingRecordsCreateSerializer, \
     UserWorkingPositionRecordsSerializer, UserWorkingPositionRecordsCreateSerializer, UserInfoSerializer, \
     UserGetStarInvestorCreateSerializer, UserGetStarInvestorSerializer
-from sourcetype.models import Tag, DataSource, TagContrastTable, IndustryGroup
+from sourcetype.models import Tag, DataSource, TagContrastTable, IndustryGroup, ProjProgressContrastTable
 from utils.customClass import JSONResponse, InvestError, RelationFilter, MySearchFilter
 from utils.logicJudge import is_userInvestor, is_userTrader, is_dataroomTrader
 from utils.sendMessage import sendmessage_userauditstatuchange, sendmessage_userregister, sendmessage_traderadd
@@ -526,11 +526,11 @@ class UserView(viewsets.ModelViewSet):
                                      'manager_beschedule', 'user_webexUser', 'user_dataroomTemp',
                                      'user_usertags', 'user_remarks', 'userreceive_msgs', 'user_workreport',
                                      'usersend_msgs', 'user_datarooms', 'user_userAttachments', 'user_userEvents',
-                                     'contractors_projBDs', 'user_sharetoken', 'user_projects',
+                                     'user_sharetoken', 'user_projects',
                                      'user_beschedule', 'user_orgBDs', 'userPM_projs']:
                         if link in ['usersupport_projs', 'investor_relations', 'trader_relations', 'userPM_projs',
                                     'user_userEvents', 'user_orgBDs', 'user_projects', 'user_remarks',
-                                    'user_userAttachments', 'user_dataroomTemp', 'user_datarooms', 'contractors_projBDs']:
+                                    'user_userAttachments', 'user_dataroomTemp', 'user_datarooms']:
                             manager = getattr(instance, link, None)
                             if not manager:
                                 continue
@@ -2437,7 +2437,7 @@ def login(request):
         clienttype = request.META.get('HTTP_CLIENTTYPE')
         username = receive['account']
         password = receive['password']
-        wxcode = receive.get('wxid', None)
+        union_id = receive.get('union_id', None)
         source = request.META.get('HTTP_SOURCE')
         if source:
             datasource = DataSource.objects.filter(id=source, is_deleted=False)
@@ -2454,29 +2454,25 @@ def login(request):
                     raise InvestError(code=2003, msg='登录失败，非法客户端', detail='登录类型不可用')
                 else:
                     raise InvestError(code=2001, msg='登录失败，密码错误', detail='密码错误')
-            if wxcode:
-                openid = get_openid(wxcode)
-                if openid:
-                    try:
-                        thirdaccount = UserContrastThirdAccount.objects.get(wexinsmallapp=openid)
-                    except UserContrastThirdAccount.DoesNotExist:
-                        UserContrastThirdAccount(wexinsmallapp=openid, user=user).save()
-                    else:
-                        if thirdaccount.user.id != user.id:
-                            raise InvestError(2048, msg='登录失败，该微信号已绑定过其他账号', detail='该微信号已绑定过其他账号')
+            if union_id:
+                try:
+                    thirdaccount = UserContrastThirdAccount.objects.get(thirdUnionID=union_id)
+                except UserContrastThirdAccount.DoesNotExist:
+                    UserContrastThirdAccount(thirdUnionID=union_id, user=user).save()
+                else:
+                    if thirdaccount.user.id != user.id:
+                        raise InvestError(2048, msg='登录失败，该飞书账号已绑定过平台账号', detail='该飞书账号已绑定过平台账号')
         else:
             user = None
-            if wxcode:
-                openid = get_openid(wxcode)
-                if openid:
+            if union_id:
                     try:
-                        thirdaccount = UserContrastThirdAccount.objects.get(wexinsmallapp=openid)
+                        thirdaccount = UserContrastThirdAccount.objects.get(thirdUnionID=union_id)
                     except UserContrastThirdAccount.DoesNotExist:
                         raise InvestError(2009, msg='登录失败，用户未绑定账号', detail='用户未绑定账号')
                     else:
                         user = thirdaccount.user
             if not user:
-                raise InvestError(2009, msg='登录失败，小程序快捷登录无效', detail='小程序快捷登录无效')
+                raise InvestError(2009, msg='登录失败，飞书快捷登录无效', detail='飞书快捷登录无效')
         if user.userstatus_id == 3:
             raise InvestError(2022, msg='登录失败，用户审核未通过，如有疑问请咨询工作人员。', detail='用户审核未通过')
         user.last_login = datetime.datetime.now()
@@ -2500,6 +2496,33 @@ def login(request):
     except Exception:
         catchexcption(request)
         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+@api_view(['POST'])
+@checkRequestToken()
+def bundThirdAccount(request):
+    '''
+     绑定 第三方账号
+    '''
+    try:
+        data = request.data
+        union_id = data.get('union_id', None)
+        if not union_id:
+            raise InvestError(20071, msg='参数缺失', detail='union_id 不能为空')
+        try:
+            thirdaccount = UserContrastThirdAccount.objects.get(user=request.user)
+        except UserContrastThirdAccount.DoesNotExist:
+            UserContrastThirdAccount(thirdUnionID=union_id, user=request.user).save()
+        else:
+            thirdaccount.thirdUnionID = union_id
+            thirdaccount.save()
+        return JSONResponse(SuccessResponse({'success': True}))
+    except InvestError as err:
+        return JSONResponse(InvestErrorResponse(err))
+    except Exception:
+        catchexcption(request)
+        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
 
 
 def maketoken(user,clienttype):
@@ -2662,3 +2685,18 @@ class UserGetStarInvestorView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
+
+def get_trader_by_name(name):
+    queryset = TraderNameIdContrast.objects.filter(is_deleted=False, name=name)
+    if queryset.exists():
+        return queryset.first().trader
+    else:
+        return None
+
+def get_traders_by_names(names):
+    traders = []
+    for name in names:
+        trader = get_trader_by_name(name)
+        if trader:
+            traders.append(trader)
+    return traders

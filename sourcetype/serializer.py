@@ -6,7 +6,7 @@ from sourcetype.models import TransactionType, TransactionPhases, OrgArea, Tag, 
     DataSource, webmenu, CharacterType, orgtitletable, Service, OrgAttribute, BDStatus, \
     AndroidAppVersion, OrgBdResponse, \
     OrgLevelType, FamiliarLevel, IndustryGroup, DidiOrderType, Education, PerformanceAppraisalLevel, TrainingType, \
-    TrainingStatus
+    TrainingStatus, ProjProgressContrastTable
 from third.views.qiniufile import getUrlWithBucketAndKey
 
 
@@ -146,6 +146,11 @@ class industryGroupSerializer(serializers.ModelSerializer):
 class serviceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Service
+        exclude = ('is_deleted',)
+
+class projProgressContrastTableSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjProgressContrastTable
         exclude = ('is_deleted',)
 
 

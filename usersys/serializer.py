@@ -50,18 +50,25 @@ class UserCommenSerializer(serializers.ModelSerializer):
     directSupervisor = UserNameSerializer()
     mentor = UserNameSerializer()
     userstatus = AuditStatusSerializer()
-    indGroup = industryGroupSerializer
+    indGroup = industryGroupSerializer()
+    indGroups = serializers.SerializerMethodField()
 
     class Meta:
         model = MyUser
         fields = ('id', 'usernameC', 'usernameE', 'tags', 'userstatus', 'photourl', 'title', 'onjob', 'mobile', 'workType',
-                  'mobileAreaCode', 'email', 'is_active', 'org', 'indGroup', 'entryTime', 'bornTime', 'isMarried',
+                  'mobileAreaCode', 'email', 'is_active', 'org', 'indGroup', 'indGroups', 'entryTime', 'bornTime', 'isMarried',
                   'directSupervisor', 'mentor', 'school', 'specialty', 'education', 'specialtyhobby', 'others')
 
     def get_tags(self, obj):
         qs = obj.tags.filter(tag_usertags__is_deleted=False, is_deleted=False)
         if qs.exists():
             return tagSerializer(qs, many=True).data
+        return None
+
+    def get_indGroups(self, obj):
+        qs = obj.user_indgroups.filter(indGroup__is_deleted=False)
+        if qs.exists():
+            return qs.values_list('indGroup', flat=True)
         return None
 
     def get_photourl(self, obj):
@@ -263,6 +270,7 @@ class UserSimpleSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     groups = GroupSerializer(MyUser.groups,many=True)
     tags = serializers.SerializerMethodField()
+    indGroups = serializers.SerializerMethodField()
     photourl = serializers.SerializerMethodField()
     resumeurl = serializers.SerializerMethodField()
     directSupervisor = UserSimpleSerializer()
@@ -278,6 +286,12 @@ class UserSerializer(serializers.ModelSerializer):
         qs = obj.tags.filter(tag_usertags__is_deleted=False, is_deleted=False)
         if qs.exists():
             return tagSerializer(qs,many=True).data
+        return None
+
+    def get_indGroups(self, obj):
+        qs = obj.user_indgroups.filter(indGroup__is_deleted=False)
+        if qs.exists():
+            return qs.values_list('indGroup', flat=True)
         return None
 
     def get_photourl(self, obj):
@@ -311,6 +325,7 @@ class UserListSerializer(serializers.ModelSerializer):
     org = OrgCommonSerializer()
     tags = serializers.SerializerMethodField()
     indGroup = industryGroupSerializer()
+    indGroups = serializers.SerializerMethodField()
     mobiletrue = serializers.SerializerMethodField()
     trader_relation = serializers.SerializerMethodField()
     trader_relations = serializers.SerializerMethodField()
@@ -320,7 +335,7 @@ class UserListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MyUser
-        fields = ('id','groups','tags','country', 'usernameC', 'usernameE', 'mobile', 'mobileAreaCode','mobiletrue', 'indGroup', 'trader_relations', 'workType',
+        fields = ('id','groups','tags','country', 'usernameC', 'usernameE', 'mobile', 'mobileAreaCode','mobiletrue', 'indGroup', 'indGroups', 'trader_relations', 'workType',
                   'email', 'title', 'userstatus', 'org', 'trader_relation', 'photourl','is_active', 'wechat', 'directSupervisor', 'mentor', 'entryTime', 'bornTime', 'isMarried',
                   'school', 'specialty', 'education', 'specialtyhobby', 'others')
 
@@ -328,6 +343,12 @@ class UserListSerializer(serializers.ModelSerializer):
         qs = obj.tags.filter(tag_usertags__is_deleted=False, is_deleted=False)
         if qs.exists():
             return qs.values_list('id', flat=True)
+        return None
+
+    def get_indGroups(self, obj):
+        qs = obj.user_indgroups.filter(indGroup__is_deleted=False)
+        if qs.exists():
+            return qs.values_list('indGroup', flat=True)
         return None
 
 
@@ -366,6 +387,7 @@ class UserListCommenSerializer(serializers.ModelSerializer):
     mobile = serializers.SerializerMethodField()
     tags = serializers.SerializerMethodField()
     indGroup = industryGroupSerializer()
+    indGroups = serializers.SerializerMethodField()
     directSupervisor = UserNameSerializer()
     mentor = UserNameSerializer()
     email = serializers.SerializerMethodField()
@@ -377,12 +399,18 @@ class UserListCommenSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = ('id', 'usernameC', 'usernameE', 'tags', 'userstatus', 'photourl', 'title', 'onjob', 'mobile', 'mobileAreaCode', 'trader_relation', 'trader_relations',
-                  'mobiletrue', 'email', 'is_active', 'org', 'indGroup', 'entryTime', 'bornTime', 'isMarried', 'directSupervisor', 'mentor', 'workType')
+                  'mobiletrue', 'email', 'is_active', 'org', 'indGroup', 'indGroups', 'entryTime', 'bornTime', 'isMarried', 'directSupervisor', 'mentor', 'workType')
 
     def get_tags(self, obj):
         qs = obj.tags.filter(tag_usertags__is_deleted=False, is_deleted=False)
         if qs.exists():
             return qs.values_list('id', flat=True)
+        return None
+
+    def get_indGroups(self, obj):
+        qs = obj.user_indgroups.filter(indGroup__is_deleted=False)
+        if qs.exists():
+            return qs.values_list('indGroup', flat=True)
         return None
 
     def get_photourl(self, obj):
