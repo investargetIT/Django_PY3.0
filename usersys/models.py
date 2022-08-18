@@ -803,6 +803,7 @@ class UserIndGroups(models.Model):
 
     class Meta:
         db_table = "user_indGroups"
+        unique_together = ('user', 'indGroup')
 
     def save(self, *args, **kwargs):
         self.datasource = self.trader.datasource
