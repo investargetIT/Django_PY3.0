@@ -282,10 +282,13 @@ class UserSerializer(serializers.ModelSerializer):
         return None
 
     def get_indGroups(self, obj):
+        indGroup_ids = []
+        if obj.indGroup and not obj.indGroup.is_deleted:
+            indGroup_ids.append(obj.indGroup.id)
         qs = obj.user_indgroups.filter(indGroup__is_deleted=False)
         if qs.exists():
-            return qs.values_list('indGroup', flat=True)
-        return None
+            indGroup_ids.extend(qs.values_list('indGroup', flat=True))
+        return list(set(indGroup_ids))
 
     def get_photourl(self, obj):
         if obj.photoKey:
