@@ -217,14 +217,14 @@ def update_feishu_excel():
                 update_feishu_indgroup_task(records, 1, indgroup_ins)
             except Exception:
                 logfeishuexcptiontofile(msg=str(indgroup_ins.nameC))
-        project_qs = project.objects.filter(is_deleted=False, feishuurl__isnull=False)
-        for proj_ins in project_qs:
-            try:
-                app_token, table_id, view_id = parseFeiShuExcelUrl(proj_ins.feishuurl)
-                records = getTableAllRecords(app_token, table_id, view_id)
-                update_feishu_project_task(records, 1, proj_ins)
-            except Exception:
-                logfeishuexcptiontofile(msg=str(proj_ins.projtitleC))
+        # project_qs = project.objects.filter(is_deleted=False, feishuurl__isnull=False)
+        # for proj_ins in project_qs:
+        #     try:
+        #         app_token, table_id, view_id = parseFeiShuExcelUrl(proj_ins.feishuurl)
+        #         records = getTableAllRecords(app_token, table_id, view_id)
+        #         update_feishu_project_task(records, 1, proj_ins)
+        #     except Exception:
+        #         logfeishuexcptiontofile(msg=str(proj_ins.projtitleC))
         print('jieshu')
     except Exception:
         logfeishuexcptiontofile()
