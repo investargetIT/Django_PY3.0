@@ -2694,16 +2694,20 @@ class UserGetStarInvestorView(viewsets.ModelViewSet):
 
 
 def get_trader_by_name(name):
-    queryset = TraderNameIdContrast.objects.filter(is_deleted=False, name=name)
-    if queryset.exists():
-        return queryset.first().trader
+    if name and len(name) > 0:
+        queryset = TraderNameIdContrast.objects.filter(is_deleted=False, name=name)
+        if queryset.exists():
+            return queryset.first().trader
+        else:
+            return None
     else:
         return None
 
 def get_traders_by_names(names):
     traders = []
-    for name in names:
-        trader = get_trader_by_name(name)
-        if trader:
-            traders.append(trader)
+    if names and len(names) > 0:
+        for name in names:
+            trader = get_trader_by_name(name)
+            if trader:
+                traders.append(trader)
     return traders
