@@ -2459,7 +2459,7 @@ def login(request):
                     thirdaccount = UserContrastThirdAccount.objects.get(thirdUnionID=union_id, is_deleted=False)
                 except UserContrastThirdAccount.DoesNotExist:
                     try:
-                        thirdaccount = UserContrastThirdAccount.objects.get(user=request.user, is_deleted=False)
+                        thirdaccount = UserContrastThirdAccount.objects.get(user=user, is_deleted=False)
                     except UserContrastThirdAccount.DoesNotExist:
                         UserContrastThirdAccount(thirdUnionID=union_id, user=user).save()
                     else:
