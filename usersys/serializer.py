@@ -268,7 +268,7 @@ class UserSerializer(serializers.ModelSerializer):
     resumeurl = serializers.SerializerMethodField()
     directSupervisor = UserSimpleSerializer()
     mentor = UserSimpleSerializer()
-
+    thirdUnionID = serializers.SerializerMethodField()
     class Meta:
         model = MyUser
         exclude = ('usercode', 'password', 'is_staff', 'is_superuser', 'createuser', 'createdtime', 'deletedtime', 'deleteduser',
@@ -289,6 +289,15 @@ class UserSerializer(serializers.ModelSerializer):
         if qs.exists():
             indGroup_ids.extend(qs.values_list('indGroup', flat=True))
         return list(set(indGroup_ids))
+
+    def get_thirdUnionID(self, obj):
+        thirdUnionID = None
+        qs = obj.user_thirdaccount.filter(is_deleted=False)
+        if qs.exists():
+            thirdUnionID = qs.first().thirdUnionID
+        return thirdUnionID
+
+
 
     def get_photourl(self, obj):
         if obj.photoKey:
