@@ -292,7 +292,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_thirdUnionID(self, obj):
         thirdUnionID = None
-        qs = obj.user_thirdaccount.filter(is_deleted=False)
+        qs = obj.user_thirdaccount.filter(is_deleted=False, thirdUnionID__isnull=False)
         if qs.exists():
             thirdUnionID = qs.first().thirdUnionID
         return thirdUnionID
