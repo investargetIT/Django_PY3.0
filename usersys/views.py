@@ -2459,7 +2459,7 @@ def login(request):
                     thirdaccount = UserContrastThirdAccount.objects.get(thirdUnionID=union_id, is_deleted=False)
                 except UserContrastThirdAccount.DoesNotExist:
                     try:
-                        thirdaccount = UserContrastThirdAccount.objects.get(user=request.user, is_deleted=False)
+                        thirdaccount = UserContrastThirdAccount.objects.get(user=user, is_deleted=False, thirdUnionID__isnull=False)
                     except UserContrastThirdAccount.DoesNotExist:
                         UserContrastThirdAccount(thirdUnionID=union_id, user=user).save()
                     else:
@@ -2517,7 +2517,7 @@ def bundThirdAccount(request):
         if not union_id:
             raise InvestError(20071, msg='参数缺失', detail='union_id 不能为空')
         try:
-            thirdaccount = UserContrastThirdAccount.objects.get(user=request.user, is_deleted=False)
+            thirdaccount = UserContrastThirdAccount.objects.get(user=request.user, is_deleted=False, thirdUnionID__isnull=False)
         except UserContrastThirdAccount.DoesNotExist:
             UserContrastThirdAccount(thirdUnionID=union_id, user=request.user).save()
         else:
