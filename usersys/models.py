@@ -746,7 +746,7 @@ class UserRelation(MyModel):
         )
 
 class UserContrastThirdAccount(MyModel):
-    user = MyForeignKey(MyUser, blank=True, on_delete=CASCADE)
+    user = MyForeignKey(MyUser, blank=True, related_name='user_thirdaccount', on_delete=CASCADE)
     thirdUnionID = models.CharField(max_length=64, blank=True, null=True, unique=True, help_text='第三方ID')
 
     class Meta:
