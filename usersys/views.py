@@ -2458,7 +2458,14 @@ def login(request):
                 try:
                     thirdaccount = UserContrastThirdAccount.objects.get(thirdUnionID=union_id, is_deleted=False)
                 except UserContrastThirdAccount.DoesNotExist:
-                    UserContrastThirdAccount(thirdUnionID=union_id, user=user).save()
+                    try:
+                        thirdaccount = UserContrastThirdAccount.objects.get(user=request.user, is_deleted=False)
+                    except UserContrastThirdAccount.DoesNotExist:
+                        UserContrastThirdAccount(thirdUnionID=union_id, user=user).save()
+                    else:
+                        if thirdaccount.thirdUnionID != union_id:
+                            thirdaccount.thirdUnionID = union_id
+                            thirdaccount.save()
                 else:
                     if thirdaccount.user.id != user.id:
                         raise InvestError(2048, msg='登录失败，该飞书账号已绑定过平台账号', detail='该飞书账号已绑定过平台账号')
