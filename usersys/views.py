@@ -2702,8 +2702,9 @@ def get_trader_by_name(name):
 
 def get_traders_by_names(names):
     traders = []
-    for name in names:
-        trader = get_trader_by_name(name)
-        if trader:
-            traders.append(trader)
+    if names and len(names) > 0:
+        for name in names:
+            trader = get_trader_by_name(name)
+            if trader:
+                traders.append(trader)
     return traders
