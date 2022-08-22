@@ -267,7 +267,7 @@ def update_feishu_indgroup_task(records, user_id, indgroup):
                         traders_5_text = data.get('承销-参与人员')
                         traders_5 = get_traders_by_names(traders_5_text)
                         comments = data.get('项目最新进展')
-                        if len(comments) > 0:
+                        if comments and len(comments) > 0:
                             comment_list = comments.split('；')
                         else:
                             comment_list = []
@@ -288,7 +288,7 @@ def update_feishu_indgroup_task(records, user_id, indgroup):
                         managers_4_text = data.get('BD-参与或材料提供人员')
                         managers_4 = get_traders_by_names(managers_4_text)
                         comments = data.get('项目最新进展')
-                        if len(comments) > 0:
+                        if comments and len(comments) > 0:
                             comment_list = comments.split('；')
                         else:
                             comment_list = []
