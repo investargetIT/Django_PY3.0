@@ -104,7 +104,7 @@ def get_login_user_identity(request):
         r = requests.post(url, data=json.dumps(post_data), headers=headers)
         union_id = r.json()['data']['union_id']
         try:
-            thirdaccount = UserContrastThirdAccount.objects.get(thirdUnionID=union_id)
+            thirdaccount = UserContrastThirdAccount.objects.get(thirdUnionID=union_id, is_deleted=False)
         except UserContrastThirdAccount.DoesNotExist:
             return JSONResponse(SuccessResponse({'feishu': r.json(), 'investarget': None}))
         else:

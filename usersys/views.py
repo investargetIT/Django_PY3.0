@@ -2456,7 +2456,7 @@ def login(request):
                     raise InvestError(code=2001, msg='登录失败，密码错误', detail='密码错误')
             if union_id:
                 try:
-                    thirdaccount = UserContrastThirdAccount.objects.get(thirdUnionID=union_id)
+                    thirdaccount = UserContrastThirdAccount.objects.get(thirdUnionID=union_id, is_deleted=False)
                 except UserContrastThirdAccount.DoesNotExist:
                     UserContrastThirdAccount(thirdUnionID=union_id, user=user).save()
                 else:
@@ -2466,7 +2466,7 @@ def login(request):
             user = None
             if union_id:
                     try:
-                        thirdaccount = UserContrastThirdAccount.objects.get(thirdUnionID=union_id)
+                        thirdaccount = UserContrastThirdAccount.objects.get(thirdUnionID=union_id, is_deleted=False)
                     except UserContrastThirdAccount.DoesNotExist:
                         raise InvestError(2009, msg='登录失败，用户未绑定账号', detail='用户未绑定账号')
                     else:
@@ -2510,7 +2510,7 @@ def bundThirdAccount(request):
         if not union_id:
             raise InvestError(20071, msg='参数缺失', detail='union_id 不能为空')
         try:
-            thirdaccount = UserContrastThirdAccount.objects.get(user=request.user)
+            thirdaccount = UserContrastThirdAccount.objects.get(user=request.user, is_deleted=False)
         except UserContrastThirdAccount.DoesNotExist:
             UserContrastThirdAccount(thirdUnionID=union_id, user=request.user).save()
         else:
