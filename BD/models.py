@@ -89,7 +89,7 @@ class ProjectBDManagers(MyModel):
         if self.projectBD is None:
             raise InvestError(20071,msg='projectBD can`t be null')
         if not self.is_deleted:
-            if ProjectBDManagers.objects.exclude(pk=self.pk).filter(is_deleted=False, manager=self.manager, projectBD=self.projectBD).exists():
+            if ProjectBDManagers.objects.exclude(pk=self.pk).filter(is_deleted=False, manager=self.manager, projectBD=self.projectBD, type=self.type).exists():
                 raise InvestError(20071, msg='负责人已存在')
         self.datasource = self.projectBD.datasource
         if self.projectBD and not self.projectBD.is_deleted:
