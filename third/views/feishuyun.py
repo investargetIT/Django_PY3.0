@@ -13,7 +13,7 @@ from sourcetype.models import IndustryGroup
 from third.thirdconfig import feishu_APPID, feishu_APP_SECRET
 from usersys.models import MyUser, UserContrastThirdAccount
 from BD.views import feishu_update_projbd_status, feishu_update_projbd_manager, feishu_update_projbd_comments, \
-    feishu_update_orgbd
+    feishu_update_orgbd, feishu_add_projbd
 from proj.views import feishu_update_proj_response, feishu_update_proj_traders, feishu_update_proj_comments
 from sourcetype.views import get_response_id_by_text, getmenulist
 from usersys.views import get_traders_by_names, maketoken
@@ -172,7 +172,6 @@ def getTableAllRecords(app_token, table_id, view_id=None):
                 records.extend(res['data']['items'])
             return records
         else:
-            logfeishuexcptiontofile(msg='table_id 为空')
             return []
     except Exception:
         logfeishuexcptiontofile()
@@ -189,6 +188,7 @@ def getAppAllTables(app_token):
                   "Authorization": "Bearer " + str(get_tenant_access_token())}
         r = requests.get(url, headers=header, params=params)
         res = json.loads(r.content.decode())
+        print(res)
         if res['code'] != 0:
             raise InvestError(20071, msg='获取数据表失败, %s' % str(res))
         else:
@@ -212,8 +212,12 @@ def update_feishu_excel():
         indgroup_qs = IndustryGroup.objects.filter(is_deleted=False, ongongingurl__isnull=False)
         for indgroup_ins in indgroup_qs:
             try:
-                app_token, table_id, view_id = parseFeiShuExcelUrl(indgroup_ins.ongongingurl)
+                # app_token, table_id, view_id = parseFeiShuExcelUrl(indgroup_ins.ongongingurl)
+                app_token, table_id, view_id = parseFeiShuExcelUrl('https://investarget.feishu.cn/base/bascnCAoUF5AP2xk9fOHz5jfAMd')
                 records = getTableAllRecords(app_token, table_id, view_id)
+                print(indgroup_ins.ongongingurl)
+                print(app_token, table_id, view_id)
+                print(len(records))
                 update_feishu_indgroup_task(records, 1, indgroup_ins)
             except Exception:
                 logfeishuexcptiontofile(msg=str(indgroup_ins.nameC))
@@ -253,8 +257,8 @@ def update_feishu_indgroup_task(records, user_id, indgroup):
         for record in records:
             try:
                 data = record['fields']
-                if data.get('系统ID'):
-                    if data['项目类型'] == 'On going':
+                if data.get('项目类型') == 'On going':
+                    if data.get('系统ID'):
                         proj_id = int(data['系统ID'])
                         proj_respone_text = data.get('项目进度')
                         proj_respone_id = get_response_id_by_text(proj_respone_text, 1)
@@ -277,26 +281,33 @@ def update_feishu_indgroup_task(records, user_id, indgroup):
                         feishu_update_proj_traders(proj_id, traders_4, 4, user_id)
                         feishu_update_proj_traders(proj_id, traders_5, 5, user_id)
                         feishu_update_proj_comments(proj_id, comment_list, user_id)
-                    elif data['项目类型'] == 'BD中':
+                elif data.get('项目类型') in ['BD中', '签约中']:
+                    projbd_status_text = data.get('项目进度')
+                    projbd_status_id = get_response_id_by_text(projbd_status_text, 0)
+                    managers_2_text = data.get('BD-线索提供')
+                    managers_2 = get_traders_by_names(managers_2_text)
+                    managers_3_text = data.get('BD-主要人员')
+                    managers_3 = get_traders_by_names(managers_3_text)
+                    managers_4_text = data.get('BD-参与或材料提供人员')
+                    managers_4 = get_traders_by_names(managers_4_text)
+                    comments = data.get('项目最新进展')
+                    if comments and len(comments) > 0:
+                        comment_list = comments.split('；')
+                    else:
+                        comment_list = []
+                    if data.get('系统ID'):
                         projbd_id = int(data['系统ID'])
-                        projbd_status_text = data.get('项目进度')
-                        projbd_status_id = get_response_id_by_text(projbd_status_text, 0)
-                        managers_2_text = data.get('BD-线索提供')
-                        managers_2 = get_traders_by_names(managers_2_text)
-                        managers_3_text = data.get('BD-主要人员')
-                        managers_3 = get_traders_by_names(managers_3_text)
-                        managers_4_text = data.get('BD-参与或材料提供人员')
-                        managers_4 = get_traders_by_names(managers_4_text)
-                        comments = data.get('项目最新进展')
-                        if comments and len(comments) > 0:
-                            comment_list = comments.split('；')
-                        else:
-                            comment_list = []
+                    else:
+                        com_name = data['项目名称']
+                        projbd_id = feishu_add_projbd(com_name, projbd_status_id, user_id, indgroup.id, managers_3)
+                    if projbd_id:
                         feishu_update_projbd_status(projbd_id, projbd_status_id, user_id)
                         feishu_update_projbd_manager(projbd_id, managers_2, 2, user_id)
                         feishu_update_projbd_manager(projbd_id, managers_3, 3, user_id)
                         feishu_update_projbd_manager(projbd_id, managers_4, 4, user_id)
                         feishu_update_projbd_comments(projbd_id, comment_list, user_id)
+                else:
+                    print(data.get('项目类型'))
             except Exception:
                 logfeishuexcptiontofile(msg=str(record))
     except Exception:
@@ -307,15 +318,15 @@ def update_feishu_project_task(records, user_id, proj):
         for record in records:
             try:
                 data = record['fields']
-                orgnames = data['机构名称']
+                orgnames = data.get('机构名称', '')
                 org = get_Org_By_Alias(orgnames)
                 if not org:
                     raise InvestError(20071, msg='未匹配到机构')
-                status_text = data['跟进情况']
+                status_text = data.get('跟进情况')
                 status_id = get_response_id_by_text(status_text, 1)
                 if not status_id:
                     raise InvestError(20071, msg='未匹配到任务状态')
-                manager_names = data['负责IR同事']
+                manager_names = data.get('负责IR同事')
                 managers = get_traders_by_names(manager_names)
                 if len(managers) == 0:
                     raise InvestError(20071, msg='未匹配到IR')

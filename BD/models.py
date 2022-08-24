@@ -37,7 +37,7 @@ class ProjectBD(MyModel):
     source = models.TextField(blank=True,null=True,help_text='来源')
     source_type = models.IntegerField(blank=True,null=True,choices=bd_sourcetype)
     manager = MyForeignKey(MyUser,blank=True,null=True,help_text='负责人',related_name='user_projBDs')
-    contractors = MyForeignKey(MyUser, blank=True, null=True, help_text='签约负责人', related_name='contractors_projBDs')
+    contractors = MyForeignKey(MyUser, blank=True, null=True, help_text='签约负责人/项目发起人', related_name='contractors_projBDs')
     financeAmount = models.BigIntegerField(blank=True, null=True, help_text='融资金额')
     isimportant = models.BooleanField(blank=True, default=False, help_text='是否重点BD')
     financeCurrency = MyForeignKey(CurrencyType, default=1, null=True, blank=True, help_text='融资金额货币类型')
@@ -89,7 +89,7 @@ class ProjectBDManagers(MyModel):
         if self.projectBD is None:
             raise InvestError(20071,msg='projectBD can`t be null')
         if not self.is_deleted:
-            if ProjectBDManagers.objects.exclude(pk=self.pk).filter(is_deleted=False, manager=self.manager, projectBD=self.projectBD).exists():
+            if ProjectBDManagers.objects.exclude(pk=self.pk).filter(is_deleted=False, manager=self.manager, projectBD=self.projectBD, type=self.type).exists():
                 raise InvestError(20071, msg='负责人已存在')
         self.datasource = self.projectBD.datasource
         if self.projectBD and not self.projectBD.is_deleted:
