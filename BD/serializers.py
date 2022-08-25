@@ -59,7 +59,7 @@ class ProjectBDManagersSerializer(serializers.ModelSerializer):
     manager = UserCommenSerializer()
     class Meta:
         model = ProjectBDManagers
-        fields = ('manager', 'id', 'createdtime', 'projectBD', 'createuser')
+        exclude = ('deleteduser', 'deletedtime', 'datasource', 'is_deleted')
 
 class ProjectBDCreateSerializer(serializers.ModelSerializer):
     class Meta:
