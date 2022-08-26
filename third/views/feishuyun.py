@@ -212,7 +212,7 @@ def update_feishu_excel():
         indgroup_qs = IndustryGroup.objects.filter(is_deleted=False, ongongingurl__isnull=False)
         for indgroup_ins in indgroup_qs:
             try:
-                app_token, table_id, view_id = parseFeiShuExcelUrl(indgroup_ins.ongongingurl)
+                app_token, table_id, view_id = parseFeiShuExcelUrl("https://investarget.feishu.cn/base/bascnnEqEJKzsOaNNJLUyQmachc?table=tblJCs6ZrP9AQEPK&view=vewWlgSLiS")
                 records = getTableAllRecords(app_token, table_id, view_id)
                 print(indgroup_ins.ongongingurl)
                 print(app_token, table_id, view_id)
@@ -342,3 +342,8 @@ def update_feishu_project_task(records, user_id, proj):
                 logfeishuexcptiontofile(msg=str(record))
     except Exception:
         logfeishuexcptiontofile(msg=str(proj.projtitleC))
+
+
+def test(request):
+    update_feishu_excel()
+    return JSONResponse({})
