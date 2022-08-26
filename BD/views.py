@@ -163,10 +163,10 @@ class ProjectBDView(viewsets.ModelViewSet):
             data = request.data
             lang = request.GET.get('lang')
             comments = data.get('comments',None)
-            relateManagers = data.get('manager', None)
+            relateManagers = data.get('managers', None)
             data['createuser'] = request.user.id
             data['datasource'] = request.user.datasource.id
-            data['manager'] = relateManagers.pop(0) if relateManagers else request.user.id
+            data['manager'] = relateManagers[0] if relateManagers else request.user.id
             data['contractors'] = data['contractors'] if data.get('contractors') else request.user.id
             if request.user.has_perm('BD.manageProjectBD'):
                 pass

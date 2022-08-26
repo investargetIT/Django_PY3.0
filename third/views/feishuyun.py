@@ -289,6 +289,7 @@ def update_feishu_indgroup_task(records, user_id, indgroup):
                     managers_3 = get_traders_by_names(managers_3_text)
                     managers_4_text = data.get('BD-参与或材料提供人员')
                     managers_4 = get_traders_by_names(managers_4_text)
+                    managers_3.extend(managers_4)
                     comments = data.get('项目最新进展')
                     if comments and len(comments) > 0:
                         comment_list = comments.split('；')
@@ -303,7 +304,6 @@ def update_feishu_indgroup_task(records, user_id, indgroup):
                         feishu_update_projbd_status(projbd_id, projbd_status_id, user_id)
                         feishu_update_projbd_manager(projbd_id, managers_2, 2, user_id)
                         feishu_update_projbd_manager(projbd_id, managers_3, 3, user_id)
-                        feishu_update_projbd_manager(projbd_id, managers_4, 4, user_id)
                         feishu_update_projbd_comments(projbd_id, comment_list, user_id)
                 else:
                     print(data.get('项目类型'))
