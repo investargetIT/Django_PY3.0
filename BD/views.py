@@ -281,20 +281,6 @@ class ProjectBDManagersView(viewsets.ModelViewSet):
     filter_fields = ('projectBD', 'manager')
     serializer_class = ProjectBDManagersCreateSerializer
 
-    def get_object(self):
-        queryset = self.filter_queryset(self.get_queryset())
-        lookup_url_kwarg = 'pk'
-        assert lookup_url_kwarg in self.kwargs, (
-                'Expected view %s to be called with a URL keyword argument '
-                'named "%s". Fix your URL conf' %
-                (self.__class__.__name__, lookup_url_kwarg)
-        )
-        try:
-            obj = queryset.get(id=self.kwargs[lookup_url_kwarg])
-        except ProjectBDManagers.DoesNotExist:
-            raise InvestError(code=8892, msg='获取项目BD负责人信息失败', detail='负责人不存在')
-        return obj
-
 
     @loginTokenIsAvailable()
     def create(self, request, *args, **kwargs):
@@ -327,7 +313,7 @@ class ProjectBDManagersView(viewsets.ModelViewSet):
     @loginTokenIsAvailable()
     def destroy(self, request, *args, **kwargs):
         try:
-            instance = self.get_object()
+            instance = ProjectBDManagers.objects.get(id=self.kwargs['pk'])
             if request.user.has_perm('BD.manageProjectBD') or is_projBDManager(request.user.id, instance.projectBD):
                 pass
             elif request.user == instance.projectBD.createuser:
