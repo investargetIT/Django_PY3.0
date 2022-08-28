@@ -280,31 +280,31 @@ def update_feishu_indgroup_task(records, user_id, indgroup):
                         feishu_update_proj_traders(proj_id, traders_4, 4, user_id)
                         feishu_update_proj_traders(proj_id, traders_5, 5, user_id)
                         feishu_update_proj_comments(proj_id, comment_list, user_id)
-                elif data.get('项目类型') in ['BD中', '签约中']:
-                    projbd_status_text = data.get('项目进度')
-                    projbd_status_id = get_response_id_by_text(projbd_status_text, 0)
-                    managers_2_text = data.get('BD-线索提供')
-                    managers_2 = get_traders_by_names(managers_2_text)
-                    managers_3_text = data.get('BD-主要人员')
-                    managers_3 = get_traders_by_names(managers_3_text)
-                    managers_4_text = data.get('BD-参与或材料提供人员')
-                    managers_4 = get_traders_by_names(managers_4_text)
-                    managers_3.extend(managers_4)
-                    comments = data.get('项目最新进展')
-                    if comments and len(comments) > 0:
-                        comment_list = comments.split('；')
-                    else:
-                        comment_list = []
-                    if data.get('系统ID'):
-                        projbd_id = int(data['系统ID'])
-                    else:
-                        com_name = data['项目名称']
-                        projbd_id = feishu_add_projbd(com_name, projbd_status_id, user_id, indgroup.id, managers_3)
-                    if projbd_id:
-                        feishu_update_projbd_status(projbd_id, projbd_status_id, user_id)
-                        feishu_update_projbd_manager(projbd_id, managers_2, 2, user_id)
-                        feishu_update_projbd_manager(projbd_id, managers_3, 3, user_id)
-                        feishu_update_projbd_comments(projbd_id, comment_list, user_id)
+                # elif data.get('项目类型') in ['BD中', '签约中']:
+                #     projbd_status_text = data.get('项目进度')
+                #     projbd_status_id = get_response_id_by_text(projbd_status_text, 0)
+                #     managers_2_text = data.get('BD-线索提供')
+                #     managers_2 = get_traders_by_names(managers_2_text)
+                #     managers_3_text = data.get('BD-主要人员')
+                #     managers_3 = get_traders_by_names(managers_3_text)
+                #     managers_4_text = data.get('BD-参与或材料提供人员')
+                #     managers_4 = get_traders_by_names(managers_4_text)
+                #     managers_3.extend(managers_4)
+                #     comments = data.get('项目最新进展')
+                #     if comments and len(comments) > 0:
+                #         comment_list = comments.split('；')
+                #     else:
+                #         comment_list = []
+                #     if data.get('系统ID'):
+                #         projbd_id = int(data['系统ID'])
+                #     else:
+                #         com_name = data['项目名称']
+                #         projbd_id = feishu_add_projbd(com_name, projbd_status_id, user_id, indgroup.id, managers_3)
+                #     if projbd_id:
+                #         feishu_update_projbd_status(projbd_id, projbd_status_id, user_id)
+                #         feishu_update_projbd_manager(projbd_id, managers_2, 2, user_id)
+                #         feishu_update_projbd_manager(projbd_id, managers_3, 3, user_id)
+                #         feishu_update_projbd_comments(projbd_id, comment_list, user_id)
                 else:
                     print(data.get('项目类型'))
             except Exception:
