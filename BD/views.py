@@ -163,7 +163,7 @@ class ProjectBDView(viewsets.ModelViewSet):
             data = request.data
             lang = request.GET.get('lang')
             comments = data.get('comments',None)
-            relateManagers = data.get('managers', None)
+            relateManagers = data.get('manager', None)
             data['createuser'] = request.user.id
             data['datasource'] = request.user.datasource.id
             data['manager'] = relateManagers[0] if relateManagers else request.user.id
@@ -182,7 +182,7 @@ class ProjectBDView(viewsets.ModelViewSet):
                     raise InvestError(4009, msg='新增项目BD信息失败', detail='项目BD创建失败——%s'%projectBD.error_messages)
                 if isinstance(relateManagers, list):
                     for relate_manager in relateManagers:
-                        instance = ProjectBDManagersCreateSerializer(data={'projectBD': newprojectBD.id, 'manager':relate_manager, 'createuser':request.user.id})
+                        instance = ProjectBDManagersCreateSerializer(data={'projectBD': newprojectBD.id, 'manager':relate_manager, 'createuser':request.user.id, 'type':3})
                         if instance.is_valid():
                             instance.save()
                 if comments:
