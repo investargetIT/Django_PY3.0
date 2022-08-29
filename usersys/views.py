@@ -58,7 +58,7 @@ class UserFilter(FilterSet):
     investor = RelationFilter(filterstr='trader_relations__investoruser', lookup_method='in', relationName='trader_relations__is_deleted')
     class Meta:
         model = MyUser
-        fields = ('id', 'onjob', 'groups', 'indGroup', 'org','userstatus','currency','orgtransactionphases','orgarea','usercode','title','trader','investor','usernameC')
+        fields = ('id', 'onjob', 'groups', 'org','userstatus','currency','orgtransactionphases','orgarea','usercode','title','trader','investor','usernameC')
 
 
 class UserView(viewsets.ModelViewSet):
