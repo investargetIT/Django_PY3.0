@@ -83,8 +83,8 @@ class ProjectBDSerializer(serializers.ModelSerializer):
     def get_manager(self, obj):
         qs = obj.ProjectBD_managers.filter(is_deleted=False)
         if qs.exists():
-            return {'main': UserCommenSerializer(obj.manager).data,'normal': ProjectBDManagersSerializer(qs, many=True).data}
-        return {'main': UserCommenSerializer(obj.manager).data,'normal': None}
+            return ProjectBDManagersSerializer(qs, many=True).data
+        return None
 
     def get_BDComments(self, obj):
         user_id = self.context.get('user_id')
