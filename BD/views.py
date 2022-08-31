@@ -98,7 +98,8 @@ class ProjectBDView(viewsets.ModelViewSet):
                 manager_list = request.GET['manager'].split(',')
                 queryset = queryset.filter(Q(manager__in=manager_list) | Q(ProjectBD_managers__manager__in=manager_list, ProjectBD_managers__is_deleted=False) | Q(contractors__in=manager_list))
             if not request.user.has_perm('BD.manageProjectBD'):
-                queryset = queryset.filter(Q(createuser=request.user) | Q(indGroup=request.user.indGroup, indGroup__isnull=False) | Q(manager=request.user) | Q(contractors=request.user) | Q(ProjectBD_managers__manager=request.user, ProjectBD_managers__is_deleted=False)).distinct()
+                queryset = queryset.filter(Q(createuser=request.user) | Q(indGroup=request.user.indGroup, indGroup__isnull=False) | Q(manager=request.user) | Q(contractors=request.user) | Q(ProjectBD_managers__manager=request.user, ProjectBD_managers__is_deleted=False))
+            queryset = queryset.distinct()
             sortfield = request.GET.get('sort', 'lastmodifytime')
             desc = request.GET.get('desc', 1)
             if desc in ('1', u'1', 1):

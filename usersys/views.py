@@ -131,6 +131,7 @@ class UserView(viewsets.ModelViewSet):
             if indGroups:  # 匹配机构标签和机构下用户标签
                 indGroups = indGroups.split(',')
                 queryset = queryset.filter(Q(indGroup__in=indGroups) | Q(user_indgroups__indGroup__in=indGroups))
+            queryset = queryset.distinct()
             sortfield = request.GET.get('sort', 'createdtime')
             desc = request.GET.get('desc', 1)
             queryset = mySortQuery(queryset, sortfield, desc, True)
