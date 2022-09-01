@@ -542,15 +542,15 @@ class UserView(viewsets.ModelViewSet):
                             # one to one
                             if isinstance(manager, models.Model):
                                 if hasattr(manager, 'is_deleted') and not manager.is_deleted:
-                                    raise InvestError(code=2010, msg='用户信息删除失败', detail=u'{} 上有关联数据'.format(link))
+                                    raise InvestError(code=2010, msg='删除失败，请先删除该用户的关联数据', detail=u'{} 上有关联数据'.format(link))
                             else:
                                 try:
                                     manager.model._meta.get_field('is_deleted')
                                     if manager.all().filter(is_deleted=False).count():
-                                        raise InvestError(code=2010, msg='用户信息删除失败', detail=u'{} 上有关联数据'.format(link))
+                                        raise InvestError(code=2010, msg='删除失败，请先删除该用户的关联数据', detail=u'{} 上有关联数据'.format(link))
                                 except FieldDoesNotExist:
                                     if manager.all().count():
-                                        raise InvestError(code=2010, msg='用户信息删除失败', detail=u'{} 上有关联数据'.format(link))
+                                        raise InvestError(code=2010, msg='删除失败，请先删除该用户的关联数据', detail=u'{} 上有关联数据'.format(link))
                         else:
                             manager = getattr(instance, link, None)
                             if not manager:
