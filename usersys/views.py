@@ -526,7 +526,7 @@ class UserView(viewsets.ModelViewSet):
                         pass
                     else:
                         raise InvestError(code=2009, msg='用户信息删除失败')
-                    for link in ['investor_relations', 'trader_relations', 'usersupport_projs', 'usercreate_OKR', 'usercreate_OKRResult',
+                    for link in ['investor_relations', 'trader_relations', 'usersupport_projs',
                                      'manager_beschedule', 'user_webexUser', 'user_dataroomTemp',
                                      'user_usertags', 'user_remarks', 'userreceive_msgs', 'user_workreport',
                                      'usersend_msgs', 'user_datarooms', 'user_userAttachments', 'user_userEvents',

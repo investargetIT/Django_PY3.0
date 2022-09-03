@@ -2,7 +2,7 @@ from django.db.models import Q
 from rest_framework import serializers
 
 from BD.models import ProjectBDComments, ProjectBD, OrgBDComments, OrgBD, OrgBDBlack, ProjectBDManagers, \
-    WorkReport, WorkReportProjInfo, OKR, OKRResult, WorkReportMarketMsg
+    WorkReport, WorkReportProjInfo, WorkReportMarketMsg
 from org.serializer import OrgCommonSerializer
 from proj.models import project
 from proj.serializer import ProjSimpleSerializer, ProjCommonSerializer
@@ -232,30 +232,6 @@ class WorkReportProjInfoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WorkReportProjInfo
-        exclude = ('deleteduser', 'deletedtime', 'datasource', 'is_deleted', 'createuser')
-
-
-class OKRCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OKR
-        fields = '__all__'
-
-
-class OKRSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OKR
-        exclude = ('deleteduser', 'deletedtime', 'datasource', 'is_deleted')
-
-
-class OKRResultCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OKRResult
-        fields = '__all__'
-
-
-class OKRResultSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OKRResult
         exclude = ('deleteduser', 'deletedtime', 'datasource', 'is_deleted', 'createuser')
 
 
