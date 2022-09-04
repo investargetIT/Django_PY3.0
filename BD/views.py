@@ -1,5 +1,5 @@
 #coding=utf8
-import threading, traceback, datetime, json
+import threading, traceback, datetime, json, os
 from django.core.paginator import Paginator, EmptyPage
 from django.db import transaction
 from django.db.models import QuerySet, Q, Count, Max
@@ -17,9 +17,10 @@ from BD.serializers import ProjectBDSerializer, ProjectBDCreateSerializer, Proje
     ProjectBDManagersCreateSerializer, WorkReportCreateSerializer, WorkReportSerializer, \
     WorkReportProjInfoCreateSerializer, WorkReportProjInfoSerializer, orgBDProjSerializer, \
     WorkReportMarketMsgCreateSerializer, WorkReportMarketMsgSerializer
-from invest.settings import cli_domain
+from invest.settings import cli_domain, APILOG_PATH
 from msg.views import deleteMessage
 from org.models import organization
+from third.views.qiniufile import downloadFileToPath
 from usersys.models import MyUser
 from utils.customClass import RelationFilter, InvestError, JSONResponse, MyFilterSet
 from utils.logicJudge import is_projBDManager, is_projTrader, is_orgBDTrader
@@ -61,6 +62,7 @@ class ProjectBDView(viewsets.ModelViewSet):
     retrieve:查看新项目BD信息
     update:修改bd信息
     destroy:删除新项目BD
+    fullSearchProject:es搜索行动计划信息
     """
     filter_backends = (filters.DjangoFilterBackend,filters.SearchFilter)
     queryset = ProjectBD.objects.filter(is_deleted=False)
@@ -269,6 +271,56 @@ class ProjectBDView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
+    @loginTokenIsAvailable()
+    def fullSearchProject(self, request, *args, **kwargs):
+        try:
+            page_index = int(request.GET.get('page_index', 1))
+            page_size = int(request.GET.get('page_size', 10))
+            lang = request.GET.get('lang', 'cn')
+            search = request.GET.get('search', '')
+            search_body = {
+                "query": {
+                    "bool": {
+                        "must": [
+                            {
+                                "bool": {
+                                    "must": [
+                                        {"term": {"django_ct": "BD.ProjectBDComments"}},
+                                    ]
+                                },
+                            },
+                            {
+                                "bool": {
+                                    "should": [
+                                        {"match_phrase": {"comments": search}},
+                                        {"match_phrase": {"projectDesc": search}},
+                                        {"match_phrase": {"fileContent": search}}
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                },
+                "_source": ["projectBD", "django_ct"]
+            }
+            results = getEsScrollResult(search_body)
+            searchIds = set()
+            for source in results:
+                searchIds.add(source['_source']['projectBD'])
+            projbd_qs = self.get_queryset().filter(id__in=searchIds).distinct()
+            try:
+                count = projbd_qs.count()
+                org_qs = Paginator(projbd_qs, page_size)
+                org_qs = org_qs.page(page_index)
+            except EmptyPage:
+                return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
+            return JSONResponse(SuccessResponse(
+                {'count': count, 'data': returnListChangeToLanguage(ProjectBDSerializer(org_qs, many=True).data, lang)}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 class ProjectBDManagersView(viewsets.ModelViewSet):
     """
@@ -1678,6 +1730,15 @@ def sendWorkReportMessage():
         if not WorkReport.objects.filter(user=user, startTime__gte=this_week_start, startTime__lte=this_week_end, is_deleted=False).exists():
             sendmessage_workReportDonotWrite(user)
 
+
+
+def downloadProjectBDCommentAttachments():
+    attachment_qs = ProjectBDComments.objects.filter(is_deleted=False, key__isnull=False, projectBD__is_deleted=False)
+    for attInstance in attachment_qs:
+        attachmentPath = APILOG_PATH['projectBDCommentFilePath'] + attInstance.key
+        if not os.path.exists(attachmentPath):
+            downloadFileToPath(key=attInstance.key, bucket=attInstance.bucket, path=attachmentPath)
+            attInstance.save()
 
 
 def feishu_update_projbd_status(projbd_id, response_id, requsetuser_id):

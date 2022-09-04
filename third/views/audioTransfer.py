@@ -345,3 +345,12 @@ class AudioTranslateTaskRecordView(viewsets.ModelViewSet):
         except Exception:
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+def getAudioFileTranslateTaskResult(trans_id):
+    try:
+        trans_ins = AudioTranslateTaskRecord.objects.get(is_deleted=False, id=trans_id)
+        return trans_ins.onebest
+    except Exception:
+        return None
+
