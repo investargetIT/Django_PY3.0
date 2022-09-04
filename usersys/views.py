@@ -520,12 +520,12 @@ class UserView(viewsets.ModelViewSet):
             with transaction.atomic():
                 for userid in useridlist:
                     if userid == request.user.id:
-                        raise InvestError(20071, msg='用户信息删除失败', detail='不能删除自己')
+                        raise InvestError(20071, msg='删除失败, 不能删除自己', detail='不能删除自己')
                     instance = self.get_object(userid)
                     if request.user.has_perm('usersys.admin_manageuser') or is_userTrader(request.user, instance.id):
                         pass
                     else:
-                        raise InvestError(code=2009, msg='用户信息删除失败')
+                        raise InvestError(code=2009, msg='删除失败')
                     for link in ['investor_relations', 'trader_relations', 'usersupport_projs',
                                      'manager_beschedule', 'user_webexUser', 'user_dataroomTemp',
                                      'user_usertags', 'user_remarks', 'userreceive_msgs', 'user_workreport',
@@ -541,15 +541,15 @@ class UserView(viewsets.ModelViewSet):
                             # one to one
                             if isinstance(manager, models.Model):
                                 if hasattr(manager, 'is_deleted') and not manager.is_deleted:
-                                    raise InvestError(code=2010, msg='用户信息删除失败', detail=u'{} 上有关联数据'.format(link))
+                                    raise InvestError(code=2010, msg='删除失败, 请先删除用户关联信息', detail=u'{} 上有关联数据'.format(link))
                             else:
                                 try:
                                     manager.model._meta.get_field('is_deleted')
                                     if manager.all().filter(is_deleted=False).count():
-                                        raise InvestError(code=2010, msg='用户信息删除失败', detail=u'{} 上有关联数据'.format(link))
+                                        raise InvestError(code=2010, msg='删除失败, 请先删除用户关联信息', detail=u'{} 上有关联数据'.format(link))
                                 except FieldDoesNotExist:
                                     if manager.all().count():
-                                        raise InvestError(code=2010, msg='用户信息删除失败', detail=u'{} 上有关联数据'.format(link))
+                                        raise InvestError(code=2010, msg='删除失败, 请先删除用户关联信息', detail=u'{} 上有关联数据'.format(link))
                         else:
                             manager = getattr(instance, link, None)
                             if not manager:
