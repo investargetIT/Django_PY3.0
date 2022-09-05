@@ -98,8 +98,6 @@ class ProjectBDView(viewsets.ModelViewSet):
             if request.GET.get('manager'):
                 manager_list = request.GET['manager'].split(',')
                 queryset = queryset.filter(Q(manager__in=manager_list) | Q(ProjectBD_managers__manager__in=manager_list, ProjectBD_managers__is_deleted=False) | Q(contractors__in=manager_list))
-            if not request.user.has_perm('BD.manageProjectBD'):
-                queryset = queryset.filter(Q(createuser=request.user) | Q(indGroup=request.user.indGroup, indGroup__isnull=False) | Q(manager=request.user) | Q(contractors=request.user) | Q(ProjectBD_managers__manager=request.user, ProjectBD_managers__is_deleted=False)).distinct()
             sortfield = request.GET.get('sort', 'lastmodifytime')
             desc = request.GET.get('desc', 1)
             if desc in ('1', u'1', 1):
@@ -123,23 +121,17 @@ class ProjectBDView(viewsets.ModelViewSet):
     def countBd(self, request, *args, **kwargs):
         try:
             queryset = self.filter_queryset(self.get_queryset())
-            if request.user.has_perm('BD.manageProjectBD'):
-                if request.GET.get('manager'):
-                    manager_list = request.GET['manager'].split(',')
-                    allQueryset = queryset.filter(Q(manager__in=manager_list) | Q(ProjectBD_managers__manager__in=manager_list, ProjectBD_managers__is_deleted=False) | Q(contractors__in=manager_list)).distinct()
-                    relateManager_qs = ProjectBDManagers.objects.filter(is_deleted=False, projectBD__in=queryset.values_list('id'), manager__in=manager_list)
-                    manager_qs = queryset.filter(manager__in=manager_list).distinct()
-                    contractor_qs = queryset.filter(contractors__in=manager_list).distinct()
-                else:
-                    allQueryset = queryset
-                    manager_qs = queryset
-                    relateManager_qs = ProjectBDManagers.objects.filter(is_deleted=False, projectBD__in=queryset.values_list('id'))
-                    contractor_qs = queryset
+            if request.GET.get('manager'):
+                manager_list = request.GET['manager'].split(',')
+                allQueryset = queryset.filter(Q(manager__in=manager_list) | Q(ProjectBD_managers__manager__in=manager_list, ProjectBD_managers__is_deleted=False) | Q(contractors__in=manager_list)).distinct()
+                relateManager_qs = ProjectBDManagers.objects.filter(is_deleted=False, projectBD__in=queryset.values_list('id'), manager__in=manager_list)
+                manager_qs = queryset.filter(manager__in=manager_list).distinct()
+                contractor_qs = queryset.filter(contractors__in=manager_list).distinct()
             else:
-                allQueryset = queryset.filter(Q(createuser=request.user.indGroup) | Q(indGroup=request.user.indGroup, indGroup__isnull=False) | Q(manager_id=request.user.id) | Q(contractors_id=request.user.id) | Q(ProjectBD_managers__manager_id=request.user.id, ProjectBD_managers__is_deleted=False)).distinct()
-                relateManager_qs = ProjectBDManagers.objects.filter(is_deleted=False, projectBD__in=queryset.values_list('id'), manager_id=request.user.id)
-                manager_qs = queryset.filter(manager_id=request.user.id).distinct()
-                contractor_qs = queryset.filter(contractors_id=request.user.id).distinct()
+                allQueryset = queryset
+                manager_qs = queryset
+                relateManager_qs = ProjectBDManagers.objects.filter(is_deleted=False, projectBD__in=queryset.values_list('id'))
+                contractor_qs = queryset
             count = allQueryset.count()
             countlist, relateCountlist, contractorsCountlist = [], [], []
             counts = manager_qs.values_list('manager').annotate(Count('manager'))
@@ -203,14 +195,6 @@ class ProjectBDView(viewsets.ModelViewSet):
         try:
             lang = request.GET.get('lang')
             instance = self.get_object()
-            if request.user.has_perm('BD.manageProjectBD') or is_projBDManager(request.user.id, instance):
-                pass
-            elif request.user == instance.createuser:
-                pass
-            elif request.user.indGroup and request.user.indGroup == instance.indGroup:
-                pass
-            else:
-                raise InvestError(2009, msg='查看项目BD信息失败')
             serializer = self.serializer_class(instance)
             return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data, lang)))
         except InvestError as err:
@@ -419,13 +403,7 @@ class ProjectBDCommentsView(viewsets.ModelViewSet):
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
             lang = request.GET.get('lang', 'cn')
-            queryset = self.filter_queryset(self.get_queryset())
-            if not request.user.has_perm('BD.manageProjectBD'):
-                queryset = queryset.filter(Q(projectBD__indGroup=request.user.indGroup, projectBD__indGroup__isnull=False) | Q(projectBD__createuser=request.user)
-                                           | Q(projectBD__in=request.user.user_projBDs.all())
-                                           | Q(projectBD__in=request.user.contractors_projBDs.all())
-                                           | Q(projectBD__in=request.user.managers_ProjectBD.filter(is_deleted=False).values_list('projectBD', flat=True))).distinct()
-            queryset = queryset.order_by('-createdtime')
+            queryset = self.filter_queryset(self.get_queryset()).order_by('-createdtime')
             try:
                 count = queryset.count()
                 queryset = Paginator(queryset, page_size)
