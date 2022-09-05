@@ -111,12 +111,8 @@ workreportproj_detail = views.WorkReportProjInfoView.as_view({
 })
 
 
-projbd_search = views.ProjectBDView.as_view({
-        'get': 'fullSearchProject',
-})
 urlpatterns = [
         url(r'^projbd/$', projbd_list, name='projbd_list'),
-        url(r'^projbd/search$', projbd_search, name='projbd_search'),
         url(r'^projbd/count/$', projbd_count, name='projbd_count'),
         url(r'^projbd/(?P<pk>\d+)/$', projbd_detail, name='projbd_detail'),
         url(r'^projbd/relatemanager/$', projbdmanagers_create, name='projbdmanagers_create'),

@@ -64,7 +64,7 @@ class ProjectBDView(viewsets.ModelViewSet):
     destroy:删除新项目BD
     fullSearchProject:es搜索行动计划信息
     """
-    filter_backends = (filters.DjangoFilterBackend,filters.SearchFilter)
+    filter_backends = (filters.DjangoFilterBackend,)
     queryset = ProjectBD.objects.filter(is_deleted=False)
     filter_class = ProjectBDFilter
     search_fields = ('com_name', 'username', 'source')
@@ -98,6 +98,38 @@ class ProjectBDView(viewsets.ModelViewSet):
             if request.GET.get('manager'):
                 manager_list = request.GET['manager'].split(',')
                 queryset = queryset.filter(Q(manager__in=manager_list) | Q(ProjectBD_managers__manager__in=manager_list, ProjectBD_managers__is_deleted=False) | Q(contractors__in=manager_list))
+            search = request.GET.get('search')
+            if search and len(search) > 0:
+                search_body = {
+                    "query": {
+                        "bool": {
+                            "must": [
+                                {
+                                    "bool": {
+                                        "must": [
+                                            {"term": {"django_ct": "BD.ProjectBDComments"}},
+                                        ]
+                                    },
+                                },
+                                {
+                                    "bool": {
+                                        "should": [
+                                            {"match_phrase": {"comments": search}},
+                                            {"match_phrase": {"projectDesc": search}},
+                                            {"match_phrase": {"fileContent": search}}
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "_source": ["projectBD", "django_ct"]
+                }
+                results = getEsScrollResult(search_body)
+                searchIds = set()
+                for source in results:
+                    searchIds.add(source['_source']['projectBD'])
+                queryset = queryset.filter(id__in=searchIds).distinct()
             sortfield = request.GET.get('sort', 'lastmodifytime')
             desc = request.GET.get('desc', 1)
             if desc in ('1', u'1', 1):
@@ -255,56 +287,6 @@ class ProjectBDView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable()
-    def fullSearchProject(self, request, *args, **kwargs):
-        try:
-            page_index = int(request.GET.get('page_index', 1))
-            page_size = int(request.GET.get('page_size', 10))
-            lang = request.GET.get('lang', 'cn')
-            search = request.GET.get('search', '')
-            search_body = {
-                "query": {
-                    "bool": {
-                        "must": [
-                            {
-                                "bool": {
-                                    "must": [
-                                        {"term": {"django_ct": "BD.ProjectBDComments"}},
-                                    ]
-                                },
-                            },
-                            {
-                                "bool": {
-                                    "should": [
-                                        {"match_phrase": {"comments": search}},
-                                        {"match_phrase": {"projectDesc": search}},
-                                        {"match_phrase": {"fileContent": search}}
-                                    ]
-                                }
-                            }
-                        ]
-                    }
-                },
-                "_source": ["projectBD", "django_ct"]
-            }
-            results = getEsScrollResult(search_body)
-            searchIds = set()
-            for source in results:
-                searchIds.add(source['_source']['projectBD'])
-            projbd_qs = self.get_queryset().filter(id__in=searchIds).distinct()
-            try:
-                count = projbd_qs.count()
-                org_qs = Paginator(projbd_qs, page_size)
-                org_qs = org_qs.page(page_index)
-            except EmptyPage:
-                return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
-            return JSONResponse(SuccessResponse(
-                {'count': count, 'data': returnListChangeToLanguage(ProjectBDSerializer(org_qs, many=True).data, lang)}))
-        except InvestError as err:
-            return JSONResponse(InvestErrorResponse(err))
-        except Exception:
-            catchexcption(request)
-            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 class ProjectBDManagersView(viewsets.ModelViewSet):
     """

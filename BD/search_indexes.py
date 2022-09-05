@@ -24,6 +24,7 @@ class ProjectBDCommentsIndex(indexes.SearchIndex, indexes.Indexable):
     projectBD = indexes.IntegerField(model_attr='projectBD', null=True)
     fileContent = indexes.CharField(null=True)
     projectDesc = indexes.CharField(null=True)
+    comname = indexes.CharField(null=True)
     createuser = indexes.IntegerField(model_attr='createuser_id', null=True)
 
     def get_model(self):
@@ -54,7 +55,7 @@ class ProjectBDCommentsIndex(indexes.SearchIndex, indexes.Indexable):
                             text = f.read()
                             type = chardet.detect(text)
                             filecontent = text.decode(type["encoding"], 'ignore')
-                    elif type in ['.mp3', 'avi'] and obj.transid:
+                    elif type in ['.mp3', '.wav', '.flac', '.opus', '.m4a'] and obj.transid:
                         filecontent = getAudioFileTranslateTaskResult(obj.transid)
             except Exception:
                 logexcption(msg='行动计划附件内容提取失败')
@@ -71,6 +72,11 @@ class ProjectBDCommentsIndex(indexes.SearchIndex, indexes.Indexable):
                 logexcption(msg='行动计划全库项目介绍提取失败')
         return projectDesc
 
+    def prepare_comname(self, obj):
+        comname = None
+        if obj.projectBD:
+            comname = obj.projectBD.com_name
+        return comname
 
     def index_queryset(self, using=None):
         """返回要建立索引的数据查询集"""
