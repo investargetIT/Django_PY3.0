@@ -21,7 +21,7 @@ class ProjectBDCommentsIndex(indexes.SearchIndex, indexes.Indexable):
     # # 保存在索引库中的字段
     id = indexes.IntegerField(model_attr='id')
     comments = indexes.CharField(model_attr='comments', null=True)
-    projectBD = indexes.IntegerField(model_attr='projectBD', null=True)
+    projectBD = indexes.IntegerField(model_attr='projectBD_id', null=True)
     fileContent = indexes.CharField(null=True)
     projectDesc = indexes.CharField(null=True)
     comname = indexes.CharField(null=True)
