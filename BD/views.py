@@ -102,33 +102,33 @@ class ProjectBDView(viewsets.ModelViewSet):
             if search and len(search) > 0:
                 search_body = {
                     "query": {
-                        "bool": {
-                            "must": [
-                                {
-                                    "bool": {
-                                        "must": [
-                                            {"term": {"django_ct": "BD.ProjectBDComments"}},
-                                        ]
-                                    },
-                                },
-                                {
-                                    "bool": {
-                                        "should": [
-                                            {"match_phrase": {"comments": search}},
-                                            {"match_phrase": {"projectDesc": search}},
-                                            {"match_phrase": {"fileContent": search}}
-                                        ]
-                                    }
+                    "bool": {
+                        "must": [
+                            # {
+                            #     "bool": {
+                            #         "must": {"terms": {"django_ct": ['BD.projectbdcomments']}}
+                            #     },
+                            # },
+                            {
+                                "bool": {
+                                    "should": [
+                                        {"match_phrase": {"comments": search}},
+                                        {"match_phrase": {"fileContent": search}},
+                                        {"match_phrase": {"comname": search}},
+                                        {"match_phrase": {"projectDesc": search}}
+                                    ]
                                 }
-                            ]
-                        }
-                    },
+                            }
+                        ]
+                    }
+                },
                     "_source": ["projectBD", "django_ct"]
                 }
                 results = getEsScrollResult(search_body)
                 searchIds = set()
                 for source in results:
-                    searchIds.add(source['_source']['projectBD'])
+                    if source['_source'].get('projectBD') and source['_source']['django_ct'] == 'BD.projectbdcomments':
+                        searchIds.add(source['_source']['projectBD'])
                 queryset = queryset.filter(id__in=searchIds).distinct()
             sortfield = request.GET.get('sort', 'lastmodifytime')
             desc = request.GET.get('desc', 1)
