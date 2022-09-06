@@ -2,7 +2,7 @@
 import threading, traceback, datetime, json, os
 from django.core.paginator import Paginator, EmptyPage
 from django.db import transaction
-from django.db.models import QuerySet, Q, Count, Max
+from django.db.models import QuerySet, Q, Count, Max, F
 from django.shortcuts import render_to_response
 from django_filters import FilterSet
 from django.core.serializers.json import DjangoJSONEncoder
@@ -1789,4 +1789,14 @@ def feishu_update_orgbd(org, proj, status_id, requsetuser_id, manager, comment, 
         logfeishuexcptiontofile('飞书机构看板导入失败: %s' % str(err))
 
 
-
+def updateProjectBDTimeToSaveEs():
+    try:
+        projbd_qs = ProjectBD.objects.filter(is_deleted=False)
+        projbd_qs.update(lastmodifytime=F('lastmodifytime') + datetime.timedelta(seconds=1))
+    except Exception:
+        logexcption(msg='触发更新项目BDes存储内容操作失败')
+    try:
+        projbdcom_qs = ProjectBDComments.objects.filter(is_deleted=False)
+        projbdcom_qs.update(lastmodifytime=F('lastmodifytime') + datetime.timedelta(seconds=1))
+    except Exception:
+        logexcption(msg='触发更新项目BD行动计划es存储内容操作失败')

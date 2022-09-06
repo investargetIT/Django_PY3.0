@@ -4,13 +4,49 @@ import os
 from invest.settings import APILOG_PATH
 from mongoDoc.models import ProjectData
 from third.views.audioTransfer import getAudioFileTranslateTaskResult
-from .models import WorkReport, WorkReportMarketMsg, ProjectBDComments
+from .models import WorkReport, WorkReportMarketMsg, ProjectBDComments, ProjectBD
 import chardet
 from utils.somedef import getPdfWordContent, BaiDuAipGetImageWord
 from haystack import indexes
 import subprocess
 from utils.util import logexcption
 import docx
+
+class ProjectBDIndex(indexes.SearchIndex, indexes.Indexable):
+    """
+        WorkReport索引类
+    """
+    text = indexes.CharField(document=True, use_template=True)
+
+    # # 保存在索引库中的字段
+    id = indexes.IntegerField(model_attr='id')
+    projectBD = indexes.IntegerField(model_attr='id', null=True)
+    projectDesc = indexes.CharField(null=True)
+    comname = indexes.CharField(model_attr='com_name', null=True)
+    createuser = indexes.IntegerField(model_attr='createuser_id', null=True)
+
+    def get_model(self):
+        """返回建立索引的模型类"""
+        return ProjectBD
+
+    def get_updated_field(self):
+        return 'lastmodifytime'
+
+    def prepare_projectDesc(self, obj):
+        projectDesc = None
+        if obj.source_type == 0:
+            try:
+                if len(ProjectData.objects.filter(com_name__icontains=self.com_name)) >= 1:
+                   mongo_project = ProjectData.objects.filter(com_name__icontains=self.com_name).first()
+                   projectDesc = mongo_project.com_des
+            except Exception:
+                logexcption(msg='行动计划全库项目介绍提取失败')
+        return projectDesc
+
+    def index_queryset(self, using=None):
+        """返回要建立索引的数据查询集"""
+        return self.get_model().objects.filter(is_deleted=False)
+
 
 class ProjectBDCommentsIndex(indexes.SearchIndex, indexes.Indexable):
     """
@@ -23,8 +59,6 @@ class ProjectBDCommentsIndex(indexes.SearchIndex, indexes.Indexable):
     comments = indexes.CharField(model_attr='comments', null=True)
     projectBD = indexes.IntegerField(model_attr='projectBD_id', null=True)
     fileContent = indexes.CharField(null=True)
-    projectDesc = indexes.CharField(null=True)
-    comname = indexes.CharField(null=True)
     createuser = indexes.IntegerField(model_attr='createuser_id', null=True)
 
     def get_model(self):
@@ -60,23 +94,6 @@ class ProjectBDCommentsIndex(indexes.SearchIndex, indexes.Indexable):
             except Exception:
                 logexcption(msg='行动计划附件内容提取失败')
         return filecontent
-
-    def prepare_projectDesc(self, obj):
-        projectDesc = None
-        if obj.projectBD and obj.projectBD.source_type == 0:
-            try:
-                if len(ProjectData.objects.filter(com_name__icontains=self.com_name)) == 1:
-                   mongo_project = ProjectData.objects.filter(com_name__icontains=self.com_name).first()
-                   projectDesc = mongo_project.com_des
-            except Exception:
-                logexcption(msg='行动计划全库项目介绍提取失败')
-        return projectDesc
-
-    def prepare_comname(self, obj):
-        comname = None
-        if obj.projectBD:
-            comname = obj.projectBD.com_name
-        return comname
 
     def index_queryset(self, using=None):
         """返回要建立索引的数据查询集"""

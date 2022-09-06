@@ -1,4 +1,2 @@
 {{ object.comments }}
 {{ object.fileContent }}
-{{ object.projectDesc }}
-{{ object.comname }}
