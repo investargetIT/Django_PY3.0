@@ -479,9 +479,10 @@ class DataroomdirectoryorfileFilter(FilterSet):
     parent = RelationFilter(filterstr='parent', lookup_method='in')
     isFile = RelationFilter(filterstr='isFile', lookup_method='in')
     id = RelationFilter(filterstr='id', lookup_method='in')
+    createuser = RelationFilter(filterstr='createuser', lookup_method='in')
     class Meta:
         model = dataroomdirectoryorfile
-        fields = ('dataroom', 'parent', 'isFile', 'id')
+        fields = ('dataroom', 'parent', 'isFile', 'id', 'createuser')
 
 class DataroomdirectoryorfileView(viewsets.ModelViewSet):
     """

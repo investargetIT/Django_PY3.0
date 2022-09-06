@@ -352,6 +352,15 @@ class ProjectBDManagersView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
+class ProjectBDCommentsFilter(FilterSet):
+    id = RelationFilter(filterstr='id', lookup_method='in')
+    projectBD = RelationFilter(filterstr='projectBD', lookup_method='in')
+    createuser = RelationFilter(filterstr='createuser',lookup_method='in')
+
+    class Meta:
+        model = ProjectBDComments
+        fields = ('id', 'projectBD', 'createuser')
+
 class ProjectBDCommentsView(viewsets.ModelViewSet):
     """
     list:获取新项目BDcomments
@@ -360,7 +369,7 @@ class ProjectBDCommentsView(viewsets.ModelViewSet):
     """
     filter_backends = (filters.DjangoFilterBackend,)
     queryset = ProjectBDComments.objects.filter(is_deleted=False)
-    filter_fields = ('projectBD',)
+    filter_class = ProjectBDCommentsFilter
     serializer_class = ProjectBDCommentsCreateSerializer
 
     def get_queryset(self):
