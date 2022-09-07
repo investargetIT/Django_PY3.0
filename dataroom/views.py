@@ -92,7 +92,7 @@ class DataroomView(viewsets.ModelViewSet):
             elif request.user.has_perm('usersys.as_trader'):
                 queryset = queryset.filter(Q(proj__PM=request.user) | Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False)
                                            | Q(isCompanyFile=True, proj__indGroup=request.user.indGroup)
-                                           | Q(isCompanyFile=True, proj__indGroup__in=request.user.user_indgroups.filter(is_deleted=False).values_list('indGroup', flat=True))
+                                           | Q(isCompanyFile=True, proj__indGroup__in=request.user.user_indgroups.all().values_list('indGroup', flat=True))
                                            | Q(isCompanyFile=True, proj__indGroup__isnull=True))
             else:
                 queryset = queryset.filter(dataroom_users__in=request.user.user_datarooms.filter(), dataroom_users__is_deleted=False)
