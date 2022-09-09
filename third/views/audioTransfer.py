@@ -352,5 +352,5 @@ def getAudioFileTranslateTaskResult(trans_id):
         trans_ins = AudioTranslateTaskRecord.objects.get(is_deleted=False, id=trans_id)
         return trans_ins.onebest
     except Exception:
-        return None
+        return '未找到语音转换任务'
 
