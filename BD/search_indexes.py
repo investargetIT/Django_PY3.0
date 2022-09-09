@@ -36,8 +36,8 @@ class ProjectBDIndex(indexes.SearchIndex, indexes.Indexable):
         projectDesc = None
         if obj.source_type == 0:
             try:
-                if len(ProjectData.objects.filter(com_name__icontains=self.com_name)) >= 1:
-                   mongo_project = ProjectData.objects.filter(com_name__icontains=self.com_name).first()
+                if len(ProjectData.objects.filter(com_name__icontains=self.comname)) >= 1:
+                   mongo_project = ProjectData.objects.filter(com_name__icontains=self.comname).first()
                    projectDesc = mongo_project.com_des
             except Exception:
                 logexcption(msg='行动计划全库项目介绍提取失败')
