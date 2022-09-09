@@ -24,7 +24,7 @@ from third.serializer import AudioTranslateTaskRecordSerializer, AudioTranslateT
 from third.thirdconfig import xunfei_appid, xunfei_secret_key
 from utils.customClass import JSONResponse, InvestError
 from utils.util import SuccessResponse, InvestErrorResponse, catchexcption, ExceptionResponse, \
-    loginTokenIsAvailable
+    loginTokenIsAvailable, logexcption
 
 lfasr_host = 'http://raasr.xfyun.cn/api'
 
@@ -352,5 +352,6 @@ def getAudioFileTranslateTaskResult(trans_id):
         trans_ins = AudioTranslateTaskRecord.objects.get(is_deleted=False, id=trans_id)
         return trans_ins.onebest
     except Exception:
+        logexcption(msg='语音转换内容提取失败')
         return '未找到语音转换任务'
 
