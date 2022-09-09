@@ -87,6 +87,8 @@ class ProjectBDCommentsIndex(indexes.SearchIndex, indexes.Indexable):
                     elif type == '.txt':
                         with open(file_path, "r") as f:
                             text = f.read()
+                            if type(text) == 'str':
+                                text = str.encode(text)
                             type = chardet.detect(text)
                             filecontent = text.decode(type["encoding"], 'ignore')
                     elif type in ['.mp3', '.wav', '.flac', '.opus', '.m4a'] and obj.transid:
