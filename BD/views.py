@@ -1792,16 +1792,3 @@ def feishu_update_orgbd(org, proj, status_id, requsetuser_id, manager, comment, 
             ins.save()
     except Exception as err:
         logfeishuexcptiontofile('飞书机构看板导入失败: %s' % str(err))
-
-
-def updateProjectBDTimeToSaveEs():
-    try:
-        projbd_qs = ProjectBD.objects.filter(is_deleted=False)
-        projbd_qs.update(lastmodifytime=F('lastmodifytime') + datetime.timedelta(seconds=1))
-    except Exception:
-        logexcption(msg='触发更新项目BDes存储内容操作失败')
-    try:
-        projbdcom_qs = ProjectBDComments.objects.filter(is_deleted=False)
-        projbdcom_qs.update(lastmodifytime=F('lastmodifytime') + datetime.timedelta(seconds=1))
-    except Exception:
-        logexcption(msg='触发更新项目BD行动计划es存储内容操作失败')

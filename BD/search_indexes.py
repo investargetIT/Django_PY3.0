@@ -87,7 +87,7 @@ class ProjectBDCommentsIndex(indexes.SearchIndex, indexes.Indexable):
                     elif type == '.txt':
                         with open(file_path, "r") as f:
                             text = f.read()
-                            if type(text) == 'str':
+                            if isinstance(text, str):
                                 text = str.encode(text)
                             type = chardet.detect(text)
                             filecontent = text.decode(type["encoding"], 'ignore')
