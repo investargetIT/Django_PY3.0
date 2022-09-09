@@ -22,7 +22,7 @@ class ProjectBDIndex(indexes.SearchIndex, indexes.Indexable):
     id = indexes.IntegerField(model_attr='id')
     projectBD = indexes.IntegerField(model_attr='id', null=True)
     projectDesc = indexes.CharField(null=True)
-    comname = indexes.CharField(model_attr='com_name', null=True)
+    com_name = indexes.CharField(model_attr='com_name', null=True)
     createuser = indexes.IntegerField(model_attr='createuser_id', null=True)
 
     def get_model(self):
@@ -36,8 +36,8 @@ class ProjectBDIndex(indexes.SearchIndex, indexes.Indexable):
         projectDesc = None
         if obj.source_type == 0:
             try:
-                if len(ProjectData.objects.filter(com_name__icontains=self.comname)) >= 1:
-                   mongo_project = ProjectData.objects.filter(com_name__icontains=self.comname).first()
+                if len(ProjectData.objects.all().filter(**{'%s__%s' % ('com_name', 'icontains'): self.com_name})) >= 1:
+                   mongo_project = ProjectData.objects.filter(com_name__contains=self.com_name).first()
                    projectDesc = mongo_project.com_des
             except Exception:
                 logexcption(msg='行动计划全库项目介绍提取失败')

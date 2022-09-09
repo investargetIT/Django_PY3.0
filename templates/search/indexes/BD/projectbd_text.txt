@@ -1,2 +1,2 @@
 {{ object.projectDesc }}
-{{ object.comname }}
+{{ object.com_name }}

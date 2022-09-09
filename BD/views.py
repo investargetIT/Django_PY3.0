@@ -114,7 +114,7 @@ class ProjectBDView(viewsets.ModelViewSet):
                                         "should": [
                                             {"match_phrase": {"comments": search}},
                                             {"match_phrase": {"fileContent": search}},
-                                            {"match_phrase": {"comname": search}},
+                                            {"match_phrase": {"com_name": search}},
                                             {"match_phrase": {"projectDesc": search}}
                                         ]
                                     }
@@ -1705,8 +1705,13 @@ def downloadProjectBDCommentAttachments():
     attachment_qs = ProjectBDComments.objects.filter(is_deleted=False, key__isnull=False, projectBD__is_deleted=False)
     for attInstance in attachment_qs:
         attachmentPath = APILOG_PATH['projectBDCommentFilePath'] + attInstance.key
+        filename, type = os.path.splitext(attachmentPath)
         if not os.path.exists(attachmentPath):
             downloadFileToPath(key=attInstance.key, bucket=attInstance.bucket, path=attachmentPath)
+            attInstance.lastmodifytime = F('lastmodifytime') + datetime.timedelta(seconds=1)
+            attInstance.save()
+        elif type in ['.mp3', '.wav', '.flac', '.opus', '.m4a'] and attInstance.transid:
+            attInstance.lastmodifytime = F('lastmodifytime') + datetime.timedelta(seconds=1)
             attInstance.save()
 
 
