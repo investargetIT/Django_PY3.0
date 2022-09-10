@@ -1,4 +1,4 @@
 {{ object.projectDesc }}
 {{ object.com_name }}
-{{ object.comments }}
-{{ object.filecontents }}
+{% for comment in object.comments %} {{ comment }} {% endfor %}
+{% for filecontent in object.filecontents %} {{ filecontent }} {% endfor %}
