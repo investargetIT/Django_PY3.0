@@ -54,7 +54,7 @@ class ProjectBDIndex(indexes.SearchIndex, indexes.Indexable):
         for comment in comments:
             if comment.key:
                 filecontent = None
-                file_path = APILOG_PATH['projectBDCommentFilePath'] + obj.key
+                file_path = APILOG_PATH['projectBDCommentFilePath'] + comment.key
                 try:
                     if os.path.exists(file_path):
                         filename, type = os.path.splitext(file_path)
@@ -74,8 +74,8 @@ class ProjectBDIndex(indexes.SearchIndex, indexes.Indexable):
                                     text = str.encode(text)
                                 type = chardet.detect(text)
                                 filecontent = text.decode(type["encoding"], 'ignore')
-                        elif type in ['.mp3', '.wav', '.flac', '.opus', '.m4a'] and obj.transid:
-                            filecontent = getAudioFileTranslateTaskResult(obj.transid)
+                        elif type in ['.mp3', '.wav', '.flac', '.opus', '.m4a'] and comment.transid:
+                            filecontent = getAudioFileTranslateTaskResult(comment.transid)
                 except Exception:
                     logexcption(msg='行动计划附件内容提取失败')
                 else:
