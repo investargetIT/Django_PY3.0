@@ -112,10 +112,10 @@ class ProjectBDView(viewsets.ModelViewSet):
                                 {
                                     "bool": {
                                         "should": [
-                                            {"match": {"comments": search}},
-                                            {"match": {"fileContent": search}},
-                                            {"match": {"com_name": search}},
-                                            {"match": {"projectDesc": search}}
+                                            {"wildcard": {"comments": '*%s*' % search}},
+                                            {"wildcard": {"fileContent": '*%s*' % search}},
+                                            {"wildcard": {"com_name": '*%s*' % search}},
+                                            {"wildcard": {"projectDesc": '*%s*' % search}}
                                         ]
                                     }
                                 }
