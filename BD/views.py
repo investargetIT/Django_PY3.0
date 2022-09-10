@@ -113,7 +113,7 @@ class ProjectBDView(viewsets.ModelViewSet):
                                     "bool": {
                                         "should": [
                                             {"match_phrase": {"comments": search}},
-                                            {"match_phrase": {"fileContent": search}},
+                                            {"match_phrase": {"filecontents": search}},
                                             {"match_phrase": {"com_name": search}},
                                             {"match_phrase": {"projectDesc": search}}
                                         ]
@@ -122,12 +122,12 @@ class ProjectBDView(viewsets.ModelViewSet):
                             ]
                         }
                 },
-                    "_source": ["projectBD", "django_ct"]
+                    # "_source": ["projectBD", "django_ct"]
                 }
                 results = getEsScrollResult(search_body)
                 searchIds = set()
                 for source in results:
-                    if source['_source'].get('projectBD'):
+                    if source['_source'].get('projectBD') == 512:
                         searchIds.add(source['_source']['projectBD'])
                 queryset = queryset.filter(id__in=searchIds).distinct()
             sortfield = request.GET.get('sort', 'lastmodifytime')
