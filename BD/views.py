@@ -127,7 +127,7 @@ class ProjectBDView(viewsets.ModelViewSet):
                 results = getEsScrollResult(search_body)
                 searchIds = set()
                 for source in results:
-                    if source['_source'].get('projectBD') == 512:
+                    if source['_source'].get('projectBD'):
                         searchIds.add(source['_source']['projectBD'])
                 queryset = queryset.filter(id__in=searchIds).distinct()
             sortfield = request.GET.get('sort', 'lastmodifytime')
