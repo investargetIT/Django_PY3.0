@@ -1,2 +1,4 @@
 {{ object.projectDesc }}
 {{ object.com_name }}
+{{ object.comments }}
+{{ object.filecontents }}

@@ -106,7 +106,7 @@ class ProjectBDView(viewsets.ModelViewSet):
                             "must": [
                                 {
                                     "bool": {
-                                        "must": {"terms": {"django_ct": ["bd.projectbd", "bd.projectbdcomments"]}}
+                                        "must": {"terms": {"django_ct": ["bd.projectbd"]}}
                                     },
                                 },
                                 {
