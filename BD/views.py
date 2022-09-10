@@ -112,10 +112,10 @@ class ProjectBDView(viewsets.ModelViewSet):
                                 {
                                     "bool": {
                                         "should": [
-                                            {"wildcard": {"comments": '*%s*' % search}},
-                                            {"wildcard": {"fileContent": '*%s*' % search}},
-                                            {"wildcard": {"com_name": '*%s*' % search}},
-                                            {"wildcard": {"projectDesc": '*%s*' % search}}
+                                            {"match_phrase": {"comments": search}},
+                                            {"match_phrase": {"fileContent": search}},
+                                            {"match_phrase": {"com_name": search}},
+                                            {"match_phrase": {"projectDesc": search}}
                                         ]
                                     }
                                 }
@@ -242,6 +242,7 @@ class ProjectBDView(viewsets.ModelViewSet):
             lang = request.GET.get('lang')
             instance = self.get_object()
             data.pop('datasource', None)
+            data['lastmodifytime'] = data['lastmodifytime'] if data.get('lastmodifytime') else datetime.datetime.now()
             if request.user.has_perm('BD.manageProjectBD') or is_projBDManager(request.user.id, instance):
                 pass
             elif request.user == instance.createuser:
@@ -444,6 +445,7 @@ class ProjectBDCommentsView(viewsets.ModelViewSet):
                 raise InvestError(2009, msg='修改项目BD备注信息失败')
             lang = request.GET.get('lang')
             data = request.data
+            data['lastmodifytime'] = data['lastmodifytime'] if data.get('lastmodifytime') else datetime.datetime.now()
             with transaction.atomic():
                 commentinstance = ProjectBDCommentsCreateSerializer(instance, data=data)
                 if commentinstance.is_valid():
