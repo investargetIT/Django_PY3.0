@@ -1113,6 +1113,15 @@ class UserEventView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
+class UserRemarkFilter(FilterSet):
+    id = RelationFilter(filterstr='id', lookup_method='in')
+    user = RelationFilter(filterstr='user', lookup_method='in')
+    createuser = RelationFilter(filterstr='createuser',lookup_method='in')
+
+    class Meta:
+        model = UserRemarks
+        fields = ('id', 'user', 'createuser')
+
 class UserRemarkView(viewsets.ModelViewSet):
     """
             list:用户备注列表
@@ -1123,7 +1132,7 @@ class UserRemarkView(viewsets.ModelViewSet):
             """
     filter_backends = (filters.DjangoFilterBackend,)
     queryset = UserRemarks.objects.all().filter(is_deleted=False)
-    filter_fields = ('user',)
+    filter_class = UserRemarkFilter
     serializer_class = UserRemarkSerializer
 
     def get_queryset(self):
