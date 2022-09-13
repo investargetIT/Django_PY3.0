@@ -481,9 +481,14 @@ class DataroomdirectoryorfileFilter(FilterSet):
     isFile = RelationFilter(filterstr='isFile', lookup_method='in')
     id = RelationFilter(filterstr='id', lookup_method='in')
     createuser = RelationFilter(filterstr='createuser', lookup_method='in')
+    stime = RelationFilter(filterstr='createdtime', lookup_method='gte')
+    etime = RelationFilter(filterstr='createdtime', lookup_method='lt')
+    stimeM = RelationFilter(filterstr='lastmodifytime', lookup_method='gte')
+    etimeM = RelationFilter(filterstr='lastmodifytime', lookup_method='lt')
+    
     class Meta:
         model = dataroomdirectoryorfile
-        fields = ('dataroom', 'parent', 'isFile', 'id', 'createuser')
+        fields = ('dataroom', 'parent', 'isFile', 'id', 'createuser', 'stime', 'etime', 'stimeM', 'etimeM')
 
 class DataroomdirectoryorfileView(viewsets.ModelViewSet):
     """
