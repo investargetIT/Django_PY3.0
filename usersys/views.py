@@ -1161,7 +1161,7 @@ class UserRemarkView(viewsets.ModelViewSet):
             user_id = request.GET.get('user', None)
             if request.user.has_perm('usersys.admin_manageuser'):
                 pass
-            elif user_id and is_userTrader(request.user, user_id):
+            elif user_id and request.user.has_perm('usersys.as_trader'):
                 pass
             else:
                 queryset = queryset.filter(createuser_id=request.user.id)
