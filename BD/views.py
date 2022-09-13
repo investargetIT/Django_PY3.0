@@ -357,10 +357,14 @@ class ProjectBDCommentsFilter(FilterSet):
     id = RelationFilter(filterstr='id', lookup_method='in')
     projectBD = RelationFilter(filterstr='projectBD', lookup_method='in')
     createuser = RelationFilter(filterstr='createuser',lookup_method='in')
+    stime = RelationFilter(filterstr='createdtime', lookup_method='gte')
+    etime = RelationFilter(filterstr='createdtime', lookup_method='lt')
+    stimeM = RelationFilter(filterstr='lastmodifytime', lookup_method='gte')
+    etimeM = RelationFilter(filterstr='lastmodifytime', lookup_method='lt')
 
     class Meta:
         model = ProjectBDComments
-        fields = ('id', 'projectBD', 'createuser')
+        fields = ('id', 'projectBD', 'createuser', 'stime', 'etime', 'stimeM', 'etimeM')
 
 class ProjectBDCommentsView(viewsets.ModelViewSet):
     """
