@@ -92,6 +92,7 @@ class DataroomView(viewsets.ModelViewSet):
             elif request.user.has_perm('usersys.as_trader'):
                 queryset = queryset.filter(Q(proj__PM=request.user) | Q(proj__proj_traders__user=request.user, proj__proj_traders__is_deleted=False)
                                            | Q(isCompanyFile=True, proj__indGroup=request.user.indGroup)
+                                           | Q(isCompanyFile=True, proj__indGroup__in=request.user.user_indgroups.all().values_list('indGroup', flat=True))
                                            | Q(isCompanyFile=True, proj__indGroup__isnull=True))
             else:
                 queryset = queryset.filter(dataroom_users__in=request.user.user_datarooms.filter(), dataroom_users__is_deleted=False)
@@ -479,9 +480,10 @@ class DataroomdirectoryorfileFilter(FilterSet):
     parent = RelationFilter(filterstr='parent', lookup_method='in')
     isFile = RelationFilter(filterstr='isFile', lookup_method='in')
     id = RelationFilter(filterstr='id', lookup_method='in')
+    createuser = RelationFilter(filterstr='createuser', lookup_method='in')
     class Meta:
         model = dataroomdirectoryorfile
-        fields = ('dataroom', 'parent', 'isFile', 'id')
+        fields = ('dataroom', 'parent', 'isFile', 'id', 'createuser')
 
 class DataroomdirectoryorfileView(viewsets.ModelViewSet):
     """
@@ -523,7 +525,8 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
             if request.user.has_perm('dataroom.admin_managedataroom') or is_dataroomTrader(request.user, dataroominstance):
                 pass
             elif dataroominstance.isCompanyFile and request.user.has_perm('dataroom.get_companydataroom'):
-                if dataroominstance.proj.indGroup and  dataroominstance.proj.indGroup != request.user.indGroup:
+                indGroup_ins = dataroominstance.proj.indGroup
+                if indGroup_ins and indGroup_ins != request.user.indGroup and not request.user.user_indgroups.filter(indGroup=indGroup_ins).exists():
                     raise InvestError(2009, msg='获取该dataroom文件失败')
             elif is_dataroomInvestor(request.user, dataroominstance.id):
                 user_dataroomInstance = dataroom_User_file.objects.filter(user=request.user, dataroom__id=dataroomid, is_deleted=False).first()

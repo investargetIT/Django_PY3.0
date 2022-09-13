@@ -521,13 +521,13 @@ class UserView(viewsets.ModelViewSet):
             with transaction.atomic():
                 for userid in useridlist:
                     if userid == request.user.id:
-                        raise InvestError(20071, msg='用户信息删除失败', detail='不能删除自己')
+                        raise InvestError(20071, msg='删除失败, 不能删除自己', detail='不能删除自己')
                     instance = self.get_object(userid)
                     if request.user.has_perm('usersys.admin_manageuser') or is_userTrader(request.user, instance.id):
                         pass
                     else:
-                        raise InvestError(code=2009, msg='用户信息删除失败')
-                    for link in ['investor_relations', 'trader_relations', 'usersupport_projs', 'usercreate_OKR', 'usercreate_OKRResult',
+                        raise InvestError(code=2009, msg='删除失败')
+                    for link in ['investor_relations', 'trader_relations', 'usersupport_projs',
                                      'manager_beschedule', 'user_webexUser', 'user_dataroomTemp',
                                      'user_usertags', 'user_remarks', 'userreceive_msgs', 'user_workreport',
                                      'usersend_msgs', 'user_datarooms', 'user_userAttachments', 'user_userEvents',
@@ -1114,6 +1114,15 @@ class UserEventView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
+class UserRemarkFilter(FilterSet):
+    id = RelationFilter(filterstr='id', lookup_method='in')
+    user = RelationFilter(filterstr='user', lookup_method='in')
+    createuser = RelationFilter(filterstr='createuser',lookup_method='in')
+
+    class Meta:
+        model = UserRemarks
+        fields = ('id', 'user', 'createuser')
+
 class UserRemarkView(viewsets.ModelViewSet):
     """
             list:用户备注列表
@@ -1124,7 +1133,7 @@ class UserRemarkView(viewsets.ModelViewSet):
             """
     filter_backends = (filters.DjangoFilterBackend,)
     queryset = UserRemarks.objects.all().filter(is_deleted=False)
-    filter_fields = ('user',)
+    filter_class = UserRemarkFilter
     serializer_class = UserRemarkSerializer
 
     def get_queryset(self):

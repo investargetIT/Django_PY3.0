@@ -104,6 +104,7 @@ class ProjectBDComments(MyModel):
     key = models.CharField(max_length=128, blank=True, null=True, help_text='文件路径')
     bucket = models.CharField(max_length=128, blank=True, null=True, help_text='文件所在空间')
     filename =  models.CharField(max_length=128, blank=True, null=True, help_text='文件名')
+    filetype = models.CharField(max_length=32, blank=True, null=True)
     transid = models.TextField('third.AudioTranslateTaskRecord', blank=True, null=True, help_text='语音转写任务id')
     projectBD = MyForeignKey(ProjectBD, blank=True, null=True, help_text='bd项目', related_name='ProjectBD_comments')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_ProjectBDComments')
@@ -313,57 +314,3 @@ class WorkReportProjInfo(MyModel):
             if WorkReportProjInfo.objects.exclude(pk=self.pk).filter(Q(is_deleted=False, report=self.report), filters).exists():
                 raise InvestError(20071, msg='该项目已经在报表中了')
         return super(WorkReportProjInfo, self).save(*args, **kwargs)
-
-
-
-class OKR(MyModel):
-    year = models.PositiveSmallIntegerField(blank=True, null=True, help_text='OKR目标年度')
-    quarter = models.PositiveSmallIntegerField(blank=True, null=True, help_text='OKR目标季度')
-    okrType = models.BooleanField(blank=True, default=False, help_text='0（季度）/1（年度）')
-    target = models.TextField(blank=True, null=True, help_text='OKR目标')
-    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_OKR')
-    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_OKR')
-    datasource = MyForeignKey(DataSource, blank=True, default=1, help_text='数据源')
-    class Meta:
-        db_table = 'OKR'
-
-    def save(self, *args, **kwargs):
-        if not self.is_deleted:
-            if self.okrType:
-                self.quarter = None
-                filtertype = False
-            else:
-                filtertype = True
-                if not self.quarter:
-                    raise InvestError(20072, msg='季度日期不能为空')
-                else:
-                    if self.quarter > 4:
-                        raise InvestError(20071, msg='季度日期不合法')
-            if self.year and self.year > 2100:
-                raise InvestError(20071, msg='年度日期不合法')
-            if not self.target:
-                raise InvestError(20072, msg='目标不能为空')
-            if OKR.objects.exclude(pk=self.pk).filter(is_deleted=False, year=self.year, okrType=filtertype, createuser=self.createuser).exists():
-                raise InvestError(20071, msg='该年度已存在季度/年度OKR')
-        self.datasource = self.createuser.datasource
-        return super(OKR, self).save(*args, **kwargs)
-
-
-class OKRResult(MyModel):
-    okr = MyForeignKey(OKR, blank=True, null=True, related_name='result_OKR')
-    krs = models.TextField(blank=True, null=True, help_text='关键结果（KRs)')
-    confidence = models.SmallIntegerField(blank=True, null=True, help_text='信心指数*100')
-    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_OKRResult')
-    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_OKRResult')
-    datasource = MyForeignKey(DataSource, help_text='数据源', blank=True, default=1)
-    class Meta:
-        db_table = 'OKRResult'
-
-    def save(self, *args, **kwargs):
-        if not self.is_deleted:
-            if not self.okr or self.okr.is_deleted:
-                raise InvestError(20072, msg='okr字段 不能为空')
-            if OKRResult.objects.exclude(pk=self.pk).filter(is_deleted=False, okr=self.okr, krs=self.krs).exists():
-                raise InvestError(20071, msg='该OKR已存在相同的关键结果')
-        self.datasource = self.createuser.datasource
-        return super(OKRResult, self).save(*args, **kwargs)
