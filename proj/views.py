@@ -24,11 +24,11 @@ from invest.settings import PROJECTPDF_URLPATH, APILOG_PATH
 from proj.models import project, finance, projectTags, projectIndustries, projectTransactionType, \
     ShareToken, attachment, projServices, projTraders, projectDiDiRecord, projcomments
 from proj.serializer import ProjSerializer, FinanceSerializer, ProjCreatSerializer, \
-    ProjCommonSerializer, FinanceChangeSerializer, FinanceCreateSerializer, ProjAttachmentSerializer, \
-    ProjListSerializer_admin, \
-    ProjListSerializer_user, ProjDetailSerializer_withoutsecretinfo, ProjAttachmentCreateSerializer, \
+    FinanceChangeSerializer, FinanceCreateSerializer, ProjAttachmentSerializer, \
+    ProjDetailSerializer_withoutsecretinfo, ProjAttachmentCreateSerializer, \
     ProjIndustryCreateSerializer, ProjDetailSerializer_all, ProjTradersCreateSerializer, ProjTradersSerializer, \
-    DiDiRecordSerializer, TaxiRecordCreateSerializer, ProjCommentsSerializer, ProjCommentsCreateSerializer
+    DiDiRecordSerializer, TaxiRecordCreateSerializer, ProjCommentsSerializer, ProjCommentsCreateSerializer, \
+    ProjListSerializer
 from sourcetype.models import Tag, TransactionType, DataSource, Service
 from third.views.qiniufile import deleteqiniufile, qiniuuploadfile
 from utils.logicJudge import is_projTrader, is_projdataroomInvestor, is_projOrgBDManager, is_companyDataroomProj
@@ -152,22 +152,18 @@ class ProjectView(viewsets.ModelViewSet):
                 queryset = queryset.filter(Q(proj_traders__user__in=userlist, proj_traders__is_deleted=False) | Q(PM__in=userlist))
             if request.user.is_anonymous:
                 queryset = queryset.filter(isHidden=False,projstatus_id__in=[4,6,7,8])
-                serializerclass = ProjCommonSerializer
             else:
                 if request.user.has_perm('proj.admin_manageproj'):
                     queryset = queryset
-                    serializerclass = ProjListSerializer_admin
                 elif request.user.has_perm('usersys.as_trader') and request.user.userstatus_id == 2:
                     queryset = queryset.filter(Q(createuser=request.user) | Q(PM=request.user) | Q(isHidden=False) | Q(proj_traders__user=request.user, proj_traders__is_deleted=False) | Q(supportUser=request.user) | Q(isHidden=True, proj_orgBDs__manager=request.user, proj_orgBDs__is_deleted=False))
-                    serializerclass = ProjListSerializer_admin
                 else:
                     queryset = queryset.filter(Q(isHidden=False,projstatus_id__in=[4,6,7,8]) | Q(isHidden=True, proj_datarooms__is_deleted=False, proj_datarooms__dataroom_users__user=request.user, proj_datarooms__dataroom_users__is_deleted=False))
-                    serializerclass = ProjListSerializer_user
-            queryset = queryset.distinct().select_related("PM", "createuser", "supportUser", "projstatus")
+            queryset = queryset.distinct()
             queryset = mySortQuery(queryset, sortfield, desc)
             count = queryset.count()
             queryset = queryset[int(skip_count):int(max_size)+int(skip_count)]
-            instancedata = serializerclass(queryset, many=True).data
+            instancedata = ProjListSerializer(queryset, many=True).data
             return JSONResponse(SuccessResponse({'count': count, 'data': returnListChangeToLanguage(instancedata, lang)}))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))

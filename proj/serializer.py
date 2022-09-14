@@ -28,6 +28,12 @@ class ProjTradersSerializer(serializers.ModelSerializer):
         model = projTraders
         fields = '__all__'
 
+class ProjTradersListSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = projTraders
+        exclude = ('datasource', 'is_deleted', 'deletedtime', 'deleteduser')
+
 
 class ProjIndustrySerializer(serializers.ModelSerializer):
     nameC = serializers.SerializerMethodField()
@@ -54,6 +60,18 @@ class ProjIndustrySerializer(serializers.ModelSerializer):
             return obj.industry.industryE
         return None
 
+
+class ProjIndustryListSerializer(serializers.ModelSerializer):
+    url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = projectIndustries
+        fields = ('id', 'industry', 'bucket', 'key', 'url')
+
+    def get_url(self, obj):
+        if obj.key:
+            return  getUrlWithBucketAndKey('image', obj.key)
+        return None
 
 class ProjIndustryCreateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -177,84 +195,24 @@ class ProjCreatSerializer(serializers.ModelSerializer):
 
 
 # list
-class ProjListSerializer_admin(serializers.ModelSerializer):
-    country = countrySerializer()
-    tags = serializers.SerializerMethodField()
+class ProjListSerializer(serializers.ModelSerializer):
     industries = serializers.SerializerMethodField()
-    transactionType = serializers.SerializerMethodField()
-    PM = UserNameSerializer()
-    createuser = UserNameSerializer()
     projTraders = serializers.SerializerMethodField()
-    currency = currencyTypeSerializer()
-    projstatus = ProjectStatusSerializer()
 
     class Meta:
         model = project
-        fields = ('id','industries','projtitleC','projtitleE', 'currency','transactionType','tags','financeAmount','financeAmount_USD','country','projstatus','isHidden','publishDate','createdtime','PM','createuser','projTraders','projectBD')
-
-
-    def get_tags(self, obj):
-        qs = obj.tags.filter(tag_projects__is_deleted=False)
-        if qs.exists():
-            return tagSerializer(qs,many=True).data
-        return None
+        fields = ('id','industries','projtitleC','projtitleE', 'currency','financeAmount','financeAmount_USD','country','projstatus','isHidden','publishDate','createdtime','PM','createuser','projTraders','projectBD')
 
     def get_industries(self, obj):
         qs = obj.project_industries.filter(is_deleted=False)
         if qs.exists():
-            return ProjIndustrySerializer(qs,many=True).data
-        return None
-
-    def get_transactionType(self, obj):
-        qs = obj.transactionType.filter(transactionType_projects__is_deleted=False)
-        if qs.exists():
-            return transactionTypeSerializer(qs,many=True).data
+            return ProjIndustryListSerializer(qs,many=True).data
         return None
 
     def get_projTraders(self, obj):
         qs = obj.proj_traders.filter(is_deleted=False, user__isnull=False)
         if qs.exists():
-            return ProjTradersSerializer(qs, many=True).data
-        return None
-
-
-class ProjListSerializer_user(serializers.ModelSerializer):
-    tags = serializers.SerializerMethodField()
-    industries = serializers.SerializerMethodField()
-    country = countrySerializer()
-    transactionType = serializers.SerializerMethodField()
-    PM = UserNameSerializer()
-    createuser = UserNameSerializer()
-    projTraders = serializers.SerializerMethodField()
-    currency = currencyTypeSerializer()
-    projstatus = ProjectStatusSerializer()
-
-    class Meta:
-        model = project
-        fields = ('id','industries','projtitleC','projtitleE','tags', 'currency', 'transactionType','financeAmount','financeAmount_USD','country','projstatus','publishDate','PM','createuser','projTraders','projectBD')
-
-    def get_tags(self, obj):
-        qs = obj.tags.filter(tag_projects__is_deleted=False)
-        if qs.exists():
-            return tagSerializer(qs,many=True).data
-        return None
-
-    def get_industries(self, obj):
-        qs = obj.project_industries.filter(is_deleted=False)
-        if qs.exists():
-            return ProjIndustrySerializer(qs,many=True).data
-        return None
-
-    def get_transactionType(self, obj):
-        qs = obj.transactionType.filter(transactionType_projects__is_deleted=False)
-        if qs.exists():
-            return transactionTypeSerializer(qs,many=True).data
-        return None
-
-    def get_projTraders(self, obj):
-        qs = obj.proj_traders.filter(is_deleted=False, user__isnull=False)
-        if qs.exists():
-            return ProjTradersSerializer(qs, many=True).data
+            return ProjTradersListSerializer(qs, many=True).data
         return None
 
 #detail

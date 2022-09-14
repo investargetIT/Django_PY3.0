@@ -142,7 +142,7 @@ class ProjectBDView(viewsets.ModelViewSet):
             except EmptyPage:
                 return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
             indGroup_id = request.user.indGroup.id if request.user.indGroup else None
-            serializer = ProjectBDSerializer(queryset, many=True, context={'user_id': request.user.id, 'manage': request.user.has_perm('BD.manageProjectBD'), 'indGroup_id':indGroup_id})
+            serializer = ProjectBDListSerializer(queryset, many=True, context={'user_id': request.user.id, 'manage': request.user.has_perm('BD.manageProjectBD'), 'indGroup_id':indGroup_id})
             return JSONResponse(SuccessResponse({'count': count, 'data': returnListChangeToLanguage(serializer.data, lang)}))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
