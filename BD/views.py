@@ -13,10 +13,10 @@ from BD.models import ProjectBD, ProjectBDComments, OrgBDComments, OrgBD, OrgBDB
     ProjectBDManagers, WorkReport, WorkReportProjInfo, WorkReportMarketMsg
 from BD.serializers import ProjectBDSerializer, ProjectBDCreateSerializer, ProjectBDCommentsCreateSerializer, \
     ProjectBDCommentsSerializer, OrgBDCommentsSerializer, OrgBDCommentsCreateSerializer, OrgBDCreateSerializer, \
-    OrgBDSerializer,  OrgBDBlackSerializer, OrgBDBlackCreateSerializer, \
+    OrgBDSerializer, OrgBDBlackSerializer, OrgBDBlackCreateSerializer, \
     ProjectBDManagersCreateSerializer, WorkReportCreateSerializer, WorkReportSerializer, \
     WorkReportProjInfoCreateSerializer, WorkReportProjInfoSerializer, orgBDProjSerializer, \
-    WorkReportMarketMsgCreateSerializer, WorkReportMarketMsgSerializer
+    WorkReportMarketMsgCreateSerializer, WorkReportMarketMsgSerializer, ProjectBDListSerializer
 from invest.settings import cli_domain, APILOG_PATH
 from msg.views import deleteMessage
 from org.models import organization
@@ -142,7 +142,7 @@ class ProjectBDView(viewsets.ModelViewSet):
             except EmptyPage:
                 return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
             indGroup_id = request.user.indGroup.id if request.user.indGroup else None
-            serializer = ProjectBDSerializer(queryset, many=True, context={'user_id': request.user.id, 'manage': request.user.has_perm('BD.manageProjectBD'), 'indGroup_id':indGroup_id})
+            serializer = ProjectBDListSerializer(queryset, many=True, context={'user_id': request.user.id, 'manage': request.user.has_perm('BD.manageProjectBD'), 'indGroup_id':indGroup_id})
             return JSONResponse(SuccessResponse({'count': count, 'data': returnListChangeToLanguage(serializer.data, lang)}))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))

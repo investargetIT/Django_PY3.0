@@ -12,7 +12,7 @@ from third.models import QiNiuFileUploadRecord
 from third.serializer import QiNiuFileUploadRecordSerializer
 from third.views.qiniufile import getUrlWithBucketAndKey
 from usersys.serializer import UserCommenSerializer, UserRemarkSimpleSerializer, UserAttachmentSerializer, \
-    UserSimpleSerializer
+    UserSimpleSerializer, UserNameSerializer
 from utils.logicJudge import is_projBDManager, is_userInvestor
 
 
@@ -56,7 +56,7 @@ class ProjectBDManagersCreateSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class ProjectBDManagersSerializer(serializers.ModelSerializer):
-    manager = UserCommenSerializer()
+    manager = UserNameSerializer()
     class Meta:
         model = ProjectBDManagers
         exclude = ('deleteduser', 'deletedtime', 'datasource', 'is_deleted')
@@ -96,6 +96,19 @@ class ProjectBDSerializer(serializers.ModelSerializer):
                 return ProjectBDCommentsSerializer(qs, many=True).data
         return None
 
+class ProjectBDListSerializer(serializers.ModelSerializer):
+    manager = serializers.SerializerMethodField()
+    contractors = UserNameSerializer()
+
+    class Meta:
+        model = ProjectBD
+        exclude = ('deleteduser', 'deletedtime', 'datasource', 'is_deleted')
+
+    def get_manager(self, obj):
+        qs = obj.ProjectBD_managers.filter(is_deleted=False)
+        if qs.exists():
+            return ProjectBDManagersSerializer(qs, many=True).data
+        return None
 
 class OrgBDCommentsCreateSerializer(serializers.ModelSerializer):
     class Meta:
