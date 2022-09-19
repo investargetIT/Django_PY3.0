@@ -201,7 +201,7 @@ class ProjListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = project
-        fields = ('id','industries','projtitleC','projtitleE', 'currency','financeAmount','financeAmount_USD','country','projstatus','isHidden','publishDate','createdtime','PM','createuser','projTraders','projectBD')
+        fields = ('id','industries','projtitleC','projtitleE', 'realname', 'currency','financeAmount','financeAmount_USD','country','projstatus','isHidden','publishDate','createdtime','PM','createuser','projTraders','projectBD')
 
     def get_industries(self, obj):
         qs = obj.project_industries.filter(is_deleted=False)
