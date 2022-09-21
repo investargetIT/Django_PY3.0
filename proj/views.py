@@ -78,7 +78,7 @@ class ProjectView(viewsets.ModelViewSet):
     filter_backends = (filters.SearchFilter,filters.DjangoFilterBackend,)
     queryset = project.objects.all().filter(is_deleted=False)
     filter_class = ProjectFilter
-    search_fields = ('projtitleC', 'projtitleE',)
+    search_fields = ('projtitleC', 'projtitleE', 'realname')
     serializer_class = ProjSerializer
     redis_key = 'project'
     Model = project
