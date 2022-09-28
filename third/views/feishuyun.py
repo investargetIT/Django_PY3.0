@@ -165,9 +165,7 @@ def getApprovalTasks(user_id, user_id_type=None, page_size=None, page_token=None
         'task_start_time_from': task_start_time_from,
         'task_start_time_to': task_start_time_to
     }))
-    res = json.loads(r.content)
-    print(res)
-    return res
+    return r.json()
 
 # 获取单个审批实例详情
 def getApprovalInstance(instance_id):
@@ -178,9 +176,7 @@ def getApprovalInstance(instance_id):
     url = 'https://open.feishu.cn/open-apis/approval/v4/instances/{}'.format(instance_id)
     header = {"Authorization": "Bearer " + str(get_tenant_access_token())}
     r = requests.get(url, headers=header)
-    res = json.loads(r.content)
-    print(res)
-    return res
+    return r.json()
 
 
 # 审批任务同意
@@ -206,8 +202,7 @@ def approvalstask_approve(user_id_type=None, approval_code=None, instance_code=N
         'form': form
     }
     r = requests.post(url, headers=header, data=json.dumps(approved_data))
-    res = json.loads(r.content)
-    return res
+    return r.json()
 
 # 审批任务拒绝
 def approvalstask_reject(user_id_type=None, approval_code=None, instance_code=None, user_id=None, task_id=None, comment=None):
@@ -230,8 +225,7 @@ def approvalstask_reject(user_id_type=None, approval_code=None, instance_code=No
         'comment': comment
     }
     r = requests.post(url, headers=header, data=json.dumps(approved_data))
-    res = json.loads(r.content)
-    return res
+    return r.json()
 
 # 审批任务转交
 def approvalstask_transfer(user_id_type=None, approval_code=None, instance_code=None, user_id=None, task_id=None, comment=None, transfer_user_id=None):
@@ -257,8 +251,7 @@ def approvalstask_transfer(user_id_type=None, approval_code=None, instance_code=
         'transfer_user_id': transfer_user_id
     }
     r = requests.post(url, headers=header, data=json.dumps(approved_data))
-    res = json.loads(r.content)
-    return res
+    return r.json()
 
 # 审批任务退回
 def approvalstask_specified_rollback(user_id_type=None, user_id=None, task_id=None, reason=None, task_def_key_list=None):
@@ -279,8 +272,7 @@ def approvalstask_specified_rollback(user_id_type=None, user_id=None, task_id=No
         'task_def_key_list': task_def_key_list
     }
     r = requests.post(url, headers=header, data=json.dumps(approved_data))
-    res = json.loads(r.content)
-    return res
+    return r.json()
 
 # 审批任务加签
 def approvalstask_add_sign(user_id_type=None, approval_code=None, instance_code=None, user_id=None, task_id=None, comment=None, add_sign_user_ids=None, add_sign_type=None, approval_method=None):
@@ -308,8 +300,7 @@ def approvalstask_add_sign(user_id_type=None, approval_code=None, instance_code=
         'approval_method': approval_method,
     }
     r = requests.post(url, headers=header, data=json.dumps(approved_data))
-    res = json.loads(r.content)
-    return res
+    return r.json()
 
 
 # 审批任务重新提交
@@ -337,8 +328,7 @@ def approvalstask_resubmit(user_id_type=None, approval_code=None, instance_code=
         'form': form
     }
     r = requests.post(url, headers=header, data=json.dumps(approved_data))
-    res = json.loads(r.content)
-    return res
+    return r.json()
 
 
 @api_view(['POST'])
