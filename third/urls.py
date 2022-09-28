@@ -39,5 +39,7 @@ urlpatterns = [
     url(r'^feishu/refreshtoken/$', feishuyun.refresh_access_token, name='feishu_refresh_access_token', ),
     url(r'^feishu/useridentity/$', feishuyun.get_login_user_identity, name='feishu_get_login_user_identity', ),
     url(r'^feishu/jsticket/$', feishuyun.get_jsapi_ticket, name='feishu_get_jsapi_ticket', ),
-    url(r'^feishu/test/$', feishuyun.test, name='feishu_get_jsapi_ticket', ),
+    url(r'^feishu/approval/$', feishuyun.request_GetApprovals, name='request_GetApprovals', ),
+    url(r'^feishu/approval/instance/$', feishuyun.request_GetApprovalInstance, name='request_GetApprovalInstance', ),
+    url(r'^feishu/approval/task/$', feishuyun.request_handleApprovalsTask, name='request_handleApprovalsTask', ),
 ]

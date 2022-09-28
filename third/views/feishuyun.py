@@ -144,6 +144,266 @@ def get_jsapi_ticket(request):
         catchexcption(request)
         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
+# 审批任务列表查询
+def getApprovalTasks(user_id, user_id_type=None, page_size=None, page_token=None, approval_code=None, instance_code=None, task_status=None, task_start_time_from=None, task_start_time_to=None):
+    '''
+        查询时间跨度不得大于30天，开始和结束时间必须都设置，或者都不设置
+    :return:
+    '''
+    url = 'https://open.feishu.cn/open-apis/approval/v4/tasks/search'
+    params = {
+        'user_id_type' : user_id_type,
+        'page_size': page_size,
+        'page_token': page_token
+    }
+    header = {"Authorization": "Bearer " + str(get_tenant_access_token())}
+    r = requests.post(url, headers=header, params=params, data=json.dumps({
+        'user_id': user_id,
+        'approval_code': approval_code,
+        'instance_code': instance_code,
+        'task_status': task_status,
+        'task_start_time_from': task_start_time_from,
+        'task_start_time_to': task_start_time_to
+    }))
+    res = json.loads(r.content)
+    print(res)
+    return res
+
+# 获取单个审批实例详情
+def getApprovalInstance(instance_id):
+    '''
+    :param instance_id: instance_id  例如：3E18717B-B803-4518-8C9D-F0850CD9671A
+    :return:
+    '''
+    url = 'https://open.feishu.cn/open-apis/approval/v4/instances/{}'.format(instance_id)
+    header = {"Authorization": "Bearer " + str(get_tenant_access_token())}
+    r = requests.get(url, headers=header)
+    res = json.loads(r.content)
+    print(res)
+    return res
+
+
+# 审批任务同意
+def approvalstask_approve(user_id_type=None, approval_code=None, instance_code=None, user_id=None, task_id=None, comment=None, form=None):
+    '''
+   :param user_id_type: id类型 限定请求体中用户的id类型 例如：union_id, open_id, user_id
+    :param approval_code: 审批定义id 例如：'BB51CE3E-C37D-4157-9411-46C6F2FC0526'
+    :param instance_code: 审批实例id 例如：'0D74C973-48DB-421A-94F9-A38BF0A3092C',
+    :param user_id: 操作用户id 例如： 'ou_307a66d205a6ff8ab6d88ae73520f454',
+    :param task_id: 审批任务id 例如：'7148418136075665436',
+    :param comment: 意见 例如：'第一条审批测试审核同意
+    :param form: json 数组，控件值  示例值："[{"id":"111", "type": "input", "value":"test"}]"
+    :return:
+    '''
+    url = 'https://open.feishu.cn/open-apis/approval/v4/tasks/approve?user_id_type={}'.format(user_id_type)
+    header = {"Authorization": "Bearer " + str(get_tenant_access_token())}
+    approved_data = {
+        'approval_code': approval_code,
+        'instance_code': instance_code,
+        'user_id': user_id,
+        'task_id': task_id,
+        'comment': comment,
+        'form': form
+    }
+    r = requests.post(url, headers=header, data=json.dumps(approved_data))
+    res = json.loads(r.content)
+    return res
+
+# 审批任务拒绝
+def approvalstask_reject(user_id_type=None, approval_code=None, instance_code=None, user_id=None, task_id=None, comment=None):
+    '''
+    :param user_id_type: id类型 限定请求体中用户的id类型 例如：union_id, open_id, user_id
+    :param approval_code: 审批定义id 例如：'BB51CE3E-C37D-4157-9411-46C6F2FC0526'
+    :param instance_code: 审批实例id 例如：'0D74C973-48DB-421A-94F9-A38BF0A3092C',
+    :param user_id: 操作用户id 例如： 'ou_307a66d205a6ff8ab6d88ae73520f454',
+    :param task_id: 审批任务id 例如：'7148418136075665436',
+    :param comment: 意见 例如：'第一条审批测试审核拒绝'
+    :return:
+    '''
+    url = 'https://open.feishu.cn/open-apis/approval/v4/tasks/reject?user_id_type={}'.format(user_id_type)
+    header = {"Authorization": "Bearer " + str(get_tenant_access_token())}
+    approved_data = {
+        'approval_code': approval_code,
+        'instance_code': instance_code,
+        'user_id': user_id,
+        'task_id': task_id,
+        'comment': comment
+    }
+    r = requests.post(url, headers=header, data=json.dumps(approved_data))
+    res = json.loads(r.content)
+    return res
+
+# 审批任务转交
+def approvalstask_transfer(user_id_type=None, approval_code=None, instance_code=None, user_id=None, task_id=None, comment=None, transfer_user_id=None):
+    '''
+    :param user_id_type: id类型 限定请求体中用户的id类型 例如：union_id, open_id, user_id
+    :param approval_code: 审批定义id 例如：'BB51CE3E-C37D-4157-9411-46C6F2FC0526'
+    :param instance_code: 审批实例id 例如：'0D74C973-48DB-421A-94F9-A38BF0A3092C',
+    :param user_id: 操作用户id 例如： 'ou_307a66d205a6ff8ab6d88ae73520f454',
+    :param transfer_user_id: 被转交人唯一id 例如： 'ou_307a66d205a6ff8ab6d88ae73520f454',
+    :param task_id: 审批任务id 例如：'7148418136075665436',
+    :param comment: 意见 例如：'第一条审批测试审核拒绝'
+
+    :return:
+    '''
+    url = 'https://open.feishu.cn/open-apis/approval/v4/tasks/transfer?user_id_type={}'.format(user_id_type)
+    header = {"Authorization": "Bearer " + str(get_tenant_access_token())}
+    approved_data = {
+        'approval_code': approval_code,
+        'instance_code': instance_code,
+        'user_id': user_id,
+        'task_id': task_id,
+        'comment': comment,
+        'transfer_user_id': transfer_user_id
+    }
+    r = requests.post(url, headers=header, data=json.dumps(approved_data))
+    res = json.loads(r.content)
+    return res
+
+# 审批任务退回
+def approvalstask_specified_rollback(user_id_type=None, user_id=None, task_id=None, reason=None, task_def_key_list=None):
+    '''
+    :param user_id_type: id类型 限定请求体中用户的id类型 例如：union_id, open_id, user_id
+    :param user_id: 操作用户id 例如： 'ou_307a66d205a6ff8ab6d88ae73520f454',
+    :param task_id: 审批任务id 例如：'7148418136075665436',
+    :param reason: 退回原因 例如：'申请事项填写不具体，请重新填写'
+    :param task_def_key_list: 退回到节点列表 例如： ["START","APPROVAL_27997_285502","APPROVAL_462205_2734554"] 在审批实例详情中有timeline ：node_key
+    :return:
+    '''
+    url = 'https://open.feishu.cn/open-apis/approval/v4/instances/specified_rollback?user_id_type={}'.format(user_id_type)
+    header = {"Authorization": "Bearer " + str(get_tenant_access_token())}
+    approved_data = {
+        'user_id': user_id,
+        'task_id': task_id,
+        'reason': reason,
+        'task_def_key_list': task_def_key_list
+    }
+    r = requests.post(url, headers=header, data=json.dumps(approved_data))
+    res = json.loads(r.content)
+    return res
+
+# 审批任务加签
+def approvalstask_add_sign(user_id_type=None, approval_code=None, instance_code=None, user_id=None, task_id=None, comment=None, add_sign_user_ids=None, add_sign_type=None, approval_method=None):
+    '''
+    :param approval_code: 审批定义id 例如：'BB51CE3E-C37D-4157-9411-46C6F2FC0526'
+    :param instance_code: 审批实例id 例如：'0D74C973-48DB-421A-94F9-A38BF0A3092C',
+    :param user_id: 操作用户id 例如： 'b16g66e3',
+    :param task_id: 审批任务id 例如：'7148418136075665436',
+    :param comment: 意见 例如：'第一条审批测试审核拒绝'
+    :param add_sign_user_ids: 被加签人id 例如：  ["d19b913b","3313g62b"],
+    :param add_sign_type: 1/2/3 分别代表前加签/后加签/并加签 例如：1
+    :param approval_method: 仅在前加签、后加签时需要填写，1/2 分别代表或签/会签 例如：1
+    :return:
+    '''
+    url = 'https://open.feishu.cn/open-apis/approval/v4/instances/add_sign'
+    header = {"Authorization": "Bearer " + str(get_tenant_access_token())}
+    approved_data = {
+        'approval_code': approval_code,
+        'instance_code': instance_code,
+        'user_id': user_id,
+        'task_id': task_id,
+        'comment': comment,
+        'add_sign_user_ids': add_sign_user_ids,
+        'add_sign_type': add_sign_type,
+        'approval_method': approval_method,
+    }
+    r = requests.post(url, headers=header, data=json.dumps(approved_data))
+    res = json.loads(r.content)
+    return res
+
+
+# 审批任务重新提交
+def approvalstask_resubmit(user_id_type=None, approval_code=None, instance_code=None, user_id=None, task_id=None, comment=None, form=None):
+    '''
+    :param user_id_type: id类型 限定请求体中用户的id类型 例如：union_id, open_id, user_id
+    :param approval_code: 审批定义id 例如：'BB51CE3E-C37D-4157-9411-46C6F2FC0526'
+    :param instance_code: 审批实例id 例如：'0D74C973-48DB-421A-94F9-A38BF0A3092C',
+    :param user_id: 操作用户id 例如： 'ou_307a66d205a6ff8ab6d88ae73520f454',
+    :param form: json 数组，控件值，同创建审批实例接口中form字段 例如： "[{"id":"user_name", "type": "input", "value":"test"}]"
+    # form 控件值说明 https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/reference/approval-v4/instance/create#4fd9fac6
+    :param task_id: 审批任务id 例如：'7148418136075665436',
+    :param comment: 意见 例如：'第一条审批测试审核拒绝'
+
+    :return:
+    '''
+    url = 'https://open.feishu.cn/open-apis/approval/v4/tasks/resubmit?user_id_type={}'.format(user_id_type)
+    header = {"Authorization": "Bearer " + str(get_tenant_access_token())}
+    approved_data = {
+        'approval_code': approval_code,
+        'instance_code': instance_code,
+        'user_id': user_id,
+        'task_id': task_id,
+        'comment': comment,
+        'form': form
+    }
+    r = requests.post(url, headers=header, data=json.dumps(approved_data))
+    res = json.loads(r.content)
+    return res
+
+
+@api_view(['POST'])
+def request_GetApprovals(request):
+    """
+        获取 飞书 审批任务
+    """
+    try:
+        data = request.data
+        data['user_id_type'] = data['user_id_type'] if data.get('user_id_type') in ['union_id', 'open_id', 'user_id'] else 'union_id'
+        res = getApprovalTasks(**data)
+        return JSONResponse(SuccessResponse(res))
+    except InvestError as err:
+        return JSONResponse(InvestErrorResponse(err))
+    except Exception:
+        catchexcption(request)
+        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+@api_view(['POST'])
+def request_GetApprovalInstance(request):
+    """
+        获取 查询审批实例详情
+    """
+    try:
+        data = request.data
+        res = getApprovalInstance(data['instance_id'])
+        return JSONResponse(SuccessResponse(res))
+    except InvestError as err:
+        return JSONResponse(InvestErrorResponse(err))
+    except Exception:
+        catchexcption(request)
+        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+@api_view(['POST'])
+def request_handleApprovalsTask(request):
+    """
+        处理 飞书 审批任务
+    """
+    try:
+        data = request.data
+        data['user_id_type'] = data['user_id_type'] if data.get('user_id_type') in ['union_id', 'open_id', 'user_id'] else 'union_id'
+        handle_type = request.GET.get('type')
+        if handle_type == 'approve':
+            res = approvalstask_approve(**data)
+        elif handle_type == 'reject':
+            res = approvalstask_reject(**data)
+        elif handle_type == 'transfer':
+            res = approvalstask_transfer(**data)
+        elif handle_type == 'specified_rollback':
+            res = approvalstask_specified_rollback(**data)
+        elif handle_type == 'add_sign':
+            res = approvalstask_add_sign(**data)
+        elif handle_type == 'resubmit':
+            res = approvalstask_resubmit(**data)
+        else:
+            raise InvestError(20071, msg='无效的类型', detail='handle_type 无效')
+        return JSONResponse(SuccessResponse(res))
+    except InvestError as err:
+        return JSONResponse(InvestErrorResponse(err))
+    except Exception:
+        catchexcption(request)
+        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+
 
 # 多维表格—-列出记录
 def getTableRecords(app_token, table_id, view_id=None, page_token=None):
@@ -343,7 +603,3 @@ def update_feishu_project_task(records, user_id, proj):
     except Exception:
         logfeishuexcptiontofile(msg=str(proj.projtitleC))
 
-
-def test(request):
-    update_feishu_excel()
-    return JSONResponse({})
