@@ -355,6 +355,7 @@ class ProjectBDManagersView(viewsets.ModelViewSet):
 
 class ProjectBDCommentsFilter(FilterSet):
     id = RelationFilter(filterstr='id', lookup_method='in')
+    bucket = RelationFilter(filterstr='bucket', lookup_method='in')
     projectBD = RelationFilter(filterstr='projectBD', lookup_method='in')
     createuser = RelationFilter(filterstr='createuser',lookup_method='in')
     stime = RelationFilter(filterstr='createdtime', lookup_method='gte')
@@ -364,7 +365,7 @@ class ProjectBDCommentsFilter(FilterSet):
 
     class Meta:
         model = ProjectBDComments
-        fields = ('id', 'projectBD', 'createuser', 'stime', 'etime', 'stimeM', 'etimeM')
+        fields = ('id', 'bucket', 'projectBD', 'createuser', 'stime', 'etime', 'stimeM', 'etimeM')
 
 class ProjectBDCommentsView(viewsets.ModelViewSet):
     """
