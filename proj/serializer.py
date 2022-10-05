@@ -197,6 +197,7 @@ class ProjCreatSerializer(serializers.ModelSerializer):
 # list
 class ProjListSerializer(serializers.ModelSerializer):
     industries = serializers.SerializerMethodField()
+    tags = serializers.SerializerMethodField()
     projTraders = serializers.SerializerMethodField()
 
     class Meta:
@@ -207,6 +208,12 @@ class ProjListSerializer(serializers.ModelSerializer):
         qs = obj.project_industries.filter(is_deleted=False)
         if qs.exists():
             return ProjIndustryListSerializer(qs,many=True).data
+        return None
+
+    def get_tags(self, obj):
+        qs = obj.project_tags.filter(is_deleted=False)
+        if qs.exists():
+            return qs.values_list('tag', flat=True)
         return None
 
     def get_projTraders(self, obj):
