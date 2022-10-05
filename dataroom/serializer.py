@@ -6,7 +6,7 @@ from proj.serializer import ProjCommonSerializer
 from third.models import QiNiuFileUploadRecord
 from third.serializer import QiNiuFileUploadRecordSerializer
 from third.views.qiniufile import getUrlWithBucketAndKey
-from usersys.serializer import UserInfoSerializer, UserSimpleSerializer
+from usersys.serializer import UserInfoSerializer, UserSimpleSerializer, UserOrgInfoSerializer
 
 
 class DataroomCreateSerializer(serializers.ModelSerializer):
@@ -102,8 +102,8 @@ class User_DataroomfileCreateSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class User_DataroomSerializer(serializers.ModelSerializer):
-    dataroom = DataroomSerializer()
-    user = UserInfoSerializer()
+    user = UserOrgInfoSerializer()
+
     class Meta:
         model = dataroom_User_file
         fields = ('id', 'dataroom', 'user', 'lastgettime', 'lastdowntime', 'lastdownsize')
