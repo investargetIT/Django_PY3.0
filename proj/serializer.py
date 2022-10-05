@@ -170,7 +170,7 @@ class ProjCommonSerializer(serializers.ModelSerializer):
         fields = ('id','industries','projtitleC','projtitleE','tags', 'currency', 'financeAmount','financeAmount_USD','country','projstatus','isHidden', 'PM', 'createuser','projTraders','lastProject','publishDate','createdtime','projectBD')
 
     def get_tags(self, obj):
-        qs = obj.tags.filter(tag_projects__is_deleted=False)
+        qs = obj.tags.filter(tag_projects__is_deleted=False, is_deleted=False)
         if qs.exists():
             return tagSerializer(qs,many=True).data
         return None
@@ -211,7 +211,7 @@ class ProjListSerializer(serializers.ModelSerializer):
         return None
 
     def get_tags(self, obj):
-        qs = obj.project_tags.filter(is_deleted=False)
+        qs = obj.project_tags.filter(is_deleted=False, tag__is_deleted=False)
         if qs.exists():
             return qs.values_list('tag', flat=True)
         return None
@@ -251,7 +251,7 @@ class ProjDetailSerializer_withoutsecretinfo(serializers.ModelSerializer):
         return None
 
     def get_tags(self, obj):
-        qs = obj.tags.filter(tag_projects__is_deleted=False)
+        qs = obj.tags.filter(tag_projects__is_deleted=False, is_deleted=False)
         if qs.exists():
             return tagSerializer(qs,many=True).data
         return None
@@ -323,7 +323,7 @@ class ProjDetailSerializer_all(serializers.ModelSerializer):
         return None
 
     def get_tags(self, obj):
-        qs = obj.tags.filter(tag_projects__is_deleted=False)
+        qs = obj.tags.filter(tag_projects__is_deleted=False, is_deleted=False)
         if qs.exists():
             return tagSerializer(qs,many=True).data
         return None
