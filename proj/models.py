@@ -179,6 +179,7 @@ class attachment(MyModel):
     bucket = models.CharField(max_length=32,blank=True,null=True)
     key = models.CharField(max_length=128,blank=True,null=True)
     realfilekey = models.CharField(max_length=128, blank=True, null=True)
+    transid = models.TextField('third.AudioTranslateTaskRecord', blank=True, null=True, help_text='语音转写任务id')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, on_delete=models.SET_NULL,related_name='userdelete_projattachments')
     createuser = MyForeignKey(MyUser, blank=True, null=True, on_delete=models.SET_NULL, related_name='usercreate_projattachments')
     lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, on_delete=models.SET_NULL,related_name='usermodify_projattachments')
