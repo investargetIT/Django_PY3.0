@@ -406,6 +406,7 @@ class IndustryGroup(models.Model):
     nameC = models.CharField(max_length=32, blank=True, null=True)
     nameE = models.CharField(max_length=32, blank=True, null=True)
     manager = models.BigIntegerField(blank=True, null=True)
+    dataroom_id = models.IntegerField(blank=True, null=True, help_text='公司行业组dataroom_id')
     getUserCount = models.IntegerField(blank=True, default=10)
     ongongingurl = models.CharField(max_length=200, blank=True, null=True)
     shareInvestor = models.BooleanField(blank=True, default=False, help_text='是否共享投资人')

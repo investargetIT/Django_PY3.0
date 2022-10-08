@@ -341,7 +341,7 @@ class MyUser(AbstractBaseUser, PermissionsMixin,MyModel):
             ('admin_manageuser', u'管理用户数据'),
 
             ('manageusermenu', u'全库用户管理菜单'),
-
+            ('feishu_approval', u'飞书审批'),
             ('admin_managemongo', u'管理mongo数据'),
 
             ('admin_manageindgroupinvestor', u'管理行业组投资人交易师关系'),
