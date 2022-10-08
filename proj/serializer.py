@@ -14,7 +14,7 @@ from usersys.serializer import UserCommenSerializer, UserNameSerializer
 class ProjSimpleSerializer(serializers.ModelSerializer):
     class Meta:
         model = project
-        fields = ('id', 'projtitleC', 'projtitleE', 'financeAmount', 'financeAmount_USD', 'country', 'projstatus', 'isHidden', 'lastProject', 'publishDate','projectBD')
+        fields = ('id', 'projtitleC', 'projtitleE', 'realname', 'financeAmount', 'financeAmount_USD', 'country', 'projstatus', 'isHidden', 'lastProject', 'publishDate','projectBD')
 
 
 class ProjTradersCreateSerializer(serializers.ModelSerializer):
@@ -144,7 +144,7 @@ class ProjSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = project
-        exclude = ('isSendEmail','datasource','realname')
+        exclude = ('isSendEmail','datasource',)
         depth = 1
 
     def get_projTraders(self, obj):
@@ -167,7 +167,7 @@ class ProjCommonSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = project
-        fields = ('id','industries','projtitleC','projtitleE','tags', 'currency', 'financeAmount','financeAmount_USD','country','projstatus','isHidden', 'PM', 'createuser','projTraders','lastProject','publishDate','createdtime','projectBD')
+        fields = ('id','industries','projtitleC','projtitleE','tags', 'realname', 'currency', 'financeAmount','financeAmount_USD','country','projstatus','isHidden', 'PM', 'createuser','projTraders','lastProject','publishDate','createdtime','projectBD')
 
     def get_tags(self, obj):
         qs = obj.tags.filter(tag_projects__is_deleted=False, is_deleted=False)
@@ -241,7 +241,7 @@ class ProjDetailSerializer_withoutsecretinfo(serializers.ModelSerializer):
 
     class Meta:
         model = project
-        exclude = ('supportUser', 'phoneNumber', 'email', 'contactPerson', 'lastmodifyuser', 'deleteduser', 'deletedtime', 'datasource','isSendEmail','realname')
+        exclude = ('supportUser', 'phoneNumber', 'email', 'contactPerson', 'lastmodifyuser', 'deleteduser', 'deletedtime', 'datasource','isSendEmail')
 
 
     def get_service(self, obj):
