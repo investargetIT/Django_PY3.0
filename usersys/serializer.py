@@ -115,6 +115,14 @@ class GroupCreateSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class UserOrgInfoSerializer(serializers.ModelSerializer):
+    org = OrgCommonSerializer()
+
+    class Meta:
+        model = MyUser
+        fields = ('usernameC', 'usernameE', 'org', 'title', 'id', 'tags', 'userstatus', 'is_active', 'orgarea', 'country', 'last_login')
+
+
 class UserInfoSerializer(serializers.ModelSerializer):
     tags = serializers.SerializerMethodField()
     photourl = serializers.SerializerMethodField()

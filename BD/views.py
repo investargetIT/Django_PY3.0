@@ -355,6 +355,7 @@ class ProjectBDManagersView(viewsets.ModelViewSet):
 
 class ProjectBDCommentsFilter(FilterSet):
     id = RelationFilter(filterstr='id', lookup_method='in')
+    bucket = RelationFilter(filterstr='bucket', lookup_method='in')
     projectBD = RelationFilter(filterstr='projectBD', lookup_method='in')
     createuser = RelationFilter(filterstr='createuser',lookup_method='in')
     stime = RelationFilter(filterstr='createdtime', lookup_method='gte')
@@ -364,7 +365,7 @@ class ProjectBDCommentsFilter(FilterSet):
 
     class Meta:
         model = ProjectBDComments
-        fields = ('id', 'projectBD', 'createuser', 'stime', 'etime', 'stimeM', 'etimeM')
+        fields = ('id', 'bucket', 'projectBD', 'createuser', 'stime', 'etime', 'stimeM', 'etimeM')
 
 class ProjectBDCommentsView(viewsets.ModelViewSet):
     """
@@ -429,10 +430,10 @@ class ProjectBDCommentsView(viewsets.ModelViewSet):
             with transaction.atomic():
                 commentinstance = ProjectBDCommentsCreateSerializer(data=data)
                 if commentinstance.is_valid():
-                    commentinstance.save()
+                    ins = commentinstance.save()
                 else:
                     raise InvestError(4009, msg='新增项目BD备注信息失败', detail='创建项目BDcomments失败--%s' % commentinstance.error_messages)
-                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(commentinstance.data, lang)))
+                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(ProjectBDCommentsSerializer(ins).data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
@@ -453,11 +454,11 @@ class ProjectBDCommentsView(viewsets.ModelViewSet):
             with transaction.atomic():
                 commentinstance = ProjectBDCommentsCreateSerializer(instance, data=data)
                 if commentinstance.is_valid():
-                    commentinstance.save()
+                    ins = commentinstance.save()
                 else:
                     raise InvestError(4009, msg='修改项目BD备注信息失败', detail='修改项目BDcomments失败--%s' % commentinstance.error_messages)
                 return JSONResponse(SuccessResponse(
-                    returnDictChangeToLanguage(commentinstance.data, lang)))
+                    returnDictChangeToLanguage(ProjectBDCommentsSerializer(ins).data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:

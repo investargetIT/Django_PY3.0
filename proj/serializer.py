@@ -14,7 +14,7 @@ from usersys.serializer import UserCommenSerializer, UserNameSerializer
 class ProjSimpleSerializer(serializers.ModelSerializer):
     class Meta:
         model = project
-        fields = ('id', 'projtitleC', 'projtitleE', 'financeAmount', 'financeAmount_USD', 'country', 'projstatus', 'isHidden', 'lastProject', 'publishDate','projectBD')
+        fields = ('id', 'projtitleC', 'projtitleE', 'realname', 'financeAmount', 'financeAmount_USD', 'country', 'projstatus', 'isHidden', 'lastProject', 'publishDate','projectBD')
 
 
 class ProjTradersCreateSerializer(serializers.ModelSerializer):
@@ -111,16 +111,10 @@ class ProjFinanceSerializer(serializers.ModelSerializer):
 
 
 class ProjAttachmentCreateSerializer(serializers.ModelSerializer):
-    uploadstatus = serializers.SerializerMethodField()
     class Meta:
         model = attachment
         fields = '__all__'
-    def get_uploadstatus(self, obj):
-        if obj.bucket and obj.key:
-            qs = QiNiuFileUploadRecord.objects.filter(key=obj.key, is_deleted=False)
-            if qs.exists():
-                return QiNiuFileUploadRecordSerializer(qs, many=True).data
-        return None
+
 
 class ProjAttachmentSerializer(serializers.ModelSerializer):
     uploadstatus = serializers.SerializerMethodField()
@@ -144,7 +138,7 @@ class ProjSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = project
-        exclude = ('isSendEmail','datasource','realname')
+        exclude = ('isSendEmail','datasource',)
         depth = 1
 
     def get_projTraders(self, obj):
@@ -167,10 +161,10 @@ class ProjCommonSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = project
-        fields = ('id','industries','projtitleC','projtitleE','tags', 'currency', 'financeAmount','financeAmount_USD','country','projstatus','isHidden', 'PM', 'createuser','projTraders','lastProject','publishDate','createdtime','projectBD')
+        fields = ('id','industries','projtitleC','projtitleE','tags', 'realname', 'currency', 'financeAmount','financeAmount_USD','country','projstatus','isHidden', 'PM', 'createuser','projTraders','lastProject','publishDate','createdtime','projectBD')
 
     def get_tags(self, obj):
-        qs = obj.tags.filter(tag_projects__is_deleted=False)
+        qs = obj.tags.filter(tag_projects__is_deleted=False, is_deleted=False)
         if qs.exists():
             return tagSerializer(qs,many=True).data
         return None
@@ -197,16 +191,23 @@ class ProjCreatSerializer(serializers.ModelSerializer):
 # list
 class ProjListSerializer(serializers.ModelSerializer):
     industries = serializers.SerializerMethodField()
+    tags = serializers.SerializerMethodField()
     projTraders = serializers.SerializerMethodField()
 
     class Meta:
         model = project
-        fields = ('id','industries','projtitleC','projtitleE', 'realname', 'currency','financeAmount','financeAmount_USD','country','projstatus','isHidden','publishDate','createdtime','PM','createuser','projTraders','projectBD')
+        fields = ('id','industries','projtitleC','projtitleE', 'realname', 'currency','financeAmount','financeAmount_USD', 'tags', 'country','projstatus','isHidden','publishDate','createdtime','PM','createuser','projTraders','projectBD')
 
     def get_industries(self, obj):
         qs = obj.project_industries.filter(is_deleted=False)
         if qs.exists():
             return ProjIndustryListSerializer(qs,many=True).data
+        return None
+
+    def get_tags(self, obj):
+        qs = obj.project_tags.filter(is_deleted=False, tag__is_deleted=False)
+        if qs.exists():
+            return qs.values_list('tag', flat=True)
         return None
 
     def get_projTraders(self, obj):
@@ -234,7 +235,7 @@ class ProjDetailSerializer_withoutsecretinfo(serializers.ModelSerializer):
 
     class Meta:
         model = project
-        exclude = ('supportUser', 'phoneNumber', 'email', 'contactPerson', 'lastmodifyuser', 'deleteduser', 'deletedtime', 'datasource','isSendEmail','realname')
+        exclude = ('supportUser', 'phoneNumber', 'email', 'contactPerson', 'lastmodifyuser', 'deleteduser', 'deletedtime', 'datasource','isSendEmail')
 
 
     def get_service(self, obj):
@@ -244,7 +245,7 @@ class ProjDetailSerializer_withoutsecretinfo(serializers.ModelSerializer):
         return None
 
     def get_tags(self, obj):
-        qs = obj.tags.filter(tag_projects__is_deleted=False)
+        qs = obj.tags.filter(tag_projects__is_deleted=False, is_deleted=False)
         if qs.exists():
             return tagSerializer(qs,many=True).data
         return None
@@ -316,7 +317,7 @@ class ProjDetailSerializer_all(serializers.ModelSerializer):
         return None
 
     def get_tags(self, obj):
-        qs = obj.tags.filter(tag_projects__is_deleted=False)
+        qs = obj.tags.filter(tag_projects__is_deleted=False, is_deleted=False)
         if qs.exists():
             return tagSerializer(qs,many=True).data
         return None

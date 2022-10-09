@@ -17,16 +17,10 @@ from utils.logicJudge import is_projBDManager, is_userInvestor
 
 
 class ProjectBDCommentsCreateSerializer(serializers.ModelSerializer):
-    uploadstatus = serializers.SerializerMethodField()
+
     class Meta:
         model = ProjectBDComments
         fields = '__all__'
-    def get_uploadstatus(self, obj):
-        if obj.bucket and obj.key:
-            qs = QiNiuFileUploadRecord.objects.filter(key=obj.key, is_deleted=False)
-            if qs.exists():
-                return QiNiuFileUploadRecordSerializer(qs, many=True).data
-        return None
 
 class ProjectBDCommentsSerializer(serializers.ModelSerializer):
     createuserobj = serializers.SerializerMethodField()
