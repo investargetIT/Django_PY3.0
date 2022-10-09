@@ -925,7 +925,7 @@ class ProjAttachmentView(viewsets.ModelViewSet):
                     attachments.save()
                 else:
                     raise InvestError(code=40012, msg='新增项目附件失败', detail='%s' % attachments.error_messages)
-                return JSONResponse(SuccessResponse(returnListChangeToLanguage(attachments.data,lang)))
+                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(attachments.data,lang)))
         except InvestError as err:
                 return JSONResponse(InvestErrorResponse(err))
         except Exception:

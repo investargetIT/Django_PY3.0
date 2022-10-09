@@ -430,10 +430,10 @@ class ProjectBDCommentsView(viewsets.ModelViewSet):
             with transaction.atomic():
                 commentinstance = ProjectBDCommentsCreateSerializer(data=data)
                 if commentinstance.is_valid():
-                    commentinstance.save()
+                    ins = commentinstance.save()
                 else:
                     raise InvestError(4009, msg='新增项目BD备注信息失败', detail='创建项目BDcomments失败--%s' % commentinstance.error_messages)
-                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(commentinstance.data, lang)))
+                return JSONResponse(SuccessResponse(returnDictChangeToLanguage(ProjectBDCommentsSerializer(ins).data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
@@ -454,11 +454,11 @@ class ProjectBDCommentsView(viewsets.ModelViewSet):
             with transaction.atomic():
                 commentinstance = ProjectBDCommentsCreateSerializer(instance, data=data)
                 if commentinstance.is_valid():
-                    commentinstance.save()
+                    ins = commentinstance.save()
                 else:
                     raise InvestError(4009, msg='修改项目BD备注信息失败', detail='修改项目BDcomments失败--%s' % commentinstance.error_messages)
                 return JSONResponse(SuccessResponse(
-                    returnDictChangeToLanguage(commentinstance.data, lang)))
+                    returnDictChangeToLanguage(ProjectBDCommentsSerializer(ins).data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
