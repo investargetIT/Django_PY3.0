@@ -144,6 +144,22 @@ def get_jsapi_ticket(request):
         catchexcption(request)
         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
+# 获取单个用户信息
+def getUserInfoByUserID(user_id, user_id_type="open_id", department_id_type="open_department_id"):
+    '''
+    :param user_id: user_id  例如：7be5fg9a
+    :return:
+    '''
+    url = 'https://open.feishu.cn/open-apis/contact/v3/users/{}'.format(user_id)
+    header = {"Authorization": "Bearer " + str(get_tenant_access_token())}
+    params = {
+        'user_id_type': user_id_type,
+        'department_id_type': department_id_type
+    }
+    r = requests.get(url, headers=header)
+    return r.json()
+
+
 # 审批任务列表查询
 def getApprovalTasks(user_id, user_id_type=None, page_size=None, page_token=None, approval_code=None, instance_code=None, task_status=None, task_start_time_from=None, task_start_time_to=None):
     '''
@@ -152,7 +168,7 @@ def getApprovalTasks(user_id, user_id_type=None, page_size=None, page_token=None
     '''
     url = 'https://open.feishu.cn/open-apis/approval/v4/tasks/search'
     params = {
-        'user_id_type' : user_id_type,
+        'user_id_type': user_id_type,
         'page_size': page_size,
         'page_token': page_token
     }
@@ -391,6 +407,23 @@ def request_handleApprovalsTask(request):
     except Exception:
         catchexcption(request)
         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+@api_view(['GET'])
+def request_getUserInfoByUserID(request):
+    """
+        获取单个用户信息
+    """
+    try:
+        data = request.data
+        res = getUserInfoByUserID(**data)
+        return JSONResponse(SuccessResponse(res))
+    except InvestError as err:
+        return JSONResponse(InvestErrorResponse(err))
+    except Exception:
+        catchexcption(request)
+        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
 
 
 
