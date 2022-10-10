@@ -522,10 +522,9 @@ class OrgBDView(viewsets.ModelViewSet):
     update: 修改机构看板信息
     destroy: 删除机构看板
     """
-    filter_backends = (filters.DjangoFilterBackend,filters.SearchFilter)
+    filter_backends = (filters.DjangoFilterBackend,)
     queryset = OrgBD.objects.filter(is_deleted=False)
     filter_class = OrgBDFilter
-    search_fields = ('proj__projtitleC', 'proj__realname', 'username', 'usermobile', 'manager__usernameC', 'org__orgnameC', 'org__orgnameE')
     serializer_class = OrgBDSerializer
     redis_key = 'org_bd'
 
