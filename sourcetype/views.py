@@ -774,5 +774,7 @@ def getmenulist(user):
         qslist.extend([39, 5])        # 管理行业组离职交易师所属投资人
     if user.has_perm('usersys.manageusermenu'):
         qslist.extend([40, 5])         # 全库用户管理 菜单
+    if user.has_perm('usersys.feishu_approval'):
+        qslist.extend([42])         # 飞书审批管理
     qsres = allmenuobj.filter(id__in=removeDuclicates(qslist), is_deleted=False).order_by('index')
     return WebMenuSerializer(qsres,many=True).data

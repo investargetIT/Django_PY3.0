@@ -156,7 +156,7 @@ def getUserInfoByUserID(user_id, user_id_type="open_id", department_id_type="ope
         'user_id_type': user_id_type,
         'department_id_type': department_id_type
     }
-    r = requests.get(url, headers=header)
+    r = requests.get(url, headers=header, params=params)
     return r.json()
 
 
