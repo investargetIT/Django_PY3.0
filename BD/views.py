@@ -494,6 +494,8 @@ class OrgBDFilter(MyFilterSet):
     org = RelationFilter(filterstr='org', lookup_method='in')
     response = RelationFilter(filterstr='response', lookup_method='in')
     proj = RelationFilter(filterstr='proj', lookup_method='in')
+    realname = RelationFilter(filterstr='proj__realname', lookup_method='icontains')
+    title = RelationFilter(filterstr='proj__projtitleC', lookup_method='icontains')
     bduser = RelationFilter(filterstr='bduser', lookup_method='in')
     isSolved = RelationFilter(filterstr='isSolved')
     isRead = RelationFilter(filterstr='isRead')
@@ -504,7 +506,7 @@ class OrgBDFilter(MyFilterSet):
     etimeM = RelationFilter(filterstr='lastmodifytime', lookup_method='lt')
     class Meta:
         model = OrgBD
-        fields = ('manager', 'createuser', 'org', 'proj', 'stime', 'etime', 'stimeM', 'etimeM', 'response', 'isimportant', 'isSolved', 'isRead', 'bduser')
+        fields = ('manager', 'createuser', 'org', 'realname', 'title', 'proj', 'stime', 'etime', 'stimeM', 'etimeM', 'response', 'isimportant', 'isSolved', 'isRead', 'bduser')
 
 
 class OrgBDView(viewsets.ModelViewSet):
@@ -523,7 +525,7 @@ class OrgBDView(viewsets.ModelViewSet):
     filter_backends = (filters.DjangoFilterBackend,filters.SearchFilter)
     queryset = OrgBD.objects.filter(is_deleted=False)
     filter_class = OrgBDFilter
-    search_fields = ('proj__projtitleC', 'username', 'usermobile', 'manager__usernameC', 'org__orgnameC', 'org__orgnameE')
+    search_fields = ('proj__projtitleC', 'proj__realname', 'username', 'usermobile', 'manager__usernameC', 'org__orgnameC', 'org__orgnameE')
     serializer_class = OrgBDSerializer
     redis_key = 'org_bd'
 
