@@ -1363,10 +1363,11 @@ class OrgAttachmentFilter(FilterSet):
     etime = RelationFilter(filterstr='createdtime', lookup_method='lt')
     stimeM = RelationFilter(filterstr='lastmodifytime', lookup_method='gte')
     etimeM = RelationFilter(filterstr='lastmodifytime', lookup_method='lt')
+    createuser = RelationFilter(filterstr='createuser', lookup_method='in')
 
     class Meta:
         model = orgAttachments
-        fields = ('org', 'stime', 'etime', 'stimeM', 'etimeM',)
+        fields = ('org', 'stime', 'etime', 'stimeM', 'etimeM', 'createuser')
 
 class OrgAttachmentView(viewsets.ModelViewSet):
     """
