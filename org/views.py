@@ -1361,10 +1361,14 @@ class OrgExportExcelTaskView(viewsets.ModelViewSet):
 
 class OrgAttachmentFilter(FilterSet):
     org = RelationFilter(filterstr='org', lookup_method='in')
-
+    stime = RelationFilter(filterstr='createdtime', lookup_method='gte')
+    etime = RelationFilter(filterstr='createdtime', lookup_method='lt')
+    stimeM = RelationFilter(filterstr='lastmodifytime', lookup_method='gte')
+    etimeM = RelationFilter(filterstr='lastmodifytime', lookup_method='lt')
+    
     class Meta:
         model = orgAttachments
-        fields = ('org',)
+        fields = ('org', 'stime', 'etime', 'stimeM', 'etimeM',)
 
 class OrgAttachmentView(viewsets.ModelViewSet):
     """
