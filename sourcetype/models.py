@@ -187,6 +187,19 @@ class Country(models.Model):
     def __str__(self):
         return self.countryC
 
+class GovernmentProjAttachmentType(models.Model):
+    '''
+    政府项目附件类型
+    '''
+    id = models.AutoField(primary_key=True)
+    nameC = models.CharField(max_length=40, blank=True, null=True)
+    nameE = models.CharField(max_length=128, blank=True, null=True)
+    is_deleted = models.BooleanField(blank=True, default=False)
+
+    def __str__(self):
+        return self.nameC
+
+
 class Service(models.Model):
     '''
     项目服务
