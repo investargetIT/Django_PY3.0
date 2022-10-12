@@ -735,10 +735,9 @@ class User_DataroomfileView(viewsets.ModelViewSet):
            sendFileUpdateEmailNotifaction:发送文件更新邮件通知
            destroy:减少用户可见dataroom
         """
-    filter_backends = (filters.SearchFilter, filters.DjangoFilterBackend,)
+    filter_backends = (filters.DjangoFilterBackend,)
     queryset = dataroom_User_file.objects.all().filter(is_deleted=False,dataroom__isClose=False,dataroom__is_deleted=False)
     filter_class = User_DataroomfileFilter
-    search_fields = ('dataroom__proj__projtitleC','dataroom__proj__projtitleE')
     serializer_class = User_DataroomfileCreateSerializer
     Model = dataroom_User_file
 
@@ -968,7 +967,7 @@ class User_DataroomSeefilesView(viewsets.ModelViewSet):
            create:新建用户可见文件
            destroy:删除用户某可见文件
         """
-    filter_backends = (filters.SearchFilter, filters.DjangoFilterBackend,)
+    filter_backends = (filters.DjangoFilterBackend,)
     queryset = dataroomUserSeeFiles.objects.all().filter(is_deleted=False, dataroomUserfile__is_deleted=False)
     filter_class = DataroomUserSeeFilesFilter
     serializer_class = User_DataroomSeefilesSerializer
@@ -1137,7 +1136,7 @@ class User_Dataroom_TemplateView(viewsets.ModelViewSet):
            userTempToUser: 将模板应用到用户
            destroy: 删除用户dataroom文件模板
         """
-    filter_backends = (filters.SearchFilter, filters.DjangoFilterBackend,)
+    filter_backends = (filters.DjangoFilterBackend,)
     queryset = dataroom_User_template.objects.all().filter(is_deleted=False, dataroom__isClose=False, dataroom__is_deleted=False)
     filter_fields = ('dataroom', 'user')
     serializer_class = User_DataroomTemplateSerializer
@@ -1321,7 +1320,7 @@ class DataroomUserDiscussView(viewsets.ModelViewSet):
         update: 交易师回复提问/标注
         destroy: 删除标注
         """
-    filter_backends = (filters.SearchFilter, filters.DjangoFilterBackend,)
+    filter_backends = (filters.DjangoFilterBackend,)
     queryset = dataroom_user_discuss.objects.all().filter(is_deleted=False, file__is_deleted=False, dataroom__is_deleted=False)
     filter_class = DataroomUserDiscussFilter
     serializer_class = DataroomUserDiscussSerializer
