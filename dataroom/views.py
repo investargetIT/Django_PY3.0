@@ -41,11 +41,13 @@ class DataroomFilter(FilterSet):
     supportuser = RelationFilter(filterstr='proj__supportUser',lookup_method='in')
     user = RelationFilter(filterstr='dataroom_users__user', lookup_method='in', relationName='dataroom_users__is_deleted')
     proj = RelationFilter(filterstr='proj', lookup_method='in')
+    realname = RelationFilter(filterstr='proj__realname', lookup_method='icontains')
+    title = RelationFilter(filterstr='proj__projtitleC', lookup_method='icontains')
     isClose = RelationFilter(filterstr='isClose', lookup_method='in')
     isCompanyFile = RelationFilter(filterstr='isCompanyFile', lookup_method='in')
     class Meta:
         model = dataroom
-        fields = ('proj', 'isClose', 'supportuser', 'user', 'isCompanyFile')
+        fields = ('proj', 'isClose', 'supportuser', 'user', 'isCompanyFile', 'realname', 'title',)
 
 class DataroomView(viewsets.ModelViewSet):
     """
@@ -57,9 +59,8 @@ class DataroomView(viewsets.ModelViewSet):
        checkZipStatus: 开始打包压缩任务
        downloadDataroomZip: 下载压缩包
     """
-    filter_backends = (filters.SearchFilter,filters.DjangoFilterBackend,)
+    filter_backends = (filters.DjangoFilterBackend,)
     queryset = dataroom.objects.all().filter(is_deleted=False)
-    search_fields = ('proj__projtitleC', 'proj__projtitleE', 'proj__supportUser__usernameC', 'dataroom_users__user__usernameC')
     filter_class = DataroomFilter
     serializer_class = DataroomSerializer
 
@@ -717,9 +718,11 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
 class User_DataroomfileFilter(FilterSet):
     dataroom = RelationFilter(filterstr='dataroom',lookup_method='in')
     user = RelationFilter(filterstr='user', lookup_method='in')
+    realname = RelationFilter(filterstr='dataroom__proj__realname', lookup_method='icontains')
+    title = RelationFilter(filterstr='dataroom__proj__projtitleC', lookup_method='icontains')
     class Meta:
         model = dataroom_User_file
-        fields = ('dataroom', 'user')
+        fields = ('dataroom', 'user', 'realname', 'title',)
 
 class User_DataroomfileView(viewsets.ModelViewSet):
     """

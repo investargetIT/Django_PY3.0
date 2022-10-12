@@ -44,6 +44,8 @@ from django_filters import FilterSet
 class ProjectFilter(FilterSet):
     supportUser = RelationFilter(filterstr='supportUser',lookup_method='in')
     ids = RelationFilter(filterstr='id', lookup_method='in')
+    realname = RelationFilter(filterstr='realname', lookup_method='icontains')
+    title = RelationFilter(filterstr='projtitleC', lookup_method='icontains')
     createuser = RelationFilter(filterstr='createuser', lookup_method='in')
     indGroup = RelationFilter(filterstr='indGroup', lookup_method='in')
     isoverseasproject = RelationFilter(filterstr='isoverseasproject', lookup_method='in')
@@ -61,7 +63,7 @@ class ProjectFilter(FilterSet):
         model = project
         fields = ('ids', 'bdm', 'indGroup', 'createuser', 'service', 'supportUser', 'isoverseasproject', 'industries',
                   'tags', 'projstatus', 'country', 'netIncome_USD_F', 'netIncome_USD_T', 'grossProfit_F',
-                  'grossProfit_T')
+                  'grossProfit_T', 'realname', 'title',)
 
 class ProjectView(viewsets.ModelViewSet):
     """

@@ -1570,12 +1570,14 @@ class WorkReportMarketMsgView(viewsets.ModelViewSet):
 class WorkReportProjInfoFilter(FilterSet):
     report = RelationFilter(filterstr='report',lookup_method='in')
     proj = RelationFilter(filterstr='proj', lookup_method='in')
+    realname = RelationFilter(filterstr='proj__realname', lookup_method='icontains')
+    title = RelationFilter(filterstr='proj__projtitleC', lookup_method='icontains')
     projTitle = RelationFilter(filterstr='projTitle', lookup_method='icontains')
     user = RelationFilter(filterstr='report__user', lookup_method='in')
     indGroup = RelationFilter(filterstr='report__indGroup', lookup_method='in')
     class Meta:
         model = WorkReportProjInfo
-        fields = ('report', 'proj', 'user', 'indGroup')
+        fields = ('report', 'proj', 'user', 'indGroup', 'realname', 'title',)
 
 
 class WorkReportProjInfoView(viewsets.ModelViewSet):
