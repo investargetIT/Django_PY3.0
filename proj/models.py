@@ -388,7 +388,7 @@ class GovernmentProjectTag(models.Model):
 
 
 class GovernmentProjectTrader(MyModel):
-    govproj = MyForeignKey(GovernmentProject, related_name='govproj_tags', blank=True, null=True)
+    govproj = MyForeignKey(GovernmentProject, related_name='govproj_traders', blank=True, null=True)
     trader = MyForeignKey(MyUser, blank=True, null=True, related_name='trader_govprojs')
     type = models.PositiveSmallIntegerField(blank=True, null=True, help_text='联络人0、对接人1')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_govprojTraders')
