@@ -11,7 +11,7 @@ from django.db import models
 # Create your models here.
 
 from sourcetype.models import ProjectStatus, CurrencyType, Tag, Country, TransactionType, Industry, \
-    DataSource, CharacterType, Service, IndustryGroup, DidiOrderType, OrgBdResponse, GovernmentProjAttachmentType
+    DataSource, CharacterType, Service, IndustryGroup, DidiOrderType, OrgBdResponse, GovernmentProjInfoType
 from usersys.models import MyUser
 
 from utils.customClass import InvestError, MyForeignKey, MyModel
@@ -317,16 +317,12 @@ class projcomments(MyModel):
 
 # 政府项目
 class GovernmentProject(MyModel):
-    name = models.CharField(max_length=128, blank=True, null=True, help_text='项目进展')
+    name = models.CharField(max_length=128, blank=True, null=True, help_text='项目名称')
     location = MyForeignKey(Country, blank=True, null=True, help_text='地区')
     leader = models.TextField(blank=True, null=True, help_text='高层领导')
     business = models.TextField(blank=True, null=True, help_text='业务人员（局长）')
     preference = models.TextField(blank=True, null=True, help_text='投资偏好')
     maininvestor = models.TextField(blank=True, null=True, help_text='投资主体')
-    landvalue = models.TextField(blank=True, null=True, help_text='土地价值')
-    markertreport = models.TextField(blank=True, null=True, help_text='市场报告')
-    regulation = models.TextField(blank=True, null=True, help_text='政策法规')
-    historyproj = models.TextField(blank=True, null=True, help_text='历史案例')
     remark = models.TextField(blank=True, null=True, help_text='备注说明')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_governmentprojects')
     createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_governmentprojects')
@@ -339,25 +335,43 @@ class GovernmentProject(MyModel):
 
     def save(self, *args, **kwargs):
         return super(GovernmentProject, self).save(*args, **kwargs)
-# 政府项目附件
-class GovernmentProjectAttachment(MyModel):
-    govproj = MyForeignKey(GovernmentProject, blank=True, null=True, related_name='govproj_attachments')
-    filetype = MyForeignKey(GovernmentProjAttachmentType, blank=True, null=True)
+
+# 政府项目信息  //土地价值，市场报告，政策法规
+class GovernmentProjectInfo(MyModel):
+    govproj = MyForeignKey(GovernmentProject, blank=True, null=True, related_name='govproj_infos')
+    info = models.TextField(blank=True, null=True, help_text='信息')
+    type = MyForeignKey(GovernmentProjInfoType, blank=True, null=True)
+    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_governmentprojectinfos')
+    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_governmentprojectinfos')
+    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_governmentprojectinfos')
+    datasource = MyForeignKey(DataSource, blank=True, help_text='数据源')
+
+    class Meta:
+        db_table = 'govermentproject_info'
+
+
+    def save(self, *args, **kwargs):
+        return super(GovernmentProjectInfo, self).save(*args, **kwargs)
+
+
+# 政府项目信息附件   //土地价值，市场报告，政策法规 的附件
+class GovernmentProjectInfoAttachment(MyModel):
+    govprojinfo = MyForeignKey(GovernmentProjectInfo, blank=True, null=True, related_name='govprojinfo_attachments')
     filename = models.CharField(max_length=128,blank=True,null=True)
     bucket = models.CharField(max_length=32,blank=True,null=True)
     key = models.CharField(max_length=128,blank=True,null=True)
     realfilekey = models.CharField(max_length=128, blank=True, null=True)
-    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_govprojattachments')
-    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_govprojattachments')
-    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_govprojattachments')
+    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_govprojinfoattachments')
+    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_govprojinfoattachments')
+    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_govprojinfoattachments')
 
     class Meta:
-        db_table = 'govermentproject_attachment'
+        db_table = 'govermentproject_infoattachment'
 
 # 政府项目历史案例
 class GovernmentProjectHistoryCase(MyModel):
-    govproj = MyForeignKey(GovernmentProject, related_name='govproj_projs', blank=True, null=True)
-    proj = MyForeignKey(project, blank=True, null=True, related_name='proj_govprojs')
+    govproj = MyForeignKey(GovernmentProject, related_name='govproj_historycases', blank=True, null=True)
+    proj = MyForeignKey(project, blank=True, null=True, related_name='historycase_govprojs')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_govprojhistorycases')
     createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_govprojhistorycases')
     datasource = MyForeignKey(DataSource, help_text='数据源', blank=True, default=1)

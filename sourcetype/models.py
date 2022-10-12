@@ -187,9 +187,9 @@ class Country(models.Model):
     def __str__(self):
         return self.countryC
 
-class GovernmentProjAttachmentType(models.Model):
+class GovernmentProjInfoType(models.Model):
     '''
-    政府项目附件类型
+    政府项目信息类型
     '''
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=40, blank=True, null=True)
