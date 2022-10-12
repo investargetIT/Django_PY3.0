@@ -355,7 +355,7 @@ class GovernmentProjectAttachment(MyModel):
         db_table = 'govermentproject_attachment'
 
 # 政府项目历史案例
-class GovernmentProjectHistoryCase(models):
+class GovernmentProjectHistoryCase(MyModel):
     govproj = MyForeignKey(GovernmentProject, related_name='govproj_projs', blank=True, null=True)
     proj = MyForeignKey(project, blank=True, null=True, related_name='proj_govprojs')
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_govprojhistorycases')
@@ -372,7 +372,7 @@ class GovernmentProjectHistoryCase(models):
                 raise InvestError(20071, msg='已存在一条相同记录了')
         super(GovernmentProjectHistoryCase, self).save(*args, **kwargs)
 
-class GovernmentProjectTag(models):
+class GovernmentProjectTag(models.Model):
     govproj = MyForeignKey(GovernmentProject, related_name='govproj_tags', blank=True, null=True)
     tag = MyForeignKey(Tag, related_name='tag_govprojs')
 
@@ -387,7 +387,7 @@ class GovernmentProjectTag(models):
         return super(GovernmentProjectTag, self).save(*args, **kwargs)
 
 
-class GovernmentProjectTrader(models):
+class GovernmentProjectTrader(MyModel):
     govproj = MyForeignKey(GovernmentProject, related_name='govproj_tags', blank=True, null=True)
     trader = MyForeignKey(MyUser, blank=True, null=True, related_name='trader_govprojs')
     type = models.PositiveSmallIntegerField(blank=True, null=True, help_text='联络人0、对接人1')
