@@ -40,7 +40,7 @@ import shutil
 class DataroomFilter(FilterSet):
     supportuser = RelationFilter(filterstr='proj__supportUser',lookup_method='in')
     user = RelationFilter(filterstr='dataroom_users__user', lookup_method='in', relationName='dataroom_users__is_deleted')
-    username = RelationFilter(filterstr='dataroom_users__user__usernameC'', lookup_method='icontains', relationName='dataroom_users__is_deleted')
+    username = RelationFilter(filterstr='dataroom_users__user__usernameC', lookup_method='icontains', relationName='dataroom_users__is_deleted')
     proj = RelationFilter(filterstr='proj', lookup_method='in')
     realname = RelationFilter(filterstr='proj__realname', lookup_method='icontains')
     title = RelationFilter(filterstr='proj__projtitleC', lookup_method='icontains')

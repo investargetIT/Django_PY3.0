@@ -18,26 +18,30 @@ import datetime
 from rest_framework.decorators import detail_route
 
 from APIlog.views import viewprojlog
-from dataroom.models import dataroom_User_file
 from dataroom.views import pulishProjectCreateDataroom
 from invest.settings import PROJECTPDF_URLPATH, APILOG_PATH
 from proj.models import project, finance, projectTags, projectIndustries, projectTransactionType, \
-    ShareToken, attachment, projServices, projTraders, projectDiDiRecord, projcomments
+    ShareToken, attachment, projServices, projTraders, projectDiDiRecord, projcomments, GovernmentProject, \
+    GovernmentProjectInfo, GovernmentProjectInfoAttachment, GovernmentProjectHistoryCase, GovernmentProjectTrader, \
+    GovernmentProjectTag
 from proj.serializer import ProjSerializer, FinanceSerializer, ProjCreatSerializer, \
     FinanceChangeSerializer, FinanceCreateSerializer, ProjAttachmentSerializer, \
     ProjDetailSerializer_withoutsecretinfo, ProjAttachmentCreateSerializer, \
     ProjIndustryCreateSerializer, ProjDetailSerializer_all, ProjTradersCreateSerializer, ProjTradersSerializer, \
     DiDiRecordSerializer, TaxiRecordCreateSerializer, ProjCommentsSerializer, ProjCommentsCreateSerializer, \
-    ProjListSerializer
+    ProjListSerializer, GovernmentProjectSerializer, GovernmentProjectCreateSerializer, \
+    GovernmentProjectDetailSerializer, GovernmentProjectInfoSerializer, GovernmentProjectInfoCreateSerializer, \
+    GovernmentProjectInfoAttachmentCreateSerializer, GovernmentProjectInfoAttachmentSerializer, \
+    GovernmentProjectHistoryCaseSerializer, GovernmentProjectHistoryCaseCreateSerializer, \
+    GovernmentProjectTraderSerializer, GovernmentProjectTraderCreateSerializer
 from sourcetype.models import Tag, TransactionType, DataSource, Service
 from third.views.qiniufile import deleteqiniufile, qiniuuploadfile
 from utils.logicJudge import is_projTrader, is_projdataroomInvestor, is_projOrgBDManager, is_companyDataroomProj
 from utils.somedef import addWaterMark
 from utils.sendMessage import sendmessage_projectpublish
 from utils.util import catchexcption, read_from_cache, write_to_cache, loginTokenIsAvailable, \
-    returnListChangeToLanguage, \
-    returnDictChangeToLanguage, SuccessResponse, InvestErrorResponse, ExceptionResponse, setrequestuser, \
-    setUserObjectPermission, cache_delete_key, checkrequesttoken, logexcption, mySortQuery, checkrequestpagesize
+    returnListChangeToLanguage, returnDictChangeToLanguage, SuccessResponse, InvestErrorResponse, ExceptionResponse, \
+    setrequestuser, cache_delete_key, checkrequesttoken, logexcption, mySortQuery, checkrequestpagesize
 from utils.customClass import JSONResponse, InvestError, RelationFilter
 from django_filters import FilterSet
 
@@ -528,7 +532,7 @@ class ProjectView(viewsets.ModelViewSet):
             if instance.proj_datarooms.filter(is_deleted=False, proj=instance).exists():
                 raise InvestError(code=2010, msg='删除项目失败', detail='{} 上有关联数据'.format('proj_datarooms'))
             with transaction.atomic():
-                for link in ['proj_finances', 'proj_attachment', 'project_tags', 'project_industries', 'project_TransactionTypes', 'proj_traders',
+                for link in ['proj_finances', 'proj_attachment', 'project_tags', 'project_industries', 'project_TransactionTypes', 'proj_traders', 'historycase_govprojs',
                              'proj_sharetoken', 'proj_datarooms', 'proj_services', 'proj_schedule', 'proj_orgBDs','proj_OrgBdBlacks', 'relate_projects']:
                     if link in ['proj_datarooms', 'relate_projects']:
                         manager = getattr(instance, link, None)
@@ -1494,3 +1498,583 @@ def feishu_update_proj_comments(proj_id, comments, requsetuser_id):
         logexcption('飞书项目id：%s,未找到对应项目' % proj_id)
     except Exception as err:
         logexcption('飞书项目最新进展备注导入失败: %s' % str(err))
+
+
+class GovernmentProjectFilter(FilterSet):
+    id = RelationFilter(filterstr='id', lookup_method='in')
+    name = RelationFilter(filterstr='name', lookup_method='icontains')
+    location = RelationFilter(filterstr='location', lookup_method='in', relationName='location__is_deleted')
+    leader = RelationFilter(filterstr='leader', lookup_method='icontains')
+    business = RelationFilter(filterstr='business', lookup_method='icontains')
+    preference = RelationFilter(filterstr='preference', lookup_method='icontains')
+    trader = RelationFilter(filterstr='govproj_traders__trader', lookup_method='in', relationName='govproj_traders__is_deleted')
+    tag = RelationFilter(filterstr='govproj_tags__tag', lookup_method='in')
+    createuser = RelationFilter(filterstr='createuser', lookup_method='in')
+
+    class Meta:
+        model = GovernmentProject
+        fields = ('id', 'name', 'location', 'leader', 'business', 'preference', 'trader', 'tag', 'createuser')
+
+class GovernmentProjectView(viewsets.ModelViewSet):
+    """
+        list:获取政府项目list
+        create:新增政府项目
+        retrieve:查看政府项目
+        update:修改政府项目
+        destroy:删除政府项目
+    """
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = GovernmentProjectFilter
+    queryset = GovernmentProject.objects.all().filter(is_deleted=False)
+    serializer_class = GovernmentProjectSerializer
+
+    def get_queryset(self):
+        if self.request.user.is_authenticated:
+            queryset = self.queryset.filter(datasource=self.request.user.datasource)
+        else:
+            queryset = self.queryset.all()
+        return queryset
+
+    @loginTokenIsAvailable()
+    def list(self, request, *args, **kwargs):
+        try:
+            page_size = request.GET.get('page_size', 10)
+            page_index = request.GET.get('page_index', 1)
+            lang = request.GET.get('lang', 'cn')
+            queryset = self.filter_queryset(self.get_queryset())
+            try:
+                count = queryset.count()
+                queryset = Paginator(queryset, page_size)
+                queryset = queryset.page(page_index)
+            except EmptyPage:
+                return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(
+                SuccessResponse({'count': count, 'data': returnListChangeToLanguage(serializer.data, lang)}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def create(self, request, *args, **kwargs):
+        try:
+            with transaction.atomic():
+                data = request.data
+                tagsdata = data.get('tags')
+                data['datasource'] = request.user.datasource_id
+                serializer = GovernmentProjectCreateSerializer(data=data)
+                if serializer.is_valid():
+                    instance = serializer.save()
+                    if tagsdata:
+                        tagslist = []
+                        if not isinstance(tagsdata,list):
+                            raise InvestError(20071, msg='新增项目失败', detail='tags must be a list')
+                        for tagid in tagsdata:
+                            tagslist.append(GovernmentProjectTag(govproj=instance, tag_id=tagid))
+                        instance.govproj_tags.bulk_create(tagslist)
+                else:
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
+                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable()
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            lang = request.GET.get('lang')
+            instance = self.get_object()
+            serializer = GovernmentProjectDetailSerializer(instance)
+            return JSONResponse(SuccessResponse(returnDictChangeToLanguage(serializer.data, lang)))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def update(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            with transaction.atomic():
+                data = request.data
+                data["lastmodifyuser"] = request.user.id
+                tagsdata = data.get('tags')
+                serializer = GovernmentProjectCreateSerializer(instance, data=data)
+                if serializer.is_valid():
+                    instance = serializer.save()
+                    if tagsdata is not None and isinstance(tagsdata,list):
+                        exist_tags = instance.govproj_tags.filter(tag__is_deleted=False).values_list('tag', flat=True)
+                        addlist = [item for item in tagsdata if item not in exist_tags]
+                        removelist = [item for item in exist_tags if item not in tagsdata]
+                        instance.govproj_tags.filter(tag__in=removelist).delete()
+                        govprojtaglist = []
+                        for tag in addlist:
+                            govprojtaglist.append(GovernmentProjectTag(govproj=instance, tag_id=tag))
+                        instance.govproj_tags.bulk_create(govprojtaglist)
+                else:
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
+                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def destroy(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            for link in ['govproj_infos', 'govprojinfo_attachments', 'govproj_historycases', 'govproj_tags', 'govproj_traders']:
+                manager = getattr(instance, link, None)
+                if not manager:
+                    continue
+                if isinstance(manager, models.Model):
+                    if hasattr(manager, 'is_deleted'):
+                        if not manager.is_deleted:
+                            manager.is_deleted = True
+                            manager.save()
+                    else:
+                        manager.delete()
+                else:
+                    try:
+                        manager.model._meta.get_field('is_deleted')
+                        if manager.all().filter(is_deleted=False).count():
+                            manager.all().update(is_deleted=True)
+                    except FieldDoesNotExist:
+                        manager.all().delete()
+            instance.is_deleted = True
+            instance.deletedtime = datetime.datetime.now()
+            instance.deleteduser = request.user
+            instance.save(update_fields=['is_deleted', 'deletedtime', 'deleteduser'])
+            return JSONResponse(SuccessResponse({'is_deleted': instance.is_deleted}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+class GovernmentProjectInfoFilter(FilterSet):
+    id = RelationFilter(filterstr='id', lookup_method='in')
+    govproj = RelationFilter(filterstr='govproj', lookup_method='in')
+    info = RelationFilter(filterstr='info', lookup_method='icontains')
+    type = RelationFilter(filterstr='type', lookup_method='in')
+    createuser = RelationFilter(filterstr='createuser', lookup_method='in')
+
+    class Meta:
+        model = GovernmentProjectInfo
+        fields = ('id', 'govproj', 'info', 'type', 'createuser')
+
+class GovernmentProjectInfoView(viewsets.ModelViewSet):
+    """
+        list:获取政府项目信息list
+        create:新增政府项目信息
+        update:修改政府项目信息
+        destroy:删除政府项目信息
+    """
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = GovernmentProjectInfoFilter
+    queryset = GovernmentProjectInfo.objects.all().filter(is_deleted=False)
+    serializer_class = GovernmentProjectInfoSerializer
+
+    def get_queryset(self):
+        if self.request.user.is_authenticated:
+            queryset = self.queryset.filter(datasource=self.request.user.datasource)
+        else:
+            queryset = self.queryset.all()
+        return queryset
+
+    @loginTokenIsAvailable()
+    def list(self, request, *args, **kwargs):
+        try:
+            page_size = request.GET.get('page_size', 10)
+            page_index = request.GET.get('page_index', 1)
+            lang = request.GET.get('lang', 'cn')
+            queryset = self.filter_queryset(self.get_queryset())
+            try:
+                count = queryset.count()
+                queryset = Paginator(queryset, page_size)
+                queryset = queryset.page(page_index)
+            except EmptyPage:
+                return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(
+                SuccessResponse({'count': count, 'data': returnListChangeToLanguage(serializer.data, lang)}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def create(self, request, *args, **kwargs):
+        try:
+            with transaction.atomic():
+                data = request.data
+                data['datasource'] = request.user.datasource_id
+                serializer = GovernmentProjectInfoCreateSerializer(data=data)
+                if serializer.is_valid():
+                    instance = serializer.save()
+                else:
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
+                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def update(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            with transaction.atomic():
+                data = request.data
+                data["lastmodifyuser"] = request.user.id
+                serializer = GovernmentProjectInfoCreateSerializer(instance, data=data)
+                if serializer.is_valid():
+                    instance = serializer.save()
+                else:
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
+                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def destroy(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            with transaction.atomic():
+                instance.govprojinfo_attachments.all().update(is_deleted=True, deletedtime=datetime.datetime.now(), deleteduser=request.user)
+                instance.is_deleted = True
+                instance.deleteduser = request.user
+                instance.deletedtime = datetime.datetime.now()
+                instance.save(update_fields=['is_deleted', 'deletedtime', 'deleteduser'])
+            return JSONResponse(SuccessResponse({'is_deleted': instance.is_deleted}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+class GovernmentProjectInfoAttachmentFilter(FilterSet):
+    id = RelationFilter(filterstr='id', lookup_method='in')
+    govproj = RelationFilter(filterstr='govprojinfo__govproj', lookup_method='in')
+    govprojinfo = RelationFilter(filterstr='govprojinfo', lookup_method='in')
+    bucket = RelationFilter(filterstr='bucket', lookup_method='in')
+    filename = RelationFilter(filterstr='type', lookup_method='icontains')
+    createuser = RelationFilter(filterstr='createuser', lookup_method='in')
+
+    class Meta:
+        model = GovernmentProjectInfoAttachment
+        fields = ('id', 'govproj', 'govprojinfo', 'bucket', 'filename', 'createuser')
+
+class GovernmentProjectInfoAttachmentView(viewsets.ModelViewSet):
+    """
+        list:获取政府项目附件
+        create:新增政府项目附件
+        update:修改政府项目附件
+        destroy:删除政府项目附件
+    """
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = GovernmentProjectInfoAttachmentFilter
+    queryset = GovernmentProjectInfoAttachment.objects.all().filter(is_deleted=False)
+    serializer_class = GovernmentProjectInfoAttachmentSerializer
+
+    def get_queryset(self):
+        if self.request.user.is_authenticated:
+            queryset = self.queryset.filter(datasource=self.request.user.datasource)
+        else:
+            queryset = self.queryset.all()
+        return queryset
+
+    @loginTokenIsAvailable()
+    def list(self, request, *args, **kwargs):
+        try:
+            page_size = request.GET.get('page_size', 10)
+            page_index = request.GET.get('page_index', 1)
+            lang = request.GET.get('lang', 'cn')
+            queryset = self.filter_queryset(self.get_queryset())
+            try:
+                count = queryset.count()
+                queryset = Paginator(queryset, page_size)
+                queryset = queryset.page(page_index)
+            except EmptyPage:
+                return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(
+                SuccessResponse({'count': count, 'data': returnListChangeToLanguage(serializer.data, lang)}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def create(self, request, *args, **kwargs):
+        try:
+            with transaction.atomic():
+                data = request.data
+                data['datasource'] = request.user.datasource_id
+                serializer = GovernmentProjectInfoAttachmentCreateSerializer(data=data)
+                if serializer.is_valid():
+                    instance = serializer.save()
+                else:
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
+                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def update(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            with transaction.atomic():
+                data = request.data
+                data["lastmodifyuser"] = request.user.id
+                serializer = GovernmentProjectInfoAttachmentCreateSerializer(instance, data=data)
+                if serializer.is_valid():
+                    instance = serializer.save()
+                else:
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
+                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def destroy(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            with transaction.atomic():
+                instance.is_deleted = True
+                instance.deleteduser = request.user
+                instance.deletedtime = datetime.datetime.now()
+                instance.save(update_fields=['is_deleted', 'deletedtime', 'deleteduser'])
+            return JSONResponse(SuccessResponse({'is_deleted': instance.is_deleted}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+class GovernmentProjectHistoryCaseFilter(FilterSet):
+    id = RelationFilter(filterstr='id', lookup_method='in')
+    govproj = RelationFilter(filterstr='govproj', lookup_method='in')
+    proj = RelationFilter(filterstr='proj', lookup_method='in')
+    createuser = RelationFilter(filterstr='createuser', lookup_method='in')
+
+    class Meta:
+        model = GovernmentProjectHistoryCase
+        fields = ('id', 'govproj', 'proj', 'createuser')
+
+
+class GovernmentProjectHistoryCaseView(viewsets.ModelViewSet):
+    """
+        list:获取政府项目附件历史案例
+        create:新增政府项目附件历史案例
+        update:修改政府项目附件历史案例
+        destroy:删除政府项目附件历史案例
+    """
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = GovernmentProjectHistoryCaseFilter
+    queryset = GovernmentProjectHistoryCase.objects.all().filter(is_deleted=False)
+    serializer_class = GovernmentProjectHistoryCaseSerializer
+
+    def get_queryset(self):
+        if self.request.user.is_authenticated:
+            queryset = self.queryset.filter(datasource=self.request.user.datasource)
+        else:
+            queryset = self.queryset.all()
+        return queryset
+
+    @loginTokenIsAvailable()
+    def list(self, request, *args, **kwargs):
+        try:
+            page_size = request.GET.get('page_size', 10)
+            page_index = request.GET.get('page_index', 1)
+            lang = request.GET.get('lang', 'cn')
+            queryset = self.filter_queryset(self.get_queryset())
+            try:
+                count = queryset.count()
+                queryset = Paginator(queryset, page_size)
+                queryset = queryset.page(page_index)
+            except EmptyPage:
+                return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(
+                SuccessResponse({'count': count, 'data': returnListChangeToLanguage(serializer.data, lang)}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def create(self, request, *args, **kwargs):
+        try:
+            with transaction.atomic():
+                data = request.data
+                data['datasource'] = request.user.datasource_id
+                serializer = GovernmentProjectHistoryCaseCreateSerializer(data=data)
+                if serializer.is_valid():
+                    instance = serializer.save()
+                else:
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
+                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def update(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            with transaction.atomic():
+                data = request.data
+                data["lastmodifyuser"] = request.user.id
+                serializer = GovernmentProjectHistoryCaseCreateSerializer(instance, data=data)
+                if serializer.is_valid():
+                    instance = serializer.save()
+                else:
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
+                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def destroy(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            with transaction.atomic():
+                instance.is_deleted = True
+                instance.deleteduser = request.user
+                instance.deletedtime = datetime.datetime.now()
+                instance.save(update_fields=['is_deleted', 'deletedtime', 'deleteduser'])
+            return JSONResponse(SuccessResponse({'is_deleted': instance.is_deleted}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+class GovernmentProjectTraderFilter(FilterSet):
+    id = RelationFilter(filterstr='id', lookup_method='in')
+    govproj = RelationFilter(filterstr='govproj', lookup_method='in')
+    trader = RelationFilter(filterstr='trader', lookup_method='in')
+    type = RelationFilter(filterstr='type', lookup_method='in')
+    createuser = RelationFilter(filterstr='createuser', lookup_method='in')
+
+    class Meta:
+        model = GovernmentProjectTrader
+        fields = ('id', 'govproj', 'trader', 'type', 'createuser')
+
+
+class GovernmentProjectTraderView(viewsets.ModelViewSet):
+    """
+        list:获取政府项目交易师
+        create:新增政府项目附件交易师
+        update:修改政府项目附件交易师
+        destroy:删除政府项目附件交易师
+    """
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = GovernmentProjectTraderFilter
+    queryset = GovernmentProjectTrader.objects.all().filter(is_deleted=False)
+    serializer_class = GovernmentProjectTraderSerializer
+
+    def get_queryset(self):
+        if self.request.user.is_authenticated:
+            queryset = self.queryset.filter(datasource=self.request.user.datasource)
+        else:
+            queryset = self.queryset.all()
+        return queryset
+
+    @loginTokenIsAvailable()
+    def list(self, request, *args, **kwargs):
+        try:
+            page_size = request.GET.get('page_size', 10)
+            page_index = request.GET.get('page_index', 1)
+            lang = request.GET.get('lang', 'cn')
+            queryset = self.filter_queryset(self.get_queryset())
+            try:
+                count = queryset.count()
+                queryset = Paginator(queryset, page_size)
+                queryset = queryset.page(page_index)
+            except EmptyPage:
+                return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(
+                SuccessResponse({'count': count, 'data': returnListChangeToLanguage(serializer.data, lang)}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def create(self, request, *args, **kwargs):
+        try:
+            with transaction.atomic():
+                data = request.data
+                data['datasource'] = request.user.datasource_id
+                serializer = GovernmentProjectTraderCreateSerializer(data=data)
+                if serializer.is_valid():
+                    instance = serializer.save()
+                else:
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
+                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def update(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            with transaction.atomic():
+                data = request.data
+                data["lastmodifyuser"] = request.user.id
+                serializer = GovernmentProjectTraderCreateSerializer(instance, data=data)
+                if serializer.is_valid():
+                    instance = serializer.save()
+                else:
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
+                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable(['usersys.as_trader'])
+    def destroy(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            with transaction.atomic():
+                instance.is_deleted = True
+                instance.deleteduser = request.user
+                instance.deletedtime = datetime.datetime.now()
+                instance.save(update_fields=['is_deleted', 'deletedtime', 'deleteduser'])
+            return JSONResponse(SuccessResponse({'is_deleted': instance.is_deleted}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))

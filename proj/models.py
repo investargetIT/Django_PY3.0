@@ -364,6 +364,7 @@ class GovernmentProjectInfoAttachment(MyModel):
     deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_govprojinfoattachments')
     createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_govprojinfoattachments')
     lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_govprojinfoattachments')
+    datasource = MyForeignKey(DataSource, help_text='数据源', blank=True, default=1)
 
     class Meta:
         db_table = 'govermentproject_infoattachment'
