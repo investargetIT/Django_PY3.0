@@ -76,7 +76,7 @@ class ProjectView(viewsets.ModelViewSet):
     getshareproj:获取分享的项目详情
     sendWXGroupPdf:发送群pdf
     """
-    filter_backends = (MySearchFilter,filters.DjangoFilterBackend,)
+    filter_backends = (filters.SearchFilter,filters.DjangoFilterBackend,)
     queryset = project.objects.all().filter(is_deleted=False)
     filter_class = ProjectFilter
     search_fields = ('projtitleC', 'projtitleE', 'realname')
