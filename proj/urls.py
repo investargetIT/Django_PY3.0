@@ -76,6 +76,55 @@ projcomments_detail = views.ProjCommentsView.as_view({
         'delete': 'destroy'
 })
 
+
+governmentproj_list = views.GovernmentProjectView.as_view({
+        'get': 'list',
+        'post': 'create'
+})
+
+governmentproj_detail = views.GovernmentProjectView.as_view({
+        'get': 'retrieve',
+        'put': 'update',
+        'delete': 'destroy'
+})
+
+governmentprojinfo_list = views.GovernmentProjectInfoView.as_view({
+        'get': 'list',
+        'post': 'create'
+})
+
+governmentprojinfo_detail = views.GovernmentProjectInfoView.as_view({
+        'put': 'update',
+        'delete': 'destroy'
+})
+governmentprojinfoatta_list = views.GovernmentProjectInfoAttachmentView.as_view({
+        'get': 'list',
+        'post': 'create'
+})
+
+governmentprojinfoatta_detail = views.GovernmentProjectInfoAttachmentView.as_view({
+        'put': 'update',
+        'delete': 'destroy'
+})
+governmentprojhistycase_list = views.GovernmentProjectHistoryCaseView.as_view({
+        'get': 'list',
+        'post': 'create'
+})
+
+governmentprojhistycase_detail = views.GovernmentProjectHistoryCaseView.as_view({
+        'put': 'update',
+        'delete': 'destroy'
+})
+governmentprojtrader_list = views.GovernmentProjectTraderView.as_view({
+        'get': 'list',
+        'post': 'create'
+})
+
+governmentprojtrader_detail = views.GovernmentProjectTraderView.as_view({
+        'put': 'update',
+        'delete': 'destroy'
+})
+
 urlpatterns = [
         url(r'^$', proj_list , name='proj_list'),
         url(r'^(?P<pk>\d+)/$', proj_detail, name='proj_detail'),
@@ -91,6 +140,17 @@ urlpatterns = [
         url(r'^shareproj/$',getshareproj,name='getshareprojdetail'),
         url(r'^comment/$', projcomments_list, name='projcomments-list'),
         url(r'^comment/(?P<pk>\d+)/$', projcomments_detail, name='projcomments-detail'),
+ #       url(r'^govproj/$', governmentproj_list, name='governmentproj-list'),
+ #       url(r'^govproj/(?P<pk>\d+)/$', governmentproj_detail, name='governmentproj-detail'),
+  #      url(r'^govproj/info/$', governmentprojinfo_list, name='governmentprojinfo-list'),
+   #     url(r'^govproj/info/(?P<pk>\d+)/$', governmentprojinfo_detail, name='governmentprojinfo-detail'),
+    #    url(r'^govproj/info/atta/$', governmentprojinfoatta_list, name='governmentprojinfoatta-list'),
+    #    url(r'^govproj/info/atta/(?P<pk>\d+)/$', governmentprojinfoatta_detail, name='governmentprojinfoatta-detail'),
+    #    url(r'^govproj/historycase/$', governmentprojhistycase_list, name='governmentprojhistycase-list'),
+    #    url(r'^govproj/historycase/(?P<pk>\d+)/$', governmentprojhistycase_detail, name='governmentprojhistycase-detail'),
+    #    url(r'^govproj/trader/$', governmentprojtrader_list, name='governmentprojtrader-list'),
+    #    url(r'^govproj/trader/(?P<pk>\d+)/$', governmentprojtrader_detail, name='governmentprojtrader-detail'),
+
         url(r'^pdf/(?P<pk>\d+)/$',getprojpdf,name='getprojpdf'),
         url(r'^test/$',views.testPdf),
 ]

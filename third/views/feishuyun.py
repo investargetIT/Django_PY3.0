@@ -409,7 +409,7 @@ def request_handleApprovalsTask(request):
         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
-@api_view(['GET'])
+@api_view(['POST'])
 def request_getUserInfoByUserID(request):
     """
         获取单个用户信息

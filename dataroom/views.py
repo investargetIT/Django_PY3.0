@@ -40,12 +40,15 @@ import shutil
 class DataroomFilter(FilterSet):
     supportuser = RelationFilter(filterstr='proj__supportUser',lookup_method='in')
     user = RelationFilter(filterstr='dataroom_users__user', lookup_method='in', relationName='dataroom_users__is_deleted')
+    username = RelationFilter(filterstr='dataroom_users__user__usernameC', lookup_method='icontains', relationName='dataroom_users__is_deleted')
     proj = RelationFilter(filterstr='proj', lookup_method='in')
+    realname = RelationFilter(filterstr='proj__realname', lookup_method='icontains')
+    title = RelationFilter(filterstr='proj__projtitleC', lookup_method='icontains')
     isClose = RelationFilter(filterstr='isClose', lookup_method='in')
     isCompanyFile = RelationFilter(filterstr='isCompanyFile', lookup_method='in')
     class Meta:
         model = dataroom
-        fields = ('proj', 'isClose', 'supportuser', 'user', 'isCompanyFile')
+        fields = ('proj', 'isClose', 'supportuser', 'user', 'isCompanyFile', 'realname', 'title', 'username',)
 
 class DataroomView(viewsets.ModelViewSet):
     """
@@ -57,9 +60,8 @@ class DataroomView(viewsets.ModelViewSet):
        checkZipStatus: 开始打包压缩任务
        downloadDataroomZip: 下载压缩包
     """
-    filter_backends = (MySearchFilter,filters.DjangoFilterBackend,)
+    filter_backends = (filters.DjangoFilterBackend,)
     queryset = dataroom.objects.all().filter(is_deleted=False)
-    search_fields = ('proj__projtitleC', 'proj__projtitleE', 'proj__supportUser__usernameC', 'dataroom_users__user__usernameC')
     filter_class = DataroomFilter
     serializer_class = DataroomSerializer
 
@@ -712,9 +714,11 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
 class User_DataroomfileFilter(FilterSet):
     dataroom = RelationFilter(filterstr='dataroom',lookup_method='in')
     user = RelationFilter(filterstr='user', lookup_method='in')
+    realname = RelationFilter(filterstr='dataroom__proj__realname', lookup_method='icontains')
+    title = RelationFilter(filterstr='dataroom__proj__projtitleC', lookup_method='icontains')
     class Meta:
         model = dataroom_User_file
-        fields = ('dataroom', 'user')
+        fields = ('dataroom', 'user', 'realname', 'title',)
 
 class User_DataroomfileView(viewsets.ModelViewSet):
     """
@@ -727,10 +731,9 @@ class User_DataroomfileView(viewsets.ModelViewSet):
            sendFileUpdateEmailNotifaction:发送文件更新邮件通知
            destroy:减少用户可见dataroom
         """
-    filter_backends = (MySearchFilter, filters.DjangoFilterBackend,)
+    filter_backends = (filters.DjangoFilterBackend,)
     queryset = dataroom_User_file.objects.all().filter(is_deleted=False,dataroom__isClose=False,dataroom__is_deleted=False)
     filter_class = User_DataroomfileFilter
-    search_fields = ('dataroom__proj__projtitleC','dataroom__proj__projtitleE')
     serializer_class = User_DataroomfileCreateSerializer
     Model = dataroom_User_file
 

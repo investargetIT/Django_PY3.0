@@ -183,6 +183,18 @@ class Country(models.Model):
     def __str__(self):
         return self.countryC
 
+class GovernmentProjInfoType(models.Model):
+    '''
+    政府项目信息类型
+    '''
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=40, blank=True, null=True)
+    is_deleted = models.BooleanField(blank=True, default=False)
+
+    def __str__(self):
+        return self.name
+
+
 class Service(models.Model):
     '''
     项目服务
