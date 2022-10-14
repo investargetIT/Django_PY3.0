@@ -6,7 +6,7 @@ from sourcetype.models import TransactionType, TransactionPhases, OrgArea, Tag, 
     DataSource, webmenu, CharacterType, orgtitletable, Service, OrgAttribute, BDStatus, \
     AndroidAppVersion, OrgBdResponse, \
     OrgLevelType, FamiliarLevel, IndustryGroup, DidiOrderType, Education, PerformanceAppraisalLevel, TrainingType, \
-    TrainingStatus, ProjProgressContrastTable, GovernmentProjInfoType
+    TrainingStatus, ProjProgressContrastTable
 from third.views.qiniufile import getUrlWithBucketAndKey
 
 
@@ -108,11 +108,6 @@ class orgAttributeSerializer(serializers.ModelSerializer):
 class currencyTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = CurrencyType
-        exclude = ('is_deleted',)
-
-class GovernmentProjInfoTypeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = GovernmentProjInfoType
         exclude = ('is_deleted',)
 
 

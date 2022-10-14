@@ -11,7 +11,7 @@ from django.db import models
 # Create your models here.
 
 from sourcetype.models import ProjectStatus, CurrencyType, Tag, Country, TransactionType, Industry, \
-    DataSource, CharacterType, Service, IndustryGroup, DidiOrderType, OrgBdResponse, GovernmentProjInfoType
+    DataSource, CharacterType, Service, IndustryGroup, DidiOrderType, OrgBdResponse
 from usersys.models import MyUser
 
 from utils.customClass import InvestError, MyForeignKey, MyModel
@@ -312,110 +312,3 @@ class projcomments(MyModel):
         self.datasource = self.proj.datasource
         return super(projcomments, self).save(*args, **kwargs)
 
-
-
-
-# 政府项目
-class GovernmentProject(MyModel):
-    name = models.CharField(max_length=128, blank=True, null=True, help_text='项目名称')
-    location = MyForeignKey(Country, blank=True, null=True, help_text='地区')
-    leader = models.TextField(blank=True, null=True, help_text='高层领导')
-    business = models.TextField(blank=True, null=True, help_text='业务人员（局长）')
-    preference = models.TextField(blank=True, null=True, help_text='投资偏好')
-    maininvestor = models.TextField(blank=True, null=True, help_text='投资主体')
-    remark = models.TextField(blank=True, null=True, help_text='备注说明')
-    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_governmentprojects')
-    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_governmentprojects')
-    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_governmentprojects')
-    datasource = MyForeignKey(DataSource, blank=True, help_text='数据源')
-
-    class Meta:
-        db_table = 'govermentproject'
-
-
-    def save(self, *args, **kwargs):
-        return super(GovernmentProject, self).save(*args, **kwargs)
-
-# 政府项目信息  //土地价值，市场报告，政策法规
-class GovernmentProjectInfo(MyModel):
-    govproj = MyForeignKey(GovernmentProject, blank=True, null=True, related_name='govproj_infos')
-    info = models.TextField(blank=True, null=True, help_text='信息')
-    type = MyForeignKey(GovernmentProjInfoType, blank=True, null=True)
-    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_governmentprojectinfos')
-    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_governmentprojectinfos')
-    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_governmentprojectinfos')
-    datasource = MyForeignKey(DataSource, blank=True, help_text='数据源')
-
-    class Meta:
-        db_table = 'govermentproject_info'
-
-
-    def save(self, *args, **kwargs):
-        return super(GovernmentProjectInfo, self).save(*args, **kwargs)
-
-
-# 政府项目信息附件   //土地价值，市场报告，政策法规 的附件
-class GovernmentProjectInfoAttachment(MyModel):
-    govprojinfo = MyForeignKey(GovernmentProjectInfo, blank=True, null=True, related_name='govprojinfo_attachments')
-    filename = models.CharField(max_length=128,blank=True,null=True)
-    bucket = models.CharField(max_length=32,blank=True,null=True)
-    key = models.CharField(max_length=128,blank=True,null=True)
-    realfilekey = models.CharField(max_length=128, blank=True, null=True)
-    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_govprojinfoattachments')
-    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_govprojinfoattachments')
-    lastmodifyuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usermodify_govprojinfoattachments')
-    datasource = MyForeignKey(DataSource, help_text='数据源', blank=True, default=1)
-
-    class Meta:
-        db_table = 'govermentproject_infoattachment'
-
-# 政府项目历史案例
-class GovernmentProjectHistoryCase(MyModel):
-    govproj = MyForeignKey(GovernmentProject, related_name='govproj_historycases', blank=True, null=True)
-    proj = MyForeignKey(project, blank=True, null=True, related_name='historycase_govprojs')
-    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_govprojhistorycases')
-    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_govprojhistorycases')
-    datasource = MyForeignKey(DataSource, help_text='数据源', blank=True, default=1)
-
-    class Meta:
-        db_table = "govermentproject_historycase"
-
-    def save(self, *args, **kwargs):
-        if not self.is_deleted:
-            qs = GovernmentProjectHistoryCase.objects.exclude(pk=self.pk).filter(is_deleted=False, govproj=self.govproj, proj=self.proj)
-            if qs.exists():
-                raise InvestError(20071, msg='已存在一条相同记录了')
-        super(GovernmentProjectHistoryCase, self).save(*args, **kwargs)
-
-class GovernmentProjectTag(models.Model):
-    govproj = MyForeignKey(GovernmentProject, related_name='govproj_tags', blank=True, null=True)
-    tag = MyForeignKey(Tag, related_name='tag_govprojs')
-
-
-    class Meta:
-        db_table = "govermentproject_tag"
-        unique_together = ('govproj', 'tag')
-
-    def save(self, *args, **kwargs):
-        if self.tag.datasource != self.govproj.datasource:
-            raise InvestError(8888, msg='标签来源不符')
-        return super(GovernmentProjectTag, self).save(*args, **kwargs)
-
-
-class GovernmentProjectTrader(MyModel):
-    govproj = MyForeignKey(GovernmentProject, related_name='govproj_traders', blank=True, null=True)
-    trader = MyForeignKey(MyUser, blank=True, null=True, related_name='trader_govprojs')
-    type = models.PositiveSmallIntegerField(blank=True, null=True, help_text='联络人0、对接人1')
-    deleteduser = MyForeignKey(MyUser, blank=True, null=True, related_name='userdelete_govprojTraders')
-    createuser = MyForeignKey(MyUser, blank=True, null=True, related_name='usercreate_govprojTraders')
-    datasource = MyForeignKey(DataSource, help_text='数据源', blank=True, default=1)
-
-    class Meta:
-        db_table = "govermentproject_trader"
-
-    def save(self, *args, **kwargs):
-        if not self.is_deleted:
-            qs = GovernmentProjectTrader.objects.exclude(pk=self.pk).filter(is_deleted=False, govproj=self.govproj, trader=self.trader, type=self.type)
-            if qs.exists():
-                raise InvestError(20071, msg='该交易师已存在一条相同记录了')
-        super(GovernmentProjectTrader, self).save(*args, **kwargs)

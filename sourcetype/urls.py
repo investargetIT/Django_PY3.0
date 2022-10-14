@@ -160,10 +160,6 @@ AndroidVersion_detail = views.AndroidAppVersionView.as_view({
         'delete':'destroy',
 })
 
-goverProjInfoType = views.GovernmentProjInfoTypeView.as_view({
-        'get': 'list',
-})
-
 urlpatterns = [
     url(r'^tag$', tag,name='tagsource',),
 
@@ -214,8 +210,6 @@ urlpatterns = [
     url(r'^trainingStatus$', TrainingStatus,name='TrainingStatusSource',),
 
     url(r'^education$', educationType,name='EducationSource',),
-
-    url(r'^goverInfoType$', goverProjInfoType, name='GoverProjInfoType', ),
 
     url(r'^projProgressContrast$', ProjProgressContrast, name='projProgressContrast', ),
 
