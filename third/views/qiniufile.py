@@ -359,7 +359,7 @@ def uploadFileToQiniu():
     elif QiNiuFileUploadRecord.objects.filter(status=2, is_deleted=False).exists():
         quesys = QiNiuFileUploadRecord.objects.filter(status=2, is_deleted=False)
         if quesys.first().starttime < (datetime.datetime.now() - datetime.timedelta(minutes=10)):
-            quesys.first().update(status=1, success1=False, success2=False, info1=None, info2=None, msg=None, starttime=None, endtime=None)
+            quesys.first().update(status=3, success1=False, success2=False, info1=None, info2=None, msg=None, starttime=None, endtime=None)
 
 # 获取七牛文件上传记录
 @api_view(['GET'])
