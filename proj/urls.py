@@ -95,7 +95,6 @@ governmentprojinfo_list = views.GovernmentProjectInfoView.as_view({
 
 governmentprojinfo_detail = views.GovernmentProjectInfoView.as_view({
         'put': 'update',
-        'delete': 'destroy'
 })
 governmentprojinfoatta_list = views.GovernmentProjectInfoAttachmentView.as_view({
         'get': 'list',
@@ -103,7 +102,6 @@ governmentprojinfoatta_list = views.GovernmentProjectInfoAttachmentView.as_view(
 })
 
 governmentprojinfoatta_detail = views.GovernmentProjectInfoAttachmentView.as_view({
-        'put': 'update',
         'delete': 'destroy'
 })
 governmentprojhistycase_list = views.GovernmentProjectHistoryCaseView.as_view({
@@ -112,7 +110,6 @@ governmentprojhistycase_list = views.GovernmentProjectHistoryCaseView.as_view({
 })
 
 governmentprojhistycase_detail = views.GovernmentProjectHistoryCaseView.as_view({
-        'put': 'update',
         'delete': 'destroy'
 })
 governmentprojtrader_list = views.GovernmentProjectTraderView.as_view({
@@ -121,7 +118,6 @@ governmentprojtrader_list = views.GovernmentProjectTraderView.as_view({
 })
 
 governmentprojtrader_detail = views.GovernmentProjectTraderView.as_view({
-        'put': 'update',
         'delete': 'destroy'
 })
 

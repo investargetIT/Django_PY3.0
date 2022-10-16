@@ -1563,17 +1563,33 @@ class GovernmentProjectView(viewsets.ModelViewSet):
             with transaction.atomic():
                 data = request.data
                 tagsdata = data.get('tags')
-                data['datasource'] = request.user.datasource_id
+                infosdata = data.get('infos')
+                historycasesdata = data.get('historycases')
+                tradersdata = data.get('traders')
+                data['datasource'] =  request.user.datasource_id
                 serializer = GovernmentProjectCreateSerializer(data=data)
                 if serializer.is_valid():
                     instance = serializer.save()
-                    if tagsdata:
-                        tagslist = []
-                        if not isinstance(tagsdata,list):
-                            raise InvestError(20071, msg='新增项目失败', detail='tags must be a list')
+                    if tagsdata and isinstance(tagsdata,list):
+                        newdatalist = []
                         for tagid in tagsdata:
-                            tagslist.append(GovernmentProjectTag(govproj=instance, tag_id=tagid))
-                        instance.govproj_tags.bulk_create(tagslist)
+                            newdatalist.append(GovernmentProjectTag(govproj=instance, tag_id=tagid))
+                        instance.govproj_tags.bulk_create(newdatalist)
+                    if infosdata and isinstance(infosdata,list):
+                        newdatalist = []
+                        for info in infosdata:
+                            newdatalist.append(GovernmentProjectInfo(govproj=instance, info=info['info'], type=info['type'], createuser=request.user, createdtime=datetime.datetime.now(), datasource=request.user.datasource))
+                        instance.govproj_infos.bulk_create(newdatalist)
+                    if historycasesdata and isinstance(historycasesdata,list):
+                        newdatalist = []
+                        for case in historycasesdata:
+                            newdatalist.append(GovernmentProjectHistoryCase(govproj=instance, proj=case, createuser=request.user, createdtime=datetime.datetime.now(), datasource=request.user.datasource))
+                        instance.govproj_historycases.bulk_create(newdatalist)
+                    if tradersdata and isinstance(tradersdata,list):
+                        newdatalist = []
+                        for trader in tradersdata:
+                            newdatalist.append(GovernmentProjectTrader(govproj=instance, trader=trader['trader'], type=trader['type'], createuser=request.user, createdtime=datetime.datetime.now(), datasource=request.user.datasource))
+                        instance.govproj_traders.bulk_create(newdatalist)
                 else:
                     raise InvestError(20071, msg='%s' % serializer.error_messages)
                 return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
@@ -1604,6 +1620,7 @@ class GovernmentProjectView(viewsets.ModelViewSet):
                 data = request.data
                 data["lastmodifyuser"] = request.user.id
                 tagsdata = data.get('tags')
+                infosdata = data.get('infos')
                 serializer = GovernmentProjectCreateSerializer(instance, data=data)
                 if serializer.is_valid():
                     instance = serializer.save()
@@ -1616,6 +1633,12 @@ class GovernmentProjectView(viewsets.ModelViewSet):
                         for tag in addlist:
                             govprojtaglist.append(GovernmentProjectTag(govproj=instance, tag_id=tag))
                         instance.govproj_tags.bulk_create(govprojtaglist)
+                    if infosdata is not None and isinstance(infosdata,list):
+                        for info in infosdata:
+                            infoins = GovernmentProjectInfo.object.get(id=info['id'])
+                            serializer = GovernmentProjectInfoCreateSerializer(infoins, data=info)
+                            if serializer.is_valid():
+                                serializer.save()
                 else:
                     raise InvestError(20071, msg='%s' % serializer.error_messages)
                 return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
@@ -1674,7 +1697,6 @@ class GovernmentProjectInfoView(viewsets.ModelViewSet):
         list:获取政府项目信息list
         create:新增政府项目信息
         update:修改政府项目信息
-        destroy:删除政府项目信息
     """
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = GovernmentProjectInfoFilter
@@ -1748,22 +1770,6 @@ class GovernmentProjectInfoView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['usersys.as_trader'])
-    def destroy(self, request, *args, **kwargs):
-        try:
-            instance = self.get_object()
-            with transaction.atomic():
-                instance.govprojinfo_attachments.all().update(is_deleted=True, deletedtime=datetime.datetime.now(), deleteduser=request.user)
-                instance.is_deleted = True
-                instance.deleteduser = request.user
-                instance.deletedtime = datetime.datetime.now()
-                instance.save(update_fields=['is_deleted', 'deletedtime', 'deleteduser'])
-            return JSONResponse(SuccessResponse({'is_deleted': instance.is_deleted}))
-        except InvestError as err:
-            return JSONResponse(InvestErrorResponse(err))
-        except Exception:
-            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
 class GovernmentProjectInfoAttachmentFilter(FilterSet):
     id = RelationFilter(filterstr='id', lookup_method='in')
     govproj = RelationFilter(filterstr='govprojinfo__govproj', lookup_method='in')
@@ -1780,7 +1786,6 @@ class GovernmentProjectInfoAttachmentView(viewsets.ModelViewSet):
     """
         list:获取政府项目附件
         create:新增政府项目附件
-        update:修改政府项目附件
         destroy:删除政府项目附件
     """
     filter_backends = (filters.DjangoFilterBackend,)
@@ -1837,25 +1842,6 @@ class GovernmentProjectInfoAttachmentView(viewsets.ModelViewSet):
 
 
     @loginTokenIsAvailable(['usersys.as_trader'])
-    def update(self, request, *args, **kwargs):
-        try:
-            instance = self.get_object()
-            with transaction.atomic():
-                data = request.data
-                data["lastmodifyuser"] = request.user.id
-                serializer = GovernmentProjectInfoAttachmentCreateSerializer(instance, data=data)
-                if serializer.is_valid():
-                    instance = serializer.save()
-                else:
-                    raise InvestError(20071, msg='%s' % serializer.error_messages)
-                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
-        except InvestError as err:
-            return JSONResponse(InvestErrorResponse(err))
-        except Exception:
-            catchexcption(request)
-            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
-    @loginTokenIsAvailable(['usersys.as_trader'])
     def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
@@ -1886,7 +1872,6 @@ class GovernmentProjectHistoryCaseView(viewsets.ModelViewSet):
     """
         list:获取政府项目附件历史案例
         create:新增政府项目附件历史案例
-        update:修改政府项目附件历史案例
         destroy:删除政府项目附件历史案例
     """
     filter_backends = (filters.DjangoFilterBackend,)
@@ -1941,25 +1926,6 @@ class GovernmentProjectHistoryCaseView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
     @loginTokenIsAvailable(['usersys.as_trader'])
-    def update(self, request, *args, **kwargs):
-        try:
-            instance = self.get_object()
-            with transaction.atomic():
-                data = request.data
-                data["lastmodifyuser"] = request.user.id
-                serializer = GovernmentProjectHistoryCaseCreateSerializer(instance, data=data)
-                if serializer.is_valid():
-                    instance = serializer.save()
-                else:
-                    raise InvestError(20071, msg='%s' % serializer.error_messages)
-                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
-        except InvestError as err:
-            return JSONResponse(InvestErrorResponse(err))
-        except Exception:
-            catchexcption(request)
-            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
-    @loginTokenIsAvailable(['usersys.as_trader'])
     def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
@@ -1991,7 +1957,6 @@ class GovernmentProjectTraderView(viewsets.ModelViewSet):
     """
         list:获取政府项目交易师
         create:新增政府项目附件交易师
-        update:修改政府项目附件交易师
         destroy:删除政府项目附件交易师
     """
     filter_backends = (filters.DjangoFilterBackend,)
@@ -2045,24 +2010,6 @@ class GovernmentProjectTraderView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['usersys.as_trader'])
-    def update(self, request, *args, **kwargs):
-        try:
-            instance = self.get_object()
-            with transaction.atomic():
-                data = request.data
-                data["lastmodifyuser"] = request.user.id
-                serializer = GovernmentProjectTraderCreateSerializer(instance, data=data)
-                if serializer.is_valid():
-                    instance = serializer.save()
-                else:
-                    raise InvestError(20071, msg='%s' % serializer.error_messages)
-                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
-        except InvestError as err:
-            return JSONResponse(InvestErrorResponse(err))
-        except Exception:
-            catchexcption(request)
-            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
     @loginTokenIsAvailable(['usersys.as_trader'])
     def destroy(self, request, *args, **kwargs):
