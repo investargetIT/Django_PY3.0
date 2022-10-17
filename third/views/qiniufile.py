@@ -267,17 +267,29 @@ def check_file(file, file_path, file_path_temp):
         return {'code': '0', 'msg': '上传并提交文件块成功', 'is_end': False}
 
 
+def check_status(thread_name):
+    my_threads = threading.enumerate()
+    for elem in my_threads:
+        if elem.name == thread_name:
+            return elem.is_alive()
+    return False
+
 def uploadFileToQiniu():
     markfilepath = APILOG_PATH['qiniumarkFilePath']
+    thread_name = 'uploadqiniufilethread'
     q = qiniu.Auth(ACCESS_KEY, SECRET_KEY)
     class startdotaskthread(threading.Thread):
 
         def getTask(self):
-            task_qs = QiNiuFileUploadRecord.objects.filter(status=1, is_deleted=False).order_by('id')
+            task_qs = QiNiuFileUploadRecord.objects.filter(status=2, is_deleted=False).order_by('id')
             if task_qs.exists():
                 return task_qs
             else:
-                return None
+                task_qs = QiNiuFileUploadRecord.objects.filter(status=1, is_deleted=False).order_by('id')
+                if task_qs.exists():
+                    return task_qs
+                else:
+                    return None
 
         # 上传本地文件
         @func_set_timeout(300)
@@ -314,27 +326,33 @@ def uploadFileToQiniu():
         def executeTask(self, task_qs):
 
             for uploadtask in task_qs:
-                if uploadtask.status == 1:
-                    uploadtask.status = 2
-                    uploadtask.starttime = datetime.datetime.now()
-                    uploadtask.save()
+                if uploadtask.status in [1, 2]:
+                    if uploadtask.status == 1:
+                        uploadtask.status = 2
+                        uploadtask.starttime = datetime.datetime.now()
+                        uploadtask.save()
                     try:
                         file_path = os.path.join(APILOG_PATH['uploadFilePath'], uploadtask.key)
                         if os.path.exists(file_path):
                             ret1, info1 = self.qiniuuploadfile(filepath=file_path, bucket_name=uploadtask.bucket, bucket_key=uploadtask.key)
                             uploadtask.success1 = ret1
                             uploadtask.info1 = info1
+                            uploadtask.save()
                             if uploadtask.convertToPDF:
                                 converfile_path = os.path.join(APILOG_PATH['uploadFilePath'], uploadtask.convertKey)
-                                self.convertAndUploadOffice(file_path, converfile_path)
+                                if not os.path.exists(converfile_path):
+                                    self.convertAndUploadOffice(file_path, converfile_path)
                                 if os.path.exists(converfile_path):
                                     ret2, info2 = self.qiniuuploadfile(filepath=converfile_path, bucket_name=uploadtask.bucket, bucket_key=uploadtask.convertKey)
                                     uploadtask.success2 = ret2
                                     uploadtask.info2 = info2
+                                    uploadtask.save()
                                 else:
                                     uploadtask.msg = '文件转换格式失败'
+                                    uploadtask.save()
                         else:
                             uploadtask.msg = '上传文件不存在'
+                            uploadtask.save()
                     except Exception:
                         logexcption(msg='文件上传七牛服务器失败')
                         uploadtask.msg = traceback.format_exc()
@@ -353,20 +371,32 @@ def uploadFileToQiniu():
             remove_file(markfilepath)
 
     if not os.path.exists(markfilepath):
+        d = startdotaskthread(name=thread_name)
+        d.start()
         f = open(markfilepath, 'w')
         f.close()
-        d = startdotaskthread()
-        d.start()
-    elif QiNiuFileUploadRecord.objects.filter(status=2, is_deleted=False).exists():
-        quesys = QiNiuFileUploadRecord.objects.filter(status=2, is_deleted=False)
-        if quesys.first().starttime < (datetime.datetime.now() - datetime.timedelta(minutes=10)):
-            quesys.first().update(status=3)
+    else:
+        if check_status(thread_name):
+            if QiNiuFileUploadRecord.objects.filter(status=2, is_deleted=False).exists():
+                uploadtask = QiNiuFileUploadRecord.objects.filter(status=2, is_deleted=False).first()
+                if uploadtask.starttime < (datetime.datetime.now() - datetime.timedelta(minutes=10)):
+                    uploadtask.status = 3
+                    uploadtask.endtime = datetime.datetime.now()
+                    uploadtask.save()
+        else:
+            remove_file(markfilepath)
+            d = startdotaskthread()
+            d.start()
+            f = open(markfilepath, 'w')
+            f.close()
+
 
 # 获取七牛文件上传记录
 @api_view(['GET'])
 @checkRequestToken()
 def getQiniuUploadRecordResponse(request):
     try:
+        uploadFileToQiniu()
         key = request.GET.get('key')
         if not key:
             raise InvestError(20071, msg='key不能为空', detail='查询上传结果，key不能为空')
