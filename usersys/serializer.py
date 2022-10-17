@@ -120,7 +120,7 @@ class UserOrgInfoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MyUser
-        fields = ('usernameC', 'usernameE', 'org', 'title', 'id', 'tags', 'userstatus', 'is_active', 'orgarea', 'country', 'last_login')
+        fields = ('usernameC', 'usernameE', 'org', 'title', 'id', 'tags', 'userstatus', 'is_active', 'orgarea', 'country', 'last_login', 'mobile', 'email')
 
 
 class UserInfoSerializer(serializers.ModelSerializer):
