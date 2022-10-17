@@ -10,7 +10,7 @@ import string
 import threading
 import traceback
 from subprocess import TimeoutExpired
-
+from func_timeout import func_set_timeout
 from urllib.parse import unquote
 import qiniu
 import requests
@@ -282,6 +282,7 @@ def uploadFileToQiniu():
                 return None
 
         # 上传本地文件
+        @func_set_timeout(300)
         def qiniuuploadfile(self, filepath, bucket_name, bucket_key):
             try:
                 uploading = True
