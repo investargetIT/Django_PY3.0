@@ -17,11 +17,12 @@ from sourcetype.serializer import tagSerializer, countrySerializer, industrySeri
     OrgtitletableSerializer, WebMenuSerializer, serviceSerializer, orgAttributeSerializer, \
     BDStatusSerializer, AndroidAppSerializer, OrgBdResponseSerializer, OrgLevelTypeSerializer, FamiliarLevelSerializer, \
     industryGroupSerializer, PerformanceAppraisalLevelSerializer, EducationSerializer, TrainingTypeSerializer, \
-    TrainingStatusSerializer, projProgressContrastTableSerializer, GovernmentProjInfoTypeSerializer
-from utils.customClass import  JSONResponse, InvestError
+    TrainingStatusSerializer, projProgressContrastTableSerializer, GovernmentProjInfoTypeSerializer, \
+    countryCreateSerializer
+from utils.customClass import JSONResponse, InvestError, RelationFilter
 from utils.util import SuccessResponse, InvestErrorResponse, ExceptionResponse, returnListChangeToLanguage, \
     catchexcption, loginTokenIsAvailable, removeDuclicates
-
+from django_filters import FilterSet
 
 class TagView(viewsets.ModelViewSet):
     """
@@ -214,16 +215,24 @@ class ServiceView(viewsets.ModelViewSet):
     #     except Exception:
     #         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
+class CountryFilter(FilterSet):
+    id = RelationFilter(filterstr='id', lookup_method='in')
+    level = RelationFilter(filterstr='level', lookup_method='in')
+    parent = RelationFilter(filterstr='parent', lookup_method='in')
+    countryC = RelationFilter(filterstr='countryC', lookup_method='icontains')
+    countryE = RelationFilter(filterstr='countryE', lookup_method='icontains')
+
+    class Meta:
+        model = Country
+        fields = ('id', 'level', 'parent', 'countryC', 'countryE')
 class CountryView(viewsets.ModelViewSet):
     """
-        list:获取所有国家
-        create:新增国家
-        update:修改国家
-        destroy:删除国家
+        list:获取所有地区
+        create:新增地区
+        destroy:删除地区
     """
-    filter_backends = (filters.SearchFilter, filters.DjangoFilterBackend,)
-    filter_fields = ('level', 'parent', 'countryC')
-    search_fields = ('countryC', 'countryE', 'areaCode')
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = CountryFilter
     queryset = Country.objects.all().filter(is_deleted=False)
     serializer_class = countrySerializer
 
@@ -233,7 +242,7 @@ class CountryView(viewsets.ModelViewSet):
             source = int(request.META.get('HTTP_SOURCE', '1'))
             if source > 2:
                 source = 1
-            queryset = self.filter_queryset(self.get_queryset()).filter(datasource_id=source).order_by('-sortweight')
+            queryset = self.filter_queryset(self.queryset.filter(datasource_id=source)).order_by('-sortweight')
             serializer = self.serializer_class(queryset, many=True)
             return JSONResponse(SuccessResponse(returnListChangeToLanguage(serializer.data,lang)))
         except InvestError as err:
@@ -241,16 +250,36 @@ class CountryView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    # def destroy(self, request, *args, **kwargs):
-    #     try:
-    #         instance = self.get_object()
-    #         instance.is_deleted = True
-    #         instance.save(update_fields=['is_deleted'])
-    #         return JSONResponse(SuccessResponse({'is_deleted':instance.is_deleted}))
-    #     except InvestError as err:
-    #         return JSONResponse(InvestErrorResponse(err))
-    #     except Exception:
-    #         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+    @loginTokenIsAvailable(['usersys.as_trader',])
+    def create(self, request, *args, **kwargs):
+        try:
+            with transaction.atomic():
+                data = request.data
+                data['datasource'] = request.user.datasource_id
+                serializer = countryCreateSerializer(data=data)
+                if serializer.is_valid():
+                    instance = serializer.save()
+                else:
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
+                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+    @loginTokenIsAvailable(['usersys.as_trader',])
+    def destroy(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            instance.is_deleted = True
+            instance.save(update_fields=['is_deleted'])
+            return JSONResponse(SuccessResponse({'is_deleted':instance.is_deleted}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
 class CharacterTypeView(viewsets.ModelViewSet):

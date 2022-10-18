@@ -74,6 +74,12 @@ class titleTypeSerializer(serializers.ModelSerializer):
         exclude = ('is_deleted',)
 
 
+class countryCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Country
+        fields = '__all__'
+
+
 class countrySerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
 
