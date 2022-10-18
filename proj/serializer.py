@@ -384,6 +384,7 @@ class GovernmentProjectCreateSerializer(serializers.ModelSerializer):
 
 class GovernmentProjectSerializer(serializers.ModelSerializer):
     tags = serializers.SerializerMethodField()
+    industrys = serializers.SerializerMethodField()
     traders = serializers.SerializerMethodField()
     class Meta:
         model = GovernmentProject
@@ -393,6 +394,11 @@ class GovernmentProjectSerializer(serializers.ModelSerializer):
         qs = obj.govproj_tags.filter(tag__is_deleted=False)
         if qs.exists():
             return qs.values_list('tag', flat=True)
+        return None
+    def get_industrys(self, obj):
+        qs = obj.govproj_industrys.filter(industry__is_deleted=False)
+        if qs.exists():
+            return qs.values_list('industry', flat=True)
         return None
     def get_traders(self, obj):
         qs = obj.govproj_traders.filter(is_deleted=False)

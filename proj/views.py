@@ -23,7 +23,7 @@ from invest.settings import PROJECTPDF_URLPATH, APILOG_PATH
 from proj.models import project, finance, projectTags, projectIndustries, projectTransactionType, \
     ShareToken, attachment, projServices, projTraders, projectDiDiRecord, projcomments, GovernmentProject, \
     GovernmentProjectInfo, GovernmentProjectInfoAttachment, GovernmentProjectHistoryCase, GovernmentProjectTrader, \
-    GovernmentProjectTag
+    GovernmentProjectTag, GovernmentProjectIndustry
 from proj.serializer import ProjSerializer, FinanceSerializer, ProjCreatSerializer, \
     FinanceChangeSerializer, FinanceCreateSerializer, ProjAttachmentSerializer, \
     ProjDetailSerializer_withoutsecretinfo, ProjAttachmentCreateSerializer, \
@@ -1564,6 +1564,7 @@ class GovernmentProjectView(viewsets.ModelViewSet):
                 data = request.data
                 tagsdata = data.get('tags')
                 infosdata = data.get('infos')
+                industrysdata = data.get('industrys')
                 historycasesdata = data.get('historycases')
                 tradersdata = data.get('traders')
                 data['datasource'] =  request.user.datasource_id
@@ -1575,6 +1576,11 @@ class GovernmentProjectView(viewsets.ModelViewSet):
                         for tagid in tagsdata:
                             newdatalist.append(GovernmentProjectTag(govproj=instance, tag_id=tagid))
                         instance.govproj_tags.bulk_create(newdatalist)
+                    if industrysdata and isinstance(industrysdata,list):
+                        newdatalist = []
+                        for industryid in industrysdata:
+                            newdatalist.append(GovernmentProjectIndustry(govproj=instance, industry_id=industryid))
+                        instance.govproj_industrys.bulk_create(newdatalist)
                     if infosdata and isinstance(infosdata,list):
                         newdatalist = []
                         for info in infosdata:
@@ -1652,7 +1658,7 @@ class GovernmentProjectView(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
-            for link in ['govproj_infos', 'govprojinfo_attachments', 'govproj_historycases', 'govproj_tags', 'govproj_traders']:
+            for link in ['govproj_infos', 'govprojinfo_attachments', 'govproj_historycases', 'govproj_tags', 'govproj_traders', 'govproj_industrys']:
                 manager = getattr(instance, link, None)
                 if not manager:
                     continue
