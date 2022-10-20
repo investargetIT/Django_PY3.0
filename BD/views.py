@@ -129,7 +129,8 @@ class ProjectBDView(viewsets.ModelViewSet):
                 for source in results:
                     if source['_source'].get('projectBD'):
                         searchIds.add(source['_source']['projectBD'])
-                queryset = queryset.filter(id__in=searchIds).distinct()
+                queryset = queryset.filter(Q(id__in=searchIds)|Q(contractors__usernameC__icontains=search)|Q(ProjectBD_managers__manager__usernameC__icontains=search)).distinct()
+            queryset = queryset.distinct()
             sortfield = request.GET.get('sort', 'lastmodifytime')
             desc = request.GET.get('desc', 1)
             if desc in ('1', u'1', 1):
