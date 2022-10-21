@@ -1065,7 +1065,7 @@ def creatpublicdataroomdirectorywithtemplate(user, publicdataroomid):
                                                    parent_id=parent, createdtime=datetime.datetime.now(),
                                                    createuser_id=user.id, datasource_id=user.datasource_id)
             directoryobj.save()
-            sondirectoryquery = publicdirectorytemplate.objects.filter(parent=templatedirectoryID)
+            sondirectoryquery = publicdirectorytemplate.objects.filter(parent=templatedirectoryID, is_deleted=False)
             if sondirectoryquery.exists():
                 for sondirectory in sondirectoryquery:
                     self.create_diractory(user, directoryname=sondirectory.name, dataroom=dataroom,
@@ -1073,7 +1073,7 @@ def creatpublicdataroomdirectorywithtemplate(user, publicdataroomid):
                                      parent=directoryobj.id)
 
         def run(self):
-            templatequery = publicdirectorytemplate.objects.all()
+            templatequery = publicdirectorytemplate.objects.filter(is_deleted=False)
             topdirectories = templatequery.filter(parent=None)
             if topdirectories.exists():
                 for directory in topdirectories:
