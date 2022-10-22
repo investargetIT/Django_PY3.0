@@ -38,6 +38,9 @@ class ProjectBDFilter(FilterSet):
     isimportant = RelationFilter(filterstr='isimportant')
     createuser = RelationFilter(filterstr='createuser', lookup_method='in')
     contractors = RelationFilter(filterstr='contractors', lookup_method='in')
+    contractors_str = RelationFilter(filterstr='contractors__usernameC', lookup_method='in')
+    manager = RelationFilter(filterstr='ProjectBD_managers__manager', lookup_method='in')
+    manager_str = RelationFilter(filterstr='ProjectBD_managers__manager__usernameC', lookup_method='in')
     indGroup = RelationFilter(filterstr='indGroup', lookup_method='in')
     country = RelationFilter(filterstr='country', lookup_method='in')
     bduser = RelationFilter(filterstr='bduser', lookup_method='in')
@@ -52,7 +55,7 @@ class ProjectBDFilter(FilterSet):
     etimeM = RelationFilter(filterstr='lastmodifytime', lookup_method='lt')
     class Meta:
         model = ProjectBD
-        fields = ('com_name', 'createuser', 'location', 'contractors', 'isimportant', 'bduser', 'indGroup', 'country', 'username', 'usermobile', 'source', 'bd_status', 'source_type', 'stime', 'etime', 'stimeM', 'etimeM')
+        fields = ('com_name', 'createuser', 'location', 'contractors', 'manager', 'contractors_str', 'manager_str', 'isimportant', 'bduser', 'indGroup', 'country', 'username', 'usermobile', 'source', 'bd_status', 'source_type', 'stime', 'etime', 'stimeM', 'etimeM')
 
 
 class ProjectBDView(viewsets.ModelViewSet):
@@ -129,7 +132,7 @@ class ProjectBDView(viewsets.ModelViewSet):
                 for source in results:
                     if source['_source'].get('projectBD'):
                         searchIds.add(source['_source']['projectBD'])
-                queryset = queryset.filter(Q(id__in=searchIds)|Q(contractors__usernameC__icontains=search)|Q(ProjectBD_managers__manager__usernameC__icontains=search)).distinct()
+                queryset = queryset.filter(id__in=searchIds).distinct()
             queryset = queryset.distinct()
             sortfield = request.GET.get('sort', 'lastmodifytime')
             desc = request.GET.get('desc', 1)
