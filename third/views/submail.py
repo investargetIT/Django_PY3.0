@@ -16,6 +16,34 @@ from third.thirdconfig import MAIL_CONFIGS, MESSAGE_CONFIGS, INTERNATIONALMESSAG
 from utils.customClass import JSONResponse, InvestError
 from utils.util import SuccessResponse, catchexcption, ExceptionResponse, InvestErrorResponse, checkIPAddressCanPass
 
+'''
+submail短信验证码模板
+'''
+SMSCODE_projectsign = {
+    '1':{
+        'in':'WzSYg',
+        'out':'sk5Nu3'
+        },
+    '2':{
+        'in':'tybmL4',
+        'out':None
+        },
+    '3':{
+        'in':'l58fI',
+        'out':None
+        },
+    '4':{
+        'in':'hIudP',
+        'out':None
+        },
+    '5':{
+        'in':'cWzJx',
+        'out':None
+        },
+    }
+
+
+
 
 def sendEmailWithAttachmentFile(destination, subject, html, attachmentpath):
     data = {'appid':MAIL_CONFIGS['appid'],
@@ -128,13 +156,13 @@ def sendSmscode(request):
             raise InvestError(8888, msg='未知来源码，请联系工作人员', detail='datasource不合法')
         varsdict = {'code': mobilecode.code, 'time': '30'}
         if areacode in [u'86', '86', 86, None]:
-            projectsign = datasource.codeTemIn
+            projectsign = SMSCODE_projectsign.get(str(source), {}).get('in')
             if projectsign:
                 response = xsendSms(destination, projectsign, varsdict)
             else:
                 raise InvestError(30011, msg='短信发送失败', detail='没有建立相应短信模板')
         else:
-            projectsign = datasource.codeTemOut
+            projectsign = SMSCODE_projectsign.get(str(source), {}).get('out')
             if projectsign:
                 response = xsendInternationalsms('+%s'%areacode + destination, projectsign, varsdict)
             else:

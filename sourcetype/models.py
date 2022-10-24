@@ -13,10 +13,6 @@ class DataSource(models.Model):
     nameC = models.CharField(max_length=32,blank=True,null=True)
     nameE = models.CharField(max_length=128, blank=True, null=True)
     domain = models.CharField(max_length=64, blank=True, null=True)
-    codeTemIn = models.CharField(max_length=16, blank=True, null=True, help_text='国内手机验证码')
-    codeTemOut = models.CharField(max_length=16, blank=True, null=True, help_text='国外手机验证码')
-    dataroomTem = models.CharField(max_length=16, blank=True, null=True, help_text='dataroom文件')
-    userAuditTem = models.CharField(max_length=16, blank=True, null=True, help_text='用户审核状态变更')
     is_deleted = models.BooleanField(blank=True, default=False)
 
     def __str__(self):
