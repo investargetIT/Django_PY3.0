@@ -526,10 +526,6 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
             queryset = self.get_queryset().filter(datasource=self.request.user.datasource)
             if request.user.has_perm('dataroom.admin_managedataroom') or is_dataroomTrader(request.user, dataroominstance):
                 pass
-            elif dataroominstance.isCompanyFile and request.user.has_perm('dataroom.get_companydataroom'):
-                indGroup_ins = dataroominstance.proj.indGroup
-                if indGroup_ins and indGroup_ins != request.user.indGroup and not request.user.user_indgroups.filter(indGroup=indGroup_ins).exists():
-                    raise InvestError(2009, msg='获取该dataroom文件失败')
             elif is_dataroomInvestor(request.user, dataroominstance.id):
                 user_dataroomInstance = dataroom_User_file.objects.filter(user=request.user, dataroom__id=dataroomid, is_deleted=False).first()
                 queryset = queryset.filter(file_userSeeFile__dataroomUserfile=user_dataroomInstance, file_userSeeFile__is_deleted=False)
@@ -555,11 +551,6 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
             dataroominstance = dataroom.objects.get(id=dataroomid, is_deleted=False)
             if request.user.has_perm('dataroom.admin_managedataroom') or is_dataroomTrader(request.user, dataroominstance):
                 queryset = self.get_queryset()
-            elif dataroominstance.isCompanyFile and request.user.has_perm('dataroom.get_companydataroom'):
-                if dataroominstance.proj.indGroup and dataroominstance.proj.indGroup != request.user.indGroup:
-                    raise InvestError(2009, msg='获取dataroom文件路径失败', detail='没有权限查看该dataroom')
-                else:
-                    queryset = self.get_queryset()
             elif is_dataroomInvestor(request.user, dataroominstance.id):
                 user_dataroomInstance = dataroom_User_file.objects.filter(user=request.user, dataroom__id=dataroomid, is_deleted=False).first()
                 queryset = self.get_queryset().filter(file_userSeeFile__dataroomUserfile=user_dataroomInstance, file_userSeeFile__is_deleted=False)

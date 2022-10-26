@@ -22,7 +22,7 @@ def is_dataroomTrader(user, dataroom):
     elif dataroom.proj and dataroom.proj.PM == user:
         return True
     elif dataroom.isCompanyFile and user.has_perm('usersys.as_trader') and dataroom.proj:
-        if dataroom.proj.indGroup and dataroom.proj.indGroup == user.indGroup:
+        if dataroom.proj.indGroup and (dataroom.proj.indGroup == user.indGroup or user.user_indgroups.filter(indGroup=dataroom.proj.indGroup).exists()):
             return True
         elif not dataroom.proj.indGroup:
             return True
@@ -87,7 +87,7 @@ def is_orgUserTrader(user, org):
 
 # 检测是否项目BD同行业组的交易师
 def is_projBDIndGroupTrader(user, projbd):
-    if projbd.indGroup == user.indGroup:
+    if projbd.indGroup == user.indGroup or user.user_indgroups.filter(indGroup=projbd.indGroup).exists():
         return True
     return False
 

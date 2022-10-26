@@ -806,8 +806,5 @@ class UserIndGroups(models.Model):
         unique_together = ('user', 'indGroup')
 
     def save(self, *args, **kwargs):
-        self.datasource = self.trader.datasource
-        if not self.is_deleted:
-            if UserIndGroups.objects.exclude(id=self.id).filter(is_deleted=False, datasource=self.datasource, indGroup=self.indGroup, user=self.user).exists():
-                raise InvestError(2007, msg='已经在行业组里了')
+        self.datasource = self.user.datasource
         super(UserIndGroups, self).save(*args, **kwargs)
