@@ -114,8 +114,6 @@ class schedule(MyModel):
         if not self.is_deleted:
             if self.createuser is None:
                 raise InvestError(20071,msg='createuser can`t be null')
-            if self.scheduledtime.strftime("%Y-%m-%d") < datetime.datetime.now().strftime("%Y-%m-%d"):
-                raise InvestError(20071,msg='日程时间不能是今天以前的时间')
             if self.proj:
                 self.projtitle = self.proj.projtitleC
         if not self.is_deleted and self.meeting and self.manager:

@@ -663,14 +663,14 @@ class ScheduleView(viewsets.ModelViewSet):
                 for i in range(0, len(data)):
                     data[i].update({'createuser': request.user.id if not data[i].get('createuser') else data[i]['createuser'],
                          'manager': request.user.id if not data[i].get('manager') else data[i]['manager']})
-                    if data[i]['type'] == 4 and not data[i].get('meeting'):
-                        if request.user.has_perm('msg.createMeeting') or request.user.has_perm('msg.manageMeeting'):
-                            pass
-                        else:
-                            raise InvestError(2009, msg='创建日程失败')
-                        data[i]['startDate'] = data[i]['scheduledtime']
-                        meetingInstance = createWebEXMeeting(data[i])
-                        data[i]['meeting'] = meetingInstance.id
+                    # if data[i]['type'] == 4 and not data[i].get('meeting'):
+                    #     if request.user.has_perm('msg.createMeeting') or request.user.has_perm('msg.manageMeeting'):
+                    #         pass
+                    #     else:
+                    #         raise InvestError(2009, msg='创建日程失败')
+                    #     data[i]['startDate'] = data[i]['scheduledtime']
+                    #     meetingInstance = createWebEXMeeting(data[i])
+                    #     data[i]['meeting'] = meetingInstance.id
                 scheduleserializer = ScheduleCreateSerializer(data=data, many=True)
                 if scheduleserializer.is_valid():
                     instances = scheduleserializer.save()
