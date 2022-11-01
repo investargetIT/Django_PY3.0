@@ -322,8 +322,6 @@ class GovernmentProject(MyModel):
     status = MyForeignKey(ProjectStatus,default=2, blank=True, null=True, help_text='项目状态')
     isHidden = models.BooleanField(blank=True, default=False)
     realname = models.CharField(max_length=128, default='名称', blank=True, null=True)
-    imagebucket = models.CharField(max_length=16, blank=True, null=True, default='image')
-    imagekey = models.CharField(max_length=128, blank=True, null=True)
     leader = models.TextField(blank=True, null=True, help_text='高层领导')
     business = models.TextField(blank=True, null=True, help_text='业务人员（局长）')
     preference = models.TextField(blank=True, null=True, help_text='投资偏好')
@@ -409,7 +407,8 @@ class GovernmentProjectTag(models.Model):
 class GovernmentProjectIndustry(models.Model):
     govproj = MyForeignKey(GovernmentProject, related_name='govproj_industrys', blank=True, null=True)
     industry = MyForeignKey(Industry, related_name='industry_govprojs')
-
+    bucket = models.CharField(max_length=16, blank=True, null=True)
+    key = models.TextField(blank=True, null=True)
 
     class Meta:
         db_table = "govermentproject_industry"
@@ -417,7 +416,7 @@ class GovernmentProjectIndustry(models.Model):
 
     def save(self, *args, **kwargs):
         if self.industry.datasource != self.govproj.datasource:
-            raise InvestError(8888, msg='标签来源不符')
+            raise InvestError(8888, msg='行业来源不符')
         return super(GovernmentProjectIndustry, self).save(*args, **kwargs)
 
 class GovernmentProjectTrader(MyModel):

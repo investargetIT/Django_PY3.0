@@ -1508,12 +1508,13 @@ class GovernmentProjectFilter(FilterSet):
     business = RelationFilter(filterstr='business', lookup_method='icontains')
     preference = RelationFilter(filterstr='preference', lookup_method='icontains')
     trader = RelationFilter(filterstr='govproj_traders__trader', lookup_method='in', relationName='govproj_traders__is_deleted')
-    tag = RelationFilter(filterstr='govproj_tags__tag', lookup_method='in')
+    tag = RelationFilter(filterstr='govproj_tags__tag', lookup_method='in', relationName='govproj_tags__tag__is_deleted')
+    industry = RelationFilter(filterstr='govproj_industrys__industry', lookup_method='in', relationName='govproj_industrys__industry__is_deleted')
     createuser = RelationFilter(filterstr='createuser', lookup_method='in')
 
     class Meta:
         model = GovernmentProject
-        fields = ('id', 'name', 'location', 'leader', 'business', 'preference', 'trader', 'tag', 'createuser')
+        fields = ('id', 'name', 'location', 'leader', 'business', 'preference', 'trader', 'tag', 'industry', 'createuser')
 
 class GovernmentProjectView(viewsets.ModelViewSet):
     """
@@ -1578,8 +1579,8 @@ class GovernmentProjectView(viewsets.ModelViewSet):
                         instance.govproj_tags.bulk_create(newdatalist)
                     if industrysdata and isinstance(industrysdata,list):
                         newdatalist = []
-                        for industryid in industrysdata:
-                            newdatalist.append(GovernmentProjectIndustry(govproj=instance, industry_id=industryid))
+                        for industrydata in industrysdata:
+                            newdatalist.append(GovernmentProjectIndustry(govproj=instance, industry_id=industrydata['industry'], bucket=industrydata['bucket'], key=industrydata['key']))
                         instance.govproj_industrys.bulk_create(newdatalist)
                     if infosdata and isinstance(infosdata,list):
                         newdatalist = []
@@ -1598,7 +1599,7 @@ class GovernmentProjectView(viewsets.ModelViewSet):
                         instance.govproj_traders.bulk_create(newdatalist)
                 else:
                     raise InvestError(20071, msg='%s' % serializer.error_messages)
-                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
+                return JSONResponse(SuccessResponse(GovernmentProjectDetailSerializer(instance).data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
@@ -1626,7 +1627,8 @@ class GovernmentProjectView(viewsets.ModelViewSet):
                 data = request.data
                 data["lastmodifyuser"] = request.user.id
                 tagsdata = data.get('tags')
-                infosdata = data.get('infos')
+                industrysdata = data.get('industrys')
+                historycasesdata = data.get('historycases')
                 serializer = GovernmentProjectCreateSerializer(instance, data=data)
                 if serializer.is_valid():
                     instance = serializer.save()
@@ -1639,15 +1641,24 @@ class GovernmentProjectView(viewsets.ModelViewSet):
                         for tag in addlist:
                             govprojtaglist.append(GovernmentProjectTag(govproj=instance, tag_id=tag))
                         instance.govproj_tags.bulk_create(govprojtaglist)
-                    if infosdata is not None and isinstance(infosdata,list):
-                        for info in infosdata:
-                            infoins = GovernmentProjectInfo.object.get(id=info['id'])
-                            serializer = GovernmentProjectInfoCreateSerializer(infoins, data=info)
-                            if serializer.is_valid():
-                                serializer.save()
+                    if industrysdata is not None and isinstance(industrysdata,list):
+                        instance.govproj_industrys.all().delete()
+                        newdatalist = []
+                        for industrydata in industrysdata:
+                            newdatalist.append(GovernmentProjectIndustry(govproj=instance, industry_id=industrydata['industry'], bucket=industrydata['bucket'], key=industrydata['key']))
+                        instance.govproj_industrys.bulk_create(newdatalist)
+                    if historycasesdata and isinstance(historycasesdata, list):
+                        exist_projs = instance.govproj_historycases.filter(proj__is_deleted=False).values_list('proj', flat=True)
+                        addlist = [item for item in historycasesdata if item not in exist_projs]
+                        removelist = [item for item in exist_projs if item not in historycasesdata]
+                        instance.govproj_historycases.filter(proj__in=removelist).update(is_deleted=True, deletedtime=datetime.datetime.now(), deleteduser=request.user)
+                        newdatalist = []
+                        for case in addlist:
+                            newdatalist.append(GovernmentProjectHistoryCase(govproj=instance, proj=case, createuser=request.user, createdtime=datetime.datetime.now(), datasource=request.user.datasource))
+                        instance.govproj_historycases.bulk_create(newdatalist)
                 else:
                     raise InvestError(20071, msg='%s' % serializer.error_messages)
-                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
+                return JSONResponse(SuccessResponse(GovernmentProjectDetailSerializer(instance).data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
