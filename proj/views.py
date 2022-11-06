@@ -1590,12 +1590,12 @@ class GovernmentProjectView(viewsets.ModelViewSet):
                     if historycasesdata and isinstance(historycasesdata,list):
                         newdatalist = []
                         for case in historycasesdata:
-                            newdatalist.append(GovernmentProjectHistoryCase(govproj=instance, proj=case, createuser=request.user, createdtime=datetime.datetime.now(), datasource=request.user.datasource))
+                            newdatalist.append(GovernmentProjectHistoryCase(govproj=instance, proj_id=case, createuser=request.user, createdtime=datetime.datetime.now(), datasource=request.user.datasource))
                         instance.govproj_historycases.bulk_create(newdatalist)
                     if tradersdata and isinstance(tradersdata,list):
                         newdatalist = []
                         for trader in tradersdata:
-                            newdatalist.append(GovernmentProjectTrader(govproj=instance, trader=trader['trader'], type=trader['type'], createuser=request.user, createdtime=datetime.datetime.now(), datasource=request.user.datasource))
+                            newdatalist.append(GovernmentProjectTrader(govproj=instance, trader_id=trader['trader'], type=trader['type'], createuser=request.user, createdtime=datetime.datetime.now(), datasource=request.user.datasource))
                         instance.govproj_traders.bulk_create(newdatalist)
                 else:
                     raise InvestError(20071, msg='%s' % serializer.error_messages)
@@ -1654,7 +1654,7 @@ class GovernmentProjectView(viewsets.ModelViewSet):
                         instance.govproj_historycases.filter(proj__in=removelist).update(is_deleted=True, deletedtime=datetime.datetime.now(), deleteduser=request.user)
                         newdatalist = []
                         for case in addlist:
-                            newdatalist.append(GovernmentProjectHistoryCase(govproj=instance, proj=case, createuser=request.user, createdtime=datetime.datetime.now(), datasource=request.user.datasource))
+                            newdatalist.append(GovernmentProjectHistoryCase(govproj=instance, proj_id=case, createuser=request.user, createdtime=datetime.datetime.now(), datasource=request.user.datasource))
                         instance.govproj_historycases.bulk_create(newdatalist)
                 else:
                     raise InvestError(20071, msg='%s' % serializer.error_messages)
