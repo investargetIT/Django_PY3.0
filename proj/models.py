@@ -339,7 +339,9 @@ class GovernmentProject(MyModel):
 
     class Meta:
         db_table = 'govermentproject'
-
+        permissions = (
+            ('governmentproject', '政府项目'),
+        )
 
     def save(self, *args, **kwargs):
         return super(GovernmentProject, self).save(*args, **kwargs)

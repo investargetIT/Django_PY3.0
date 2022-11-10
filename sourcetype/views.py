@@ -803,6 +803,8 @@ def getmenulist(user):
         qslist.extend([12])
     if user.has_perm('usersys.as_trader'):
         qslist.extend([34, 35, 15, 41])                        # 周报、OKR、个人中心、基本设置
+    if user.has_perm('proj.governmentproject'):
+        qslist.extend([43])
     if user.has_perm('emailmanage.getemailmanage'):
         qslist.extend([3])
     if user.has_perm('usersys.as_trader') or user.has_perm('BD.manageProjectBD'): # 项目bd管理

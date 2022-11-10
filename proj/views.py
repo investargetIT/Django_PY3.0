@@ -1536,7 +1536,7 @@ class GovernmentProjectView(viewsets.ModelViewSet):
             queryset = self.queryset.all()
         return queryset
 
-    @loginTokenIsAvailable()
+    @loginTokenIsAvailable(['proj.governmentproject'])
     def list(self, request, *args, **kwargs):
         try:
             page_size = request.GET.get('page_size', 10)
@@ -1558,7 +1558,7 @@ class GovernmentProjectView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
-    @loginTokenIsAvailable(['usersys.as_trader'])
+    @loginTokenIsAvailable(['proj.governmentproject'])
     def create(self, request, *args, **kwargs):
         try:
             with transaction.atomic():
@@ -1606,7 +1606,7 @@ class GovernmentProjectView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable()
+    @loginTokenIsAvailable(['proj.governmentproject'])
     def retrieve(self, request, *args, **kwargs):
         try:
             lang = request.GET.get('lang')
@@ -1619,7 +1619,7 @@ class GovernmentProjectView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['usersys.as_trader'])
+    @loginTokenIsAvailable(['proj.governmentproject'])
     def update(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
@@ -1665,7 +1665,7 @@ class GovernmentProjectView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['usersys.as_trader'])
+    @loginTokenIsAvailable(['proj.governmentproject'])
     def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
@@ -1727,7 +1727,7 @@ class GovernmentProjectInfoView(viewsets.ModelViewSet):
             queryset = self.queryset.all()
         return queryset
 
-    @loginTokenIsAvailable()
+    @loginTokenIsAvailable(['proj.governmentproject'])
     def list(self, request, *args, **kwargs):
         try:
             page_size = request.GET.get('page_size', 10)
@@ -1749,7 +1749,7 @@ class GovernmentProjectInfoView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
-    @loginTokenIsAvailable(['usersys.as_trader'])
+    @loginTokenIsAvailable(['proj.governmentproject'])
     def create(self, request, *args, **kwargs):
         try:
             with transaction.atomic():
@@ -1768,7 +1768,7 @@ class GovernmentProjectInfoView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
-    @loginTokenIsAvailable(['usersys.as_trader'])
+    @loginTokenIsAvailable(['proj.governmentproject'])
     def update(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
@@ -1817,7 +1817,7 @@ class GovernmentProjectInfoAttachmentView(viewsets.ModelViewSet):
             queryset = self.queryset.all()
         return queryset
 
-    @loginTokenIsAvailable()
+    @loginTokenIsAvailable(['proj.governmentproject'])
     def list(self, request, *args, **kwargs):
         try:
             page_size = request.GET.get('page_size', 10)
@@ -1839,7 +1839,7 @@ class GovernmentProjectInfoAttachmentView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
-    @loginTokenIsAvailable(['usersys.as_trader'])
+    @loginTokenIsAvailable(['proj.governmentproject'])
     def create(self, request, *args, **kwargs):
         try:
             with transaction.atomic():
@@ -1858,7 +1858,7 @@ class GovernmentProjectInfoAttachmentView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
-    @loginTokenIsAvailable(['usersys.as_trader'])
+    @loginTokenIsAvailable(['proj.governmentproject'])
     def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
@@ -1903,7 +1903,7 @@ class GovernmentProjectHistoryCaseView(viewsets.ModelViewSet):
             queryset = self.queryset.all()
         return queryset
 
-    @loginTokenIsAvailable()
+    @loginTokenIsAvailable(['proj.governmentproject'])
     def list(self, request, *args, **kwargs):
         try:
             page_size = request.GET.get('page_size', 10)
@@ -1924,7 +1924,7 @@ class GovernmentProjectHistoryCaseView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['usersys.as_trader'])
+    @loginTokenIsAvailable(['proj.governmentproject'])
     def create(self, request, *args, **kwargs):
         try:
             with transaction.atomic():
@@ -1942,7 +1942,7 @@ class GovernmentProjectHistoryCaseView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['usersys.as_trader'])
+    @loginTokenIsAvailable(['proj.governmentproject'])
     def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
@@ -1988,7 +1988,7 @@ class GovernmentProjectTraderView(viewsets.ModelViewSet):
             queryset = self.queryset.all()
         return queryset
 
-    @loginTokenIsAvailable()
+    @loginTokenIsAvailable(['proj.governmentproject'])
     def list(self, request, *args, **kwargs):
         try:
             page_size = request.GET.get('page_size', 10)
@@ -2009,7 +2009,7 @@ class GovernmentProjectTraderView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable(['usersys.as_trader'])
+    @loginTokenIsAvailable(['proj.governmentproject'])
     def create(self, request, *args, **kwargs):
         try:
             with transaction.atomic():
@@ -2028,7 +2028,7 @@ class GovernmentProjectTraderView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
-    @loginTokenIsAvailable(['usersys.as_trader'])
+    @loginTokenIsAvailable(['proj.governmentproject'])
     def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
