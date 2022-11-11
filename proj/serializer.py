@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from proj.models import project, finance, attachment, projServices, projectIndustries, projTraders, \
     projectDiDiRecord, projcomments, GovernmentProject, GovernmentProjectTrader, GovernmentProjectInfoAttachment, \
-    GovernmentProjectHistoryCase, GovernmentProjectInfo
+    GovernmentProjectHistoryCase, GovernmentProjectInfo, GovernmentProjectIndustry
 from sourcetype.serializer import tagSerializer, transactionTypeSerializer, serviceSerializer, countrySerializer, \
     industryWithPIndustrySerializer, countryWithContinentSerializer, DidiOrderTypeSerializer, currencyTypeSerializer, \
     ProjectStatusSerializer
@@ -376,6 +376,16 @@ class ProjCommentsCreateSerializer(serializers.ModelSerializer):
         model = projcomments
         fields = '__all__'
 
+class GovernmentProjIndustrySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GovernmentProjectIndustry
+        fields = ('industry','bucket','key','url')
+
+    def get_url(self, obj):
+        if obj.bucket and obj.key:
+            return getUrlWithBucketAndKey(obj.bucket, obj.key)
+        return None
+
 class GovernmentProjectCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = GovernmentProject
@@ -398,7 +408,7 @@ class GovernmentProjectSerializer(serializers.ModelSerializer):
     def get_industrys(self, obj):
         qs = obj.govproj_industrys.filter(industry__is_deleted=False)
         if qs.exists():
-            return qs.values_list('industry', flat=True)
+            return GovernmentProjIndustrySerializer(qs, many=True).data
         return None
     def get_traders(self, obj):
         qs = obj.govproj_traders.filter(is_deleted=False)
@@ -425,7 +435,7 @@ class GovernmentProjectDetailSerializer(serializers.ModelSerializer):
     def get_industrys(self, obj):
         qs = obj.govproj_industrys.filter(industry__is_deleted=False)
         if qs.exists():
-            return qs.values_list('industry', flat=True)
+            return GovernmentProjIndustrySerializer(qs, many=True).data
         return None
 
     def get_traders(self, obj):
@@ -445,9 +455,6 @@ class GovernmentProjectDetailSerializer(serializers.ModelSerializer):
         if qs.exists():
             return GovernmentProjectHistoryCaseSerializer(qs, many=True).data
         return None
-
-
-
 
 class GovernmentProjectTraderCreateSerializer(serializers.ModelSerializer):
     class Meta:
