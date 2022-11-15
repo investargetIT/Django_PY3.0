@@ -4,7 +4,7 @@ import threading
 import datetime
 
 from BD.views import sendExpiredOrgBDEmail, sendWorkReportMessage, downloadProjectBDCommentAttachments
-from dataroom.views import downloadDataroomPDFs
+from dataroom.views import downloadDataroomFiles
 from emailmanage.views import getAllProjectsNeedToSendMail, sendEmailToUser
 from msg.models import schedule
 from org.views import downloadOrgAttachments
@@ -25,12 +25,6 @@ def task2_sendmailprojtouser():
             sendEmailToUser()
     task2_Thread().start()
 
-def task3_downloadDataroomPDFs():
-    class task3_Thread(threading.Thread):
-        def run(self):
-            downloadDataroomPDFs()
-    task3_Thread().start()
-
 
 def task4_sendAllExpiredMsg():
     class task4_Thread(threading.Thread):
@@ -43,8 +37,10 @@ def task4_sendAllExpiredMsg():
 def task5_downloadOrgAttachments():
     class task5_Thread(threading.Thread):
         def run(self):
-            downloadOrgAttachments()
-            downloadProjectBDCommentAttachments()
+            hours = 1
+            downloadDataroomFiles(hours)
+            downloadOrgAttachments(hours)
+            downloadProjectBDCommentAttachments(hours)
     task5_Thread().start()
 
 
