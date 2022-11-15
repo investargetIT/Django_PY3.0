@@ -36,9 +36,12 @@ familiarlevel = views.FamiliarLevelView.as_view({
 
 country = views.CountryView.as_view({
         'get': 'list',
-        # 'post':'create',
+        'post':'create',
 })
 
+country_one = views.CountryView.as_view({
+        'delete':'destroy',
+})
 
 didiType = views.DidiOrderTypeView.as_view({
         'get': 'list',
@@ -102,7 +105,6 @@ transactionPhases = views.TransactionPhasesView.as_view({
         'get': 'list',
         # 'post':'create',
 })
-
 
 educationType = views.EducationView.as_view({
         'get': 'list',
@@ -178,6 +180,7 @@ urlpatterns = [
     url(r'^projstatus$', projstatus, name='projstatus', ),
 
     url(r'^country$', country,name='countrysource',),
+    url(r'^country/(?P<pk>\d+)/$', country_one,name='countrysource',),
 
     url(r'^industry$', industry,name='industrysource',),
 
