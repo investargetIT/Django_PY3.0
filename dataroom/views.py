@@ -768,9 +768,6 @@ class User_DataroomfileView(viewsets.ModelViewSet):
             if request.user.has_perm('dataroom.admin_managedataroom'):
                 pass
             else:
-                if user:
-                    if user != request.user.id:
-                        raise InvestError(2009, msg='获取dataroom用户列表信息失败')
                 queryset = queryset.filter(Q(user=request.user) | Q(dataroom__proj__PM=request.user) | Q(dataroom__proj__proj_traders__user=request.user, dataroom__proj__proj_traders__is_deleted=False)).distinct()
             count = queryset.count()
             serializer = User_DataroomSerializer(queryset, many=True)
