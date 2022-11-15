@@ -14,6 +14,7 @@ class organization(MyModel):
     investoverseasproject = models.BooleanField(blank=True, default=False, help_text='海外机构')
     orgtransactionphase = models.ManyToManyField(TransactionPhases, through='orgTransactionPhase',through_fields=('org','transactionPhase'), blank=True)
     currency = MyForeignKey(CurrencyType,blank=True, default=1)
+    country = MyForeignKey(Country, blank=True, null=True)
     decisionCycle = models.SmallIntegerField(blank=True,null=True)
     decisionMakingProcess = models.TextField(blank=True,null=True)
     establishedDate = models.DateTimeField(blank=True, null=True, help_text='成立时间')

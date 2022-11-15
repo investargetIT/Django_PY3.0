@@ -17,7 +17,7 @@ from sourcetype.serializer import tagSerializer, countrySerializer, industrySeri
     OrgtitletableSerializer, WebMenuSerializer, serviceSerializer, orgAttributeSerializer, \
     BDStatusSerializer, AndroidAppSerializer, OrgBdResponseSerializer, OrgLevelTypeSerializer, FamiliarLevelSerializer, \
     industryGroupSerializer, PerformanceAppraisalLevelSerializer, EducationSerializer, TrainingTypeSerializer, \
-    TrainingStatusSerializer, projProgressContrastTableSerializer
+    TrainingStatusSerializer, projProgressContrastTableSerializer, countryCreateSerializer
 from utils.customClass import JSONResponse, InvestError, RelationFilter
 from utils.util import SuccessResponse, InvestErrorResponse, ExceptionResponse, returnListChangeToLanguage, \
     catchexcption, loginTokenIsAvailable, removeDuclicates
@@ -244,6 +244,37 @@ class CountryView(viewsets.ModelViewSet):
             queryset = self.filter_queryset(self.queryset.filter(datasource_id=source)).order_by('-sortweight')
             serializer = self.serializer_class(queryset, many=True)
             return JSONResponse(SuccessResponse(returnListChangeToLanguage(serializer.data,lang)))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable(['usersys.as_trader',])
+    def create(self, request, *args, **kwargs):
+        try:
+            with transaction.atomic():
+                data = request.data
+                data['datasource'] = request.user.datasource_id
+                serializer = countryCreateSerializer(data=data)
+                if serializer.is_valid():
+                    instance = serializer.save()
+                else:
+                    raise InvestError(20071, msg='%s' % serializer.error_messages)
+                return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+    @loginTokenIsAvailable(['usersys.as_trader',])
+    def destroy(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            instance.is_deleted = True
+            instance.save(update_fields=['is_deleted'])
+            return JSONResponse(SuccessResponse({'is_deleted':instance.is_deleted}))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
