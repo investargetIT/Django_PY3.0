@@ -1779,9 +1779,8 @@ def fulltextsearch(request):
 
 
 
-def downloadOrgAttachments(hours):
-    createstart = datetime.datetime.now() - datetime.timedelta(hours=hours)
-    attachment_qs = orgAttachments.objects.filter(is_deleted=False, key__isnull=False, org__is_deleted=False, createdtime__gt=createstart)
+def downloadOrgAttachments(start):
+    attachment_qs = orgAttachments.objects.filter(is_deleted=False, key__isnull=False, org__is_deleted=False, createdtime__gt=start)
     for attInstance in attachment_qs:
         attachmentPath = APILOG_PATH['orgAttachmentsPath'] + attInstance.key
         if not os.path.exists(attachmentPath):

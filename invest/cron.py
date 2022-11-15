@@ -37,10 +37,10 @@ def task4_sendAllExpiredMsg():
 def task5_downloadOrgAttachments():
     class task5_Thread(threading.Thread):
         def run(self):
-            hours = 1
-            downloadDataroomFiles(hours)
-            downloadOrgAttachments(hours)
-            downloadProjectBDCommentAttachments(hours)
+            start = datetime.datetime.now() - datetime.timedelta(hours=1)
+            downloadDataroomFiles(start)
+            downloadOrgAttachments(start)
+            downloadProjectBDCommentAttachments(start)
     task5_Thread().start()
 
 

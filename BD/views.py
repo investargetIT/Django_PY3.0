@@ -1714,9 +1714,8 @@ def sendWorkReportMessage():
 
 
 
-def downloadProjectBDCommentAttachments(hours):
-    lastmodifytimestart = datetime.datetime.now() - datetime.timedelta(hours=hours)
-    attachment_qs = ProjectBDComments.objects.filter(is_deleted=False, key__isnull=False, projectBD__is_deleted=False, lastmodifytime__gt=lastmodifytimestart)
+def downloadProjectBDCommentAttachments(start):
+    attachment_qs = ProjectBDComments.objects.filter(is_deleted=False, key__isnull=False, projectBD__is_deleted=False, lastmodifytime__gt=start)
     for attInstance in attachment_qs:
         attachmentPath = APILOG_PATH['projectBDCommentFilePath'] + attInstance.key
         filename, type = os.path.splitext(attachmentPath)

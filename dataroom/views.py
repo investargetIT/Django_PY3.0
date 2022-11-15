@@ -458,9 +458,8 @@ def getPathWithFile(file_obj,rootpath,currentpath=None):
         return getPathWithFile(file_obj.parent, rootpath, currentpath)
 
 
-def downloadDataroomFiles(hours):
-    createstart = datetime.datetime.now() - datetime.timedelta(hours=hours)
-    file_qs = dataroomdirectoryorfile.objects.filter(is_deleted=False, isFile=True, dataroom__is_deleted=False, createdtime__gt=createstart)
+def downloadDataroomFiles(start):
+    file_qs = dataroomdirectoryorfile.objects.filter(is_deleted=False, isFile=True, dataroom__is_deleted=False, createdtime__gt=start)
     for fileInstance in file_qs:
         try:
             dataroomPath = os.path.join(APILOG_PATH['es_dataroomPDFPath'], 'dataroom_{}'.format(fileInstance.dataroom_id))
