@@ -184,6 +184,13 @@ class Country(models.Model):
         return self.countryC
 
 
+    def save(self, *args, **kwargs):
+        if not self.is_deleted:
+            if Country.objects.exclude(pk=self.pk).filter(is_deleted=False, parent=self.parent, countryC=self.countryC).exists():
+                raise InvestError(20071, msg='地区已存在')
+        return super(Country, self).save(*args, **kwargs)
+
+
 class Service(models.Model):
     '''
     项目服务
