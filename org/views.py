@@ -21,7 +21,8 @@ from org.serializer import OrgCommonSerializer, OrgDetailSerializer, OrgRemarkDe
     OrgContactSerializer, \
     OrgInvestEventSerializer, OrgManageFundSerializer, OrgCooperativeRelationshipSerializer, OrgListSerializer, \
     OrgExportExcelTaskSerializer, \
-    OrgExportExcelTaskDetailSerializer, OrgAttachmentSerializer, OrgRemarkCreateSerializer
+    OrgExportExcelTaskDetailSerializer, OrgAttachmentSerializer, OrgRemarkCreateSerializer, orgaliasCreateSerializer, \
+    orgaliasSerializer
 from sourcetype.models import TransactionPhases, TagContrastTable
 from third.views.qiniufile import deleteqiniufile, downloadFileToPath
 from usersys.models import UserRelation, MyUser
@@ -49,6 +50,7 @@ class OrganizationFilter(FilterSet):
     industrys = RelationFilter(filterstr='industry', lookup_method='in', relationName='industry__is_deleted')
     currencys = RelationFilter(filterstr='currency', lookup_method='in', relationName='currency__is_deleted')
     orgname = RelationFilter(filterstr='orgnameC', lookup_expr='icontains')
+    alias = RelationFilter(filterstr='org_orgalias__alias', lookup_expr='icontains')
     users = RelationFilter(filterstr='org_users', lookup_method='in', relationName='org_users__is_deleted')
     orgtransactionphases = RelationFilter(filterstr='orgtransactionphase',lookup_method='in',relationName='org_orgTransactionPhases__is_deleted')
     orgtypes = RelationFilter(filterstr='orgtype',lookup_method='in', relationName='orgtype__is_deleted')
@@ -57,7 +59,7 @@ class OrganizationFilter(FilterSet):
     trader = RelationFilter(filterstr='org_users__investor_relations__traderuser',lookup_method='in',relationName='org_users__investor_relations__is_deleted')
     class Meta:
         model = organization
-        fields = ['orgname', 'proj','orgfullname', 'orgstatus','currencys','industrys','orgtransactionphases','orgtypes','area','trader','stockcode','stockshortname','issub','investoverseasproject', 'ids']
+        fields = ['orgname', 'alias', 'proj','orgfullname', 'orgstatus','currencys','industrys','orgtransactionphases','orgtypes','area','trader','stockcode','stockshortname','issub','investoverseasproject', 'ids']
 
 class OrganizationView(viewsets.ModelViewSet):
     """
@@ -70,7 +72,7 @@ class OrganizationView(viewsets.ModelViewSet):
     filter_backends = (MySearchFilter,filters.DjangoFilterBackend,)
     queryset = organization.objects.filter(is_deleted=False)
     filter_class = OrganizationFilter
-    search_fields = ('orgnameC','orgnameE','stockcode', 'orgfullname')
+    search_fields = ('orgnameC','orgnameE','stockcode', 'orgfullname', 'org_orgalias__alias')
     serializer_class = OrgDetailSerializer
     redis_key = 'organization'
 
@@ -443,6 +445,88 @@ class OrgRemarkView(viewsets.ModelViewSet):
         except Exception:
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+class orgaliasFilter(FilterSet):
+    org = RelationFilter(filterstr='org', lookup_method='in', relationName='org__is_deleted')
+    alias = RelationFilter(filterstr='alias')
+    class Meta:
+        model = orgalias
+        fields = ('org', 'alias')
+
+class orgaliasView(viewsets.ModelViewSet):
+    """
+    list:获取机构备注列表
+    create:新增机构备注
+    retrieve:查看机构某条备注详情（id）
+    update:修改机构备注信息（id）
+    destroy:删除机构备注 （id）
+    """
+    filter_backends = (filters.DjangoFilterBackend,)
+    queryset = orgalias.objects.filter(is_deleted=False)
+    filter_class = orgaliasFilter
+    serializer_class = orgaliasCreateSerializer
+
+    @loginTokenIsAvailable()
+    def list(self, request, *args, **kwargs):
+        try:
+            page_size = request.GET.get('page_size', 10)
+            page_index = request.GET.get('page_index', 1)
+            queryset = self.filter_queryset(self.get_queryset()).filter(datasource=request.user.datasource)
+            try:
+                count = queryset.count()
+                queryset = Paginator(queryset, page_size)
+                queryset = queryset.page(page_index)
+            except EmptyPage:
+                return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
+            serializer = orgaliasSerializer(queryset, many=True)
+            return JSONResponse(SuccessResponse({'count':count,'data': serializer.data}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable()
+    def create(self, request, *args, **kwargs):
+        try:
+            data = request.data
+            if not data.get('createuser'):
+                data['createuser'] = request.user.id
+            data['datasource'] = request.user.datasource.id
+            with transaction.atomic():
+                insserializer = orgaliasCreateSerializer(data=data)
+                if insserializer.is_valid():
+                    insserializer.save()
+                else:
+                    raise InvestError(20071, msg='新增机构别名失败', detail='%s' % insserializer.error_messages)
+                return JSONResponse(SuccessResponse(insserializer.data))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+    @loginTokenIsAvailable()
+    def destroy(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, instance.org):
+                pass
+            elif request.user == instance.createuser:
+                pass
+            else:
+                raise InvestError(code=2009, msg='删除机构别名失败')
+            with transaction.atomic():
+                instance.is_deleted = True
+                instance.deletedtime = datetime.datetime.now()
+                instance.save()
+                return JSONResponse(SuccessResponse({'is_deleted': True}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
 
 
 class OrgContactView(viewsets.ModelViewSet):

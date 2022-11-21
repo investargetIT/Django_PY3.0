@@ -15,6 +15,16 @@ org_detail = views.OrganizationView.as_view({
         'delete': 'destroy'
 })
 
+orgalias_list = views.orgaliasView.as_view({
+        'get': 'list',
+        'post': 'create'
+})
+
+
+orgalias_detail = views.orgaliasView.as_view({
+        'delete': 'destroy'
+})
+
 
 org_exportlist = views.OrgExportExcelTaskView.as_view({
         'get': 'list',
@@ -134,6 +144,8 @@ urlpatterns = [
         url(r'^cooprelation/(?P<pk>\d+)/$', org_cooprelationdetail,name='org_cooprelation-detail'),
         url(r'^buyout/$', org_buyoutlist,name='org_buyout-list'),
         url(r'^buyout/(?P<pk>\d+)/$', org_buyoutdetail,name='org_buyout-detail'),
+        url(r'^alias/$', orgalias_list,name='orgalias-list'),
+        url(r'^alias/(?P<pk>\d+)/$', orgalias_detail,name='orgalias-detail'),
         url(r'^excel/$', org_exportlist,name='org_excel-list'),
         url(r'^excel/(?P<pk>\d+)/$', org_exportdetail,name='org_excel-detail'),
         url(r'^atta/$', org_attachmentlist,name='org_attachment-list'),

@@ -1,7 +1,7 @@
 #coding=utf-8
 from rest_framework import serializers
 from org.models import organization, orgRemarks, orgTransactionPhase, orgBuyout, orgContact, orgInvestEvent, \
-    orgCooperativeRelationship, orgManageFund, orgExportExcelTask, orgAttachments
+    orgCooperativeRelationship, orgManageFund, orgExportExcelTask, orgAttachments, orgalias
 from sourcetype.serializer import transactionPhasesSerializer, tagSerializer
 from third.models import QiNiuFileUploadRecord
 from third.serializer import QiNiuFileUploadRecordSerializer
@@ -12,6 +12,19 @@ class OrgCommonSerializer(serializers.ModelSerializer):
     class Meta:
         model = organization
         fields = ('id', 'orgfullname', 'orgnameC', 'orgnameE', 'description', 'createuser')
+
+
+class orgaliasCreateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = orgalias
+        fields = '__all__'
+
+class orgaliasSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = orgalias
+        exclude = ('is_deleted', 'createdtime')
 
 
 class OrgCreateSerializer(serializers.ModelSerializer):
