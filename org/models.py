@@ -71,6 +71,8 @@ class organization(MyModel):
     def save(self, *args, **kwargs):
         if not self.orgnameC:
             raise InvestError(20072,msg='机构名称不能为空')
+        if not self.orgfullname:
+            self.orgfullname = self.orgnameC
         if self.mobileCode:
             if not self.mobileCode.isdigit():
                 raise InvestError(20071, msg='区号 必须是纯数字')
