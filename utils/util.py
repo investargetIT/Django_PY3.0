@@ -13,15 +13,14 @@ from django.core.exceptions import FieldError
 from guardian.shortcuts import assign_perm, remove_perm
 from django.contrib.sessions.backends.cache import SessionStore
 from invest.settings import APILOG_PATH
+from third.thirdconfig import china_mobile, hongkong_mobile, hongkong_telephone
 from usersys.models import MyToken
 from utils.customClass import JSONResponse, InvestError
 
 REDIS_TIMEOUT = 1 * 24 * 60 * 60
 
 # mobielrestr = r'^(13[0-9]|14[579]|15[0-3,5-9]|17[0135678]|18[0-9])([0-9]{8})$'
-china_mobile = r'^((13[0-9])|(14[5,7,9])|(15[0-3,5-9])|(166)|(17[0,1,3,5,6,7,8])|(18[0-9])|(19[8,9]))([0-9]{8})$'
-hongkong_mobile = r'^(5|6|8|9)([0-9]{7})$'
-hongkong_telephone = r'^^(2[1-9]|3[1,4-7,9])([0-9]{6})$'
+
 request_max_size = 1000
 def SuccessResponse(data,msg=None):
     response = {'code': 1000, 'errormsg': msg, 'result': data, 'detail': msg}
