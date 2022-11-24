@@ -50,7 +50,7 @@ class OrganizationFilter(FilterSet):
     industrys = RelationFilter(filterstr='industry', lookup_method='in', relationName='industry__is_deleted')
     currencys = RelationFilter(filterstr='currency', lookup_method='in', relationName='currency__is_deleted')
     orgname = RelationFilter(filterstr='orgnameC', lookup_expr='icontains')
-    alias = RelationFilter(filterstr='org_orgalias__alias', lookup_expr='icontains')
+    alias = RelationFilter(filterstr='org_orgalias__alias', lookup_expr='icontains', relationName='org_orgalias__is_deleted')
     users = RelationFilter(filterstr='org_users', lookup_method='in', relationName='org_users__is_deleted')
     orgtransactionphases = RelationFilter(filterstr='orgtransactionphase',lookup_method='in',relationName='org_orgTransactionPhases__is_deleted')
     orgtypes = RelationFilter(filterstr='orgtype',lookup_method='in', relationName='orgtype__is_deleted')
