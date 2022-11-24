@@ -471,7 +471,7 @@ class orgaliasView(viewsets.ModelViewSet):
         try:
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
-            queryset = self.filter_queryset(self.get_queryset()).filter(datasource=request.user.datasource)
+            queryset = self.filter_queryset(self.get_queryset())
             try:
                 count = queryset.count()
                 queryset = Paginator(queryset, page_size)
@@ -491,7 +491,6 @@ class orgaliasView(viewsets.ModelViewSet):
             data = request.data
             if not data.get('createuser'):
                 data['createuser'] = request.user.id
-            data['datasource'] = request.user.datasource.id
             with transaction.atomic():
                 insserializer = orgaliasCreateSerializer(data=data)
                 if insserializer.is_valid():
