@@ -91,8 +91,8 @@ class organization(MyModel):
 
 
 class orgalias(MyModel):
-    org =  MyForeignKey(organization,related_name='org_orgalias')
-    alias = models.CharField(max_length=128, blank=True, null=True, help_text='机构别名')
+    org = MyForeignKey(organization, related_name='org_orgalias', on_delete=models.CASCADE)
+    alias = models.CharField(max_length=128, blank=True, help_text='机构别名')
 
     class Meta:
         db_table = "org_alias"
