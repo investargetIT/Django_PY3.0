@@ -50,7 +50,7 @@ class OrganizationFilter(FilterSet):
     industrys = RelationFilter(filterstr='industry', lookup_method='in', relationName='industry__is_deleted')
     currencys = RelationFilter(filterstr='currency', lookup_method='in', relationName='currency__is_deleted')
     orgname = RelationFilter(filterstr='orgnameC', lookup_expr='icontains')
-    alias = RelationFilter(filterstr='org_orgalias__alias', lookup_expr='icontains')
+    alias = RelationFilter(filterstr='org_orgalias__alias', lookup_expr='icontains', relationName='org_orgalias__is_deleted')
     users = RelationFilter(filterstr='org_users', lookup_method='in', relationName='org_users__is_deleted')
     orgtransactionphases = RelationFilter(filterstr='orgtransactionphase',lookup_method='in',relationName='org_orgTransactionPhases__is_deleted')
     orgtypes = RelationFilter(filterstr='orgtype',lookup_method='in', relationName='orgtype__is_deleted')
@@ -471,7 +471,7 @@ class orgaliasView(viewsets.ModelViewSet):
         try:
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
-            queryset = self.filter_queryset(self.get_queryset()).filter(datasource=request.user.datasource)
+            queryset = self.filter_queryset(self.get_queryset())
             try:
                 count = queryset.count()
                 queryset = Paginator(queryset, page_size)
@@ -491,7 +491,6 @@ class orgaliasView(viewsets.ModelViewSet):
             data = request.data
             if not data.get('createuser'):
                 data['createuser'] = request.user.id
-            data['datasource'] = request.user.datasource.id
             with transaction.atomic():
                 insserializer = orgaliasCreateSerializer(data=data)
                 if insserializer.is_valid():
