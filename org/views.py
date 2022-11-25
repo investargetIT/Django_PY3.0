@@ -485,12 +485,10 @@ class orgaliasView(viewsets.ModelViewSet):
         except Exception:
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
-    @loginTokenIsAvailable()
+    @loginTokenIsAvailable(['usersys.as_trader'])
     def create(self, request, *args, **kwargs):
         try:
             data = request.data
-            if not data.get('createuser'):
-                data['createuser'] = request.user.id
             with transaction.atomic():
                 insserializer = orgaliasCreateSerializer(data=data)
                 if insserializer.is_valid():
@@ -505,16 +503,10 @@ class orgaliasView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
 
-    @loginTokenIsAvailable()
+    @loginTokenIsAvailable(['usersys.as_trader'])
     def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
-            if request.user.has_perm('org.admin_manageorg') or is_orgUserTrader(request.user, instance.org):
-                pass
-            elif request.user == instance.createuser:
-                pass
-            else:
-                raise InvestError(code=2009, msg='删除机构别名失败')
             with transaction.atomic():
                 instance.is_deleted = True
                 instance.deletedtime = datetime.datetime.now()
