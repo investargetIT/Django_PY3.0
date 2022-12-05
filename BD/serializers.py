@@ -138,7 +138,7 @@ class OrgBDSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OrgBD
-        exclude = ('deleteduser', 'deletedtime', 'datasource', 'is_deleted', 'usermobile')
+        exclude = ('deleteduser', 'deletedtime', 'datasource', 'is_deleted')
 
     def get_BDComments(self, obj):
         qs = obj.OrgBD_comments.filter(is_deleted=False)
