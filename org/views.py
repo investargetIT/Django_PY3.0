@@ -455,11 +455,9 @@ class orgaliasFilter(FilterSet):
 
 class orgaliasView(viewsets.ModelViewSet):
     """
-    list:获取机构备注列表
-    create:新增机构备注
-    retrieve:查看机构某条备注详情（id）
-    update:修改机构备注信息（id）
-    destroy:删除机构备注 （id）
+    list:获取机构别名列表
+    create:新增机构别名
+    destroy:删除机构别名 （id）
     """
     filter_backends = (filters.DjangoFilterBackend,)
     queryset = orgalias.objects.filter(is_deleted=False)
