@@ -98,10 +98,12 @@ class orgalias(MyModel):
         db_table = "org_alias"
 
     def save(self, *args, **kwargs):
-        if orgalias.objects.exclude(pk=self.pk).filter(is_deleted=False, alias=self.alias, org=self.org).exists():
+        if orgalias.objects.exclude(pk=self.pk).filter(is_deleted=False, alias=self.alias).exists():
             raise InvestError(code=5001, msg='同名机构已存在, 无法编辑')
         if not self.is_deleted:
             if self.alias in [self.org.orgnameC, self.org.orgnameE, self.org.orgfullname]:
+                raise InvestError(code=5001, msg='机构已存在, 无法编辑')
+            if organization.objects.filter(is_deleted=False, orgfullname=self.alias).exists():
                 raise InvestError(code=5001, msg='机构已存在, 无法编辑')
         return super(orgalias, self).save(*args, **kwargs)
 
