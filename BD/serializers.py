@@ -171,10 +171,10 @@ class OrgBDSerializer(serializers.ModelSerializer):
                 info['tags'] = tagSerializer(tags, many=True).data
             if obj.bduser.photoKey:
                 info['photourl'] = getUrlWithBucketAndKey('image', obj.bduser.photoKey)
-            if obj.bduser.photoKey:
+            if obj.bduser.cardKey:
                 info['cardurl'] = getUrlWithBucketAndKey('image', obj.bduser.cardKey)
             if user_id:
-                if obj.manager.id == user_id or is_userInvestor(obj.bduser, user_id):
+                if obj.manager and obj.manager.id == user_id or is_userInvestor(obj.bduser, user_id):
                     info['email'] = obj.bduser.email
                     info['mobile'] = obj.bduser.mobile
                     info['wechat'] = obj.bduser.wechat
