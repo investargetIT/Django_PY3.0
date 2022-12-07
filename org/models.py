@@ -2,6 +2,8 @@
 from __future__ import unicode_literals
 
 from django.db import models
+from django.db.models import Q
+
 from sourcetype.models import AuditStatus, OrgType , TransactionPhases,CurrencyType, DataSource, OrgAttribute, Country, \
     Tag, Industry
 from usersys.models import MyUser
@@ -79,14 +81,14 @@ class organization(MyModel):
         if self.mobileAreaCode:
             if not self.mobileAreaCode.isdigit():
                 raise InvestError(20071, msg='国家号 必须是纯数字')
-        if self.pk:
-            if self.orgfullname:
-                if organization.objects.exclude(pk=self.pk).filter(is_deleted=False,orgfullname=self.orgfullname).exists():
-                    raise InvestError(code=5001,msg='同名机构已存在, 无法修改')
-        else:
-            if self.orgfullname:
-                if organization.objects.filter(is_deleted=False,orgfullname=self.orgfullname).exists():
-                    raise InvestError(code=5001,msg='同名机构已存在，无法新增')
+        if not self.is_deleted:
+            if organization.objects.exclude(pk=self.pk).filter(is_deleted=False).filter(Q(orgfullname=self.orgfullname)
+                | Q(orgfullname=self.orgnameC) | Q(orgfullname=self.orgnameE) | Q(orgnameC=self.orgnameC)
+                | Q(orgnameC=self.orgnameE) | Q(orgnameE=self.orgnameE)).exists():
+                raise InvestError(code=5001, msg='同名机构已存在, 无法编辑机构')
+            elif orgalias.objects.exclude(org_id=self.pk).filter(is_deleted=False).filter(Q(alias=self.orgfullname)
+                | Q(alias=self.orgnameC) | Q(alias=self.orgnameE)).exists():
+                raise InvestError(code=5001, msg='相同别名已存在, 无法编辑机构')
         super(organization,self).save(*args, **kwargs)
 
 
@@ -98,13 +100,12 @@ class orgalias(MyModel):
         db_table = "org_alias"
 
     def save(self, *args, **kwargs):
-        if orgalias.objects.exclude(pk=self.pk).filter(is_deleted=False, alias=self.alias).exists():
-            raise InvestError(code=5001, msg='同名机构已存在, 无法编辑')
         if not self.is_deleted:
-            if self.alias in [self.org.orgnameC, self.org.orgnameE, self.org.orgfullname]:
-                raise InvestError(code=5001, msg='机构已存在, 无法编辑')
-            if organization.objects.filter(is_deleted=False, orgfullname=self.alias).exists():
-                raise InvestError(code=5001, msg='机构已存在, 无法编辑')
+            if orgalias.objects.exclude(pk=self.pk).filter(is_deleted=False, alias=self.alias).exists():
+                raise InvestError(code=5001, msg='同名机构已存在, 无法编辑别名')
+            elif organization.objects.exclude(id=self.org.id).filter(is_deleted=False).filter(Q(orgfullname=self.alias)
+                | Q(orgnameC=self.alias) | Q(orgnameE=self.alias)).exists():
+                raise InvestError(code=5001, msg='同名机构已存在, 无法编辑别名')
         return super(orgalias, self).save(*args, **kwargs)
 
 class orgTags(MyModel):
