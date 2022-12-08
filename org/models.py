@@ -82,13 +82,21 @@ class organization(MyModel):
             if not self.mobileAreaCode.isdigit():
                 raise InvestError(20071, msg='国家号 必须是纯数字')
         if not self.is_deleted:
-            if organization.objects.exclude(pk=self.pk).filter(is_deleted=False).filter(Q(orgfullname=self.orgfullname)
-                | Q(orgfullname=self.orgnameC) | Q(orgfullname=self.orgnameE) | Q(orgnameC=self.orgnameC)
-                | Q(orgnameC=self.orgnameE) | Q(orgnameE=self.orgnameE)).exists():
-                raise InvestError(code=5001, msg='同名机构已存在, 无法编辑机构')
-            elif orgalias.objects.exclude(org_id=self.pk).filter(is_deleted=False).filter(Q(alias=self.orgfullname)
-                | Q(alias=self.orgnameC) | Q(alias=self.orgnameE)).exists():
-                raise InvestError(code=5001, msg='相同别名已存在, 无法编辑机构')
+            if self.orgnameE:
+                if organization.objects.exclude(pk=self.pk).filter(is_deleted=False).filter(Q(orgfullname=self.orgfullname)
+                    | Q(orgfullname=self.orgnameC) | Q(orgfullname=self.orgnameE) | Q(orgnameC=self.orgnameC)
+                    | Q(orgnameC=self.orgnameE) | Q(orgnameE=self.orgnameE)).exists():
+                    raise InvestError(code=5001, msg='同名机构已存在, 无法编辑机构')
+                elif orgalias.objects.exclude(org_id=self.pk).filter(is_deleted=False).filter(Q(alias=self.orgfullname)
+                    | Q(alias=self.orgnameC) | Q(alias=self.orgnameE)).exists():
+                    raise InvestError(code=5001, msg='相同别名已存在, 无法编辑机构')
+            else:
+                if organization.objects.exclude(pk=self.pk).filter(is_deleted=False).filter(Q(orgfullname=self.orgfullname)
+                    | Q(orgfullname=self.orgnameC) | Q(orgnameC=self.orgnameC)).exists():
+                    raise InvestError(code=5001, msg='同名机构已存在, 无法编辑机构')
+                elif orgalias.objects.exclude(org_id=self.pk).filter(is_deleted=False).filter(Q(alias=self.orgfullname)
+                    | Q(alias=self.orgnameC)).exists():
+                    raise InvestError(code=5001, msg='相同别名已存在, 无法编辑机构')
         super(organization,self).save(*args, **kwargs)
 
 
@@ -100,6 +108,8 @@ class orgalias(MyModel):
         db_table = "org_alias"
 
     def save(self, *args, **kwargs):
+        if not self.alias:
+            raise InvestError(2007, msg='alias 不能为空')
         if not self.is_deleted:
             if orgalias.objects.exclude(pk=self.pk).filter(is_deleted=False, alias=self.alias).exists():
                 raise InvestError(code=5001, msg='同名机构已存在, 无法编辑别名')
