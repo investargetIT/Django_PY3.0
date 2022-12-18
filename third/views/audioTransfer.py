@@ -279,23 +279,28 @@ class AudioTranslateTaskRecordView(viewsets.ModelViewSet):
     def audioFileTranslateToWord(self, request, *args, **kwargs):
         try:
             speaker_number = request.data.get('speaker_number', 0)
-            uploaddata = request.FILES.get('file')
-            dirpath = APILOG_PATH['audioTranslateFile']
-            file_key = request.data.get('key')
-            if not file_key:
-                filetype = str(uploaddata.name).split('.')[-1]
-                randomPrefix = datetime.datetime.now().strftime('%Y%m%d%H%M%S') + ''.join(
-                    random.sample(string.ascii_lowercase, 6))
-                file_key = randomPrefix + '.' + filetype
-            if not os.path.exists(dirpath):
-                os.makedirs(dirpath)
-            file_Path = os.path.join(dirpath, file_key)
-            with open(file_Path, 'wb+') as destination:
-                for chunk in uploaddata.chunks():
-                    destination.write(chunk)
-            api = TransferRequestApi(upload_file_path=file_Path, speaker_number=speaker_number)
+            file_key = request.data.get('key', '')
+            file_path = os.path.join(APILOG_PATH['uploadFilePath'], file_key)
+            if file_key and os.path.exists(file_path):
+                file_name = request.data['file_name'] if request.data.get('file_name') else file_key
+            else:
+                uploaddata = request.FILES.get('file')
+                dirpath = APILOG_PATH['audioTranslateFile']
+                file_name = request.data['file_name'] if request.data.get('file_name') else uploaddata.name
+                if not file_key:
+                    filetype = str(uploaddata.name).split('.')[-1]
+                    randomPrefix = datetime.datetime.now().strftime('%Y%m%d%H%M%S') + ''.join(
+                        random.sample(string.ascii_lowercase, 6))
+                    file_key = randomPrefix + '.' + filetype
+                if not os.path.exists(dirpath):
+                    os.makedirs(dirpath)
+                file_path = os.path.join(dirpath, file_key)
+                with open(file_path, 'wb+') as destination:
+                    for chunk in uploaddata.chunks():
+                        destination.write(chunk)
+            api = TransferRequestApi(upload_file_path=file_path, speaker_number=speaker_number)
             task_id = api.all_api_request()
-            instance = AudioTranslateTaskRecord(task_id=task_id, file_key=file_key, file_name=uploaddata.name,
+            instance = AudioTranslateTaskRecord(task_id=task_id, file_key=file_key, file_name=file_name,
                                      speaker_number=speaker_number, cretateUserId=request.user.id)
             instance.save()
             return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
