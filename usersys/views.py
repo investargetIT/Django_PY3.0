@@ -1,6 +1,8 @@
 #coding=utf-8
 import traceback
 import datetime
+
+import xlwt
 from django.contrib import auth
 from django.contrib.auth.models import Group, Permission
 from django.contrib.sessions.backends.cache import SessionStore
@@ -12,11 +14,11 @@ from rest_framework import filters, viewsets
 from rest_framework.decorators import api_view, detail_route, list_route
 from APIlog.views import logininlog, apilog
 from dataroom.models import dataroom
+from invest.settings import APILOG_PATH
 from org.models import organization
 from sourcetype.views import getmenulist
 from third.models import MobileAuthCode
 from third.views.qiniufile import deleteqiniufile
-from third.views.weixinlogin import get_openid
 from usersys.models import MyUser, UserRelation, userTags, MyToken, UnreachUser, UserRemarks, \
     userAttachments, userEvents, UserContrastThirdAccount, registersourcechoice, UserPerformanceAppraisalRecord, \
     UserPersonnelRelations, UserTrainingRecords, UserMentorTrackingRecords, UserWorkingPositionRecords, \
@@ -31,12 +33,12 @@ from usersys.serializer import UserSerializer, UserListSerializer, UserRelationS
     UserTrainingRecordsCreateSerializer, UserMentorTrackingRecordsSerializer, UserMentorTrackingRecordsCreateSerializer, \
     UserWorkingPositionRecordsSerializer, UserWorkingPositionRecordsCreateSerializer, UserInfoSerializer, \
     UserGetStarInvestorCreateSerializer, UserGetStarInvestorSerializer
-from sourcetype.models import Tag, DataSource, TagContrastTable, IndustryGroup, ProjProgressContrastTable
+from sourcetype.models import Tag, DataSource, TagContrastTable, IndustryGroup
 from utils.customClass import JSONResponse, InvestError, RelationFilter, MySearchFilter
 from utils.logicJudge import is_userInvestor, is_userTrader, is_dataroomTrader
 from utils.sendMessage import sendmessage_userauditstatuchange, sendmessage_userregister, sendmessage_traderadd
-from utils.util import loginTokenIsAvailable, catchexcption, returnDictChangeToLanguage, returnListChangeToLanguage,\
-    SuccessResponse, InvestErrorResponse, ExceptionResponse,  mySortQuery, checkRequestToken
+from utils.util import loginTokenIsAvailable, catchexcption, returnDictChangeToLanguage, returnListChangeToLanguage, \
+    SuccessResponse, InvestErrorResponse, ExceptionResponse, mySortQuery, checkRequestToken, checkMobileTrue
 from django_filters import FilterSet
 
 
@@ -2725,3 +2727,105 @@ def get_traders_by_names(names):
             if trader:
                 traders.append(trader)
     return traders
+
+
+
+
+
+def getOnjobTraders(datasource):
+    """获取在职交易师 """
+    tradergroups = Group.objects.filter(permissions__codename__in=['as_trader'], is_deleted=False, datasource=datasource).values_list('id', flat=True)
+    onjobtraders = MyUser.objects.filter(is_deleted=False, datasource=datasource, groups__in=tradergroups, onjob=True, userstatus=2, workType=1)
+    ecmtraders = onjobtraders.filter(workType=1).values_list('id', flat=True)
+    ibdtraders = onjobtraders.filter(workType=0).values_list('id', flat=True)
+    return ecmtraders, ibdtraders
+
+
+def getInvestorCoverage(tables, datasource):
+    ECM_traderids, IBD_traderids = getOnjobTraders(datasource)
+    wb = xlwt.Workbook(encoding='utf-8')
+    style = xlwt.XFStyle()  # 初始化样式
+    alignment = xlwt.Formatting.Alignment()
+    alignment.horz = xlwt.Alignment.HORZ_CENTER  # 垂直对齐
+    alignment.vert = xlwt.Alignment.VERT_CENTER  # 水平对齐
+    alignment.wrap = xlwt.Alignment.WRAP_AT_RIGHT  # 自动换行
+    style.alignment = alignment
+    ws_org = wb.add_sheet('机构列表')
+    ws_org.write(0, 0, '机构名称')
+    ws_org.write(0, 1, '机构id')
+    ws_org.write(0, 2, '投资人总数')
+    ws_org.write(0, 3, '覆盖投资人 数量')
+    ws_org.write(0, 4, '覆盖投资人（IBD）')
+    ws_org.write(0, 5, '覆盖投资人（仅IBD）')
+    ws_org.write(0, 6, '覆盖投资人（ECM）')
+    ws_org.write(0, 7, '覆盖投资人（仅ECM）')
+    ws_org.write(0, 8, '覆盖投资人 职位')
+    investorgroups = Group.objects.filter(permissions__codename__in=['as_investor'], is_deleted=False, datasource=datasource).values_list('id', flat=True)
+    investor_qs = MyUser.objects.filter(is_deleted=False, datasource=datasource, groups__in=investorgroups)
+
+    ws_org_hang = 1
+    for row in tables:
+        orgname = row['机构名称']
+        org_id = row['系统ID']
+        ws_org.write(ws_org_hang, 0, orgname)
+        if org_id:
+            allinvestors = investor_qs.filter(org=org_id)
+            alluserid = allinvestors.values_list('id', flat=True)
+
+            fugaiinvestors = []
+            ibdinvestors_id = []
+            ecminvestors_id = []
+            titleids = []
+
+            remarks = UserRemarks.objects.filter(is_deleted=False, datasource=datasource, user__in=alluserid).values_list('user', flat=True)
+            remarkuserids = list(set(remarks))
+            for investor in allinvestors:
+                trader_relations = investor.investor_relations.filter(is_deleted=False)
+                if trader_relations.exists():
+                    hasIBDtrader = False
+                    hasECMtrader = False
+                    if trader_relations.filter(traderuser__in=IBD_traderids).exists():
+                            hasIBDtrader = True
+                    elif trader_relations.filter(traderuser__in=ECM_traderids).exists():
+                            hasECMtrader = True
+                    if hasIBDtrader or hasECMtrader:
+
+                        if investor.id in remarkuserids or checkMobileTrue(investor.mobile, investor.mobileAreaCode):
+                            if hasIBDtrader:
+                                ibdinvestors_id.append((investor.id))
+                            if hasECMtrader:
+                                ecminvestors_id.append((investor.id))
+                            fugaiinvestors.append((investor))
+                        else:
+                            hasIBDtrader = False
+                            hasECMtrader = False
+                            if trader_relations.filter(~Q(familiar=99)).filter(traderuser__in=IBD_traderids).exists():
+                                hasIBDtrader = True
+                            elif trader_relations.filter(~Q(familiar=99)).filter(traderuser__in=ECM_traderids).exists():
+                                hasECMtrader = True
+                            if hasIBDtrader or hasECMtrader:
+                                if hasIBDtrader:
+                                    ibdinvestors_id.append((investor.id))
+                                if hasECMtrader:
+                                    ecminvestors_id.append((investor.id))
+                                fugaiinvestors.append((investor))
+
+            onlyibd = [investor for investor in ibdinvestors_id if investor not in ecminvestors_id]
+            onlyecm = [investor for investor in ecminvestors_id if investor not in ibdinvestors_id]
+            titles = []
+            for investor in fugaiinvestors:
+                if investor.title and not investor.title.is_deleted:
+                    titles.append(investor.title)
+            data_dict = {}
+            for title in titleids:
+                data_dict[title.nameC] = data_dict.get(title.nameC, 0) + 1
+            ws_org.write(ws_org_hang, 1, org_id)
+            ws_org.write(ws_org_hang, 2, str(len(allinvestors)))
+            ws_org.write(ws_org_hang, 3, str(len(fugaiinvestors)))
+            ws_org.write(ws_org_hang, 4, str(len(ibdinvestors_id)))
+            ws_org.write(ws_org_hang, 5, str(len(onlyibd)))
+            ws_org.write(ws_org_hang, 6, str(len(ecminvestors_id)))
+            ws_org.write(ws_org_hang, 7, str(len(onlyecm)))
+            ws_org.write(ws_org_hang, 8, str(data_dict))
+        ws_org_hang += 1
+    wb.save(APILOG_PATH['investorCoverageExcelPath'])
