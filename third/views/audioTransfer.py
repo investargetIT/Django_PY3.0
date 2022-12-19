@@ -15,6 +15,7 @@ import traceback
 import requests
 from django.core.paginator import Paginator, EmptyPage
 from django.db import transaction
+from django.db.models import Q
 from rest_framework import viewsets
 from rest_framework import filters
 
@@ -298,6 +299,9 @@ class AudioTranslateTaskRecordView(viewsets.ModelViewSet):
                 with open(file_path, 'wb+') as destination:
                     for chunk in uploaddata.chunks():
                         destination.write(chunk)
+            onedayago = datetime.datetime.now() - datetime.timedelta(days=1)
+            if AudioTranslateTaskRecord.objects.filter(is_deleted=False).filter(Q(file_key=file_key) | Q(file_name=file_name, createTime__gt=onedayago)).exists():
+                raise InvestError(4010, msg='语音转文字转换失败', detail='已存在相同语音转换记录，请查询')
             api = TransferRequestApi(upload_file_path=file_path, speaker_number=speaker_number)
             task_id = api.all_api_request()
             instance = AudioTranslateTaskRecord(task_id=task_id, file_key=file_key, file_name=file_name,
