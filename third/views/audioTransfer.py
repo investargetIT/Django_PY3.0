@@ -11,10 +11,11 @@ import random
 import string
 import time
 import traceback
-
+from django_filters import FilterSet
 import requests
 from django.core.paginator import Paginator, EmptyPage
 from django.db import transaction
+from django.db.models import Q
 from rest_framework import viewsets
 from rest_framework import filters
 
@@ -22,7 +23,7 @@ from invest.settings import APILOG_PATH
 from third.models import AudioTranslateTaskRecord
 from third.serializer import AudioTranslateTaskRecordSerializer, AudioTranslateTaskRecordUpdateSerializer
 from third.thirdconfig import xunfei_appid, xunfei_secret_key
-from utils.customClass import JSONResponse, InvestError
+from utils.customClass import JSONResponse, InvestError, RelationFilter
 from utils.util import SuccessResponse, InvestErrorResponse, catchexcption, ExceptionResponse, \
     loginTokenIsAvailable, logexcption
 
@@ -241,6 +242,16 @@ class GetResultRequestApi(object):
                 # task 未完成，返回task状态
                 return {'task_status': task_status}
 
+class AudioTranslateTaskRecordFilter(FilterSet):
+    id = RelationFilter(filterstr='id', lookup_method='in')
+    cretateUserId = RelationFilter(filterstr='cretateUserId', lookup_method='in')
+    file_key = RelationFilter(filterstr='file_key', lookup_method='in')
+    file_name = RelationFilter(filterstr='file_name')
+    taskStatus = RelationFilter(filterstr='taskStatus', lookup_method='in')
+
+    class Meta:
+        model = AudioTranslateTaskRecord
+        fields = ('cretateUserId', 'taskStatus', 'file_key', 'id', 'file_name')
 
 
 class AudioTranslateTaskRecordView(viewsets.ModelViewSet):
@@ -250,9 +261,8 @@ class AudioTranslateTaskRecordView(viewsets.ModelViewSet):
         getAudioFileTranslateToWordTaskResult: 获取转换结果
         update: 编辑 转换结果内容、发言人数量
     """
-    filter_backends = (filters.SearchFilter, filters.DjangoFilterBackend,)
-    filter_fields = ('cretateUserId', 'taskStatus', 'file_key')
-    search_fields = ('file_name',)
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = AudioTranslateTaskRecordFilter
     queryset = AudioTranslateTaskRecord.objects.all().filter(is_deleted=False)
     serializer_class = AudioTranslateTaskRecordSerializer
 
@@ -279,25 +289,36 @@ class AudioTranslateTaskRecordView(viewsets.ModelViewSet):
     def audioFileTranslateToWord(self, request, *args, **kwargs):
         try:
             speaker_number = request.data.get('speaker_number', 0)
-            uploaddata = request.FILES.get('file')
-            dirpath = APILOG_PATH['audioTranslateFile']
-            file_key = request.data.get('key')
-            if not file_key:
-                filetype = str(uploaddata.name).split('.')[-1]
-                randomPrefix = datetime.datetime.now().strftime('%Y%m%d%H%M%S') + ''.join(
-                    random.sample(string.ascii_lowercase, 6))
-                file_key = randomPrefix + '.' + filetype
-            if not os.path.exists(dirpath):
-                os.makedirs(dirpath)
-            file_Path = os.path.join(dirpath, file_key)
-            with open(file_Path, 'wb+') as destination:
-                for chunk in uploaddata.chunks():
-                    destination.write(chunk)
-            api = TransferRequestApi(upload_file_path=file_Path, speaker_number=speaker_number)
-            task_id = api.all_api_request()
-            instance = AudioTranslateTaskRecord(task_id=task_id, file_key=file_key, file_name=uploaddata.name,
-                                     speaker_number=speaker_number, cretateUserId=request.user.id)
-            instance.save()
+            file_key = request.data.get('key', '')
+            file_path = os.path.join(APILOG_PATH['uploadFilePath'], file_key)
+            if file_key and os.path.exists(file_path):
+                file_name = request.data['file_name'] if request.data.get('file_name') else file_key
+            else:
+                uploaddata = request.FILES.get('file')
+                dirpath = APILOG_PATH['audioTranslateFile']
+                file_name = request.data['file_name'] if request.data.get('file_name') else uploaddata.name
+                if not file_key:
+                    filetype = str(uploaddata.name).split('.')[-1]
+                    randomPrefix = datetime.datetime.now().strftime('%Y%m%d%H%M%S') + ''.join(
+                        random.sample(string.ascii_lowercase, 6))
+                    file_key = randomPrefix + '.' + filetype
+                if not os.path.exists(dirpath):
+                    os.makedirs(dirpath)
+                file_path = os.path.join(dirpath, file_key)
+                with open(file_path, 'wb+') as destination:
+                    for chunk in uploaddata.chunks():
+                        destination.write(chunk)
+            onedayago = datetime.datetime.now() - datetime.timedelta(days=1)
+            if self.queryset.filter(file_key=file_key).exists():
+                instance = self.queryset.filter(file_key=file_key).first()
+            elif self.queryset.filter(file_name=file_name, createTime__gt=onedayago).exists():
+                instance = self.queryset.filter(file_name=file_name, createTime__gt=onedayago).first()
+            else:
+                api = TransferRequestApi(upload_file_path=file_path, speaker_number=speaker_number)
+                task_id = api.all_api_request()
+                instance = AudioTranslateTaskRecord(task_id=task_id, file_key=file_key, file_name=file_name,
+                                         speaker_number=speaker_number, cretateUserId=request.user.id)
+                instance.save()
             return JSONResponse(SuccessResponse(self.serializer_class(instance).data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
