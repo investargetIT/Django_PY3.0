@@ -3,6 +3,7 @@ import os
 import re
 
 import shutil
+import threading
 import time
 
 from django.core.cache import cache
@@ -389,4 +390,11 @@ def checkMobileTrue(mobile=None, mobileAreaCode=None):
             res = re.search(hongkong_telephone, mobile)
             if res:
                 return True
+    return False
+
+def check_status(thread_name):
+    my_threads = threading.enumerate()
+    for elem in my_threads:
+        if elem.name == thread_name:
+            return elem.is_alive()
     return False

@@ -26,7 +26,7 @@ from third.serializer import QiNiuFileUploadRecordSerializer
 from third.thirdconfig import qiniu_url, ACCESS_KEY, SECRET_KEY, max_chunk_size
 from utils.customClass import JSONResponse, InvestError
 from utils.util import InvestErrorResponse, ExceptionResponse, SuccessResponse, logexcption, checkRequestToken, \
-    catchexcption
+    catchexcption, check_status
 
 
 @api_view(['POST'])
@@ -269,12 +269,7 @@ def check_file(file, file_path, file_path_temp):
         return {'code': '0', 'msg': '上传并提交文件块成功', 'is_end': False}
 
 
-def check_status(thread_name):
-    my_threads = threading.enumerate()
-    for elem in my_threads:
-        if elem.name == thread_name:
-            return elem.is_alive()
-    return False
+
 
 def uploadFileToQiniu():
     markfilepath = APILOG_PATH['qiniumarkFilePath']

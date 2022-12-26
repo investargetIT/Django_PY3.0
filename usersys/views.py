@@ -1,4 +1,6 @@
 #coding=utf-8
+import os
+import threading
 import traceback
 import datetime
 
@@ -10,6 +12,7 @@ from django.core.exceptions import FieldDoesNotExist
 from django.core.paginator import Paginator, EmptyPage
 from django.db import transaction, models, connection
 from django.db.models import Q, Count, QuerySet
+from django.http import StreamingHttpResponse
 from rest_framework import filters, viewsets
 from rest_framework.decorators import api_view, detail_route, list_route
 from APIlog.views import logininlog, apilog
@@ -18,7 +21,7 @@ from invest.settings import APILOG_PATH
 from org.models import organization
 from sourcetype.views import getmenulist
 from third.models import MobileAuthCode
-from third.views.qiniufile import deleteqiniufile
+from third.views.qiniufile import deleteqiniufile, remove_file
 from usersys.models import MyUser, UserRelation, userTags, MyToken, UnreachUser, UserRemarks, \
     userAttachments, userEvents, UserContrastThirdAccount, registersourcechoice, UserPerformanceAppraisalRecord, \
     UserPersonnelRelations, UserTrainingRecords, UserMentorTrackingRecords, UserWorkingPositionRecords, \
@@ -37,8 +40,10 @@ from sourcetype.models import Tag, DataSource, TagContrastTable, IndustryGroup
 from utils.customClass import JSONResponse, InvestError, RelationFilter, MySearchFilter
 from utils.logicJudge import is_userInvestor, is_userTrader, is_dataroomTrader
 from utils.sendMessage import sendmessage_userauditstatuchange, sendmessage_userregister, sendmessage_traderadd
+from utils.somedef import excel_table_byindex, file_iterator
 from utils.util import loginTokenIsAvailable, catchexcption, returnDictChangeToLanguage, returnListChangeToLanguage, \
-    SuccessResponse, InvestErrorResponse, ExceptionResponse, mySortQuery, checkRequestToken, checkMobileTrue
+    SuccessResponse, InvestErrorResponse, ExceptionResponse, mySortQuery, checkRequestToken, checkMobileTrue, \
+    logexcption
 from django_filters import FilterSet
 
 
@@ -2741,91 +2746,158 @@ def getOnjobTraders(datasource):
     return ecmtraders, ibdtraders
 
 
-def getInvestorCoverage(tables, datasource):
-    ECM_traderids, IBD_traderids = getOnjobTraders(datasource)
-    wb = xlwt.Workbook(encoding='utf-8')
-    style = xlwt.XFStyle()  # 初始化样式
-    alignment = xlwt.Formatting.Alignment()
-    alignment.horz = xlwt.Alignment.HORZ_CENTER  # 垂直对齐
-    alignment.vert = xlwt.Alignment.VERT_CENTER  # 水平对齐
-    alignment.wrap = xlwt.Alignment.WRAP_AT_RIGHT  # 自动换行
-    style.alignment = alignment
-    ws_org = wb.add_sheet('机构列表')
-    ws_org.write(0, 0, '机构名称')
-    ws_org.write(0, 1, '机构id')
-    ws_org.write(0, 2, '投资人总数')
-    ws_org.write(0, 3, '覆盖投资人 数量')
-    ws_org.write(0, 4, '覆盖投资人（IBD）')
-    ws_org.write(0, 5, '覆盖投资人（仅IBD）')
-    ws_org.write(0, 6, '覆盖投资人（ECM）')
-    ws_org.write(0, 7, '覆盖投资人（仅ECM）')
-    ws_org.write(0, 8, '覆盖投资人 职位')
-    investorgroups = Group.objects.filter(permissions__codename__in=['as_investor'], is_deleted=False, datasource=datasource).values_list('id', flat=True)
-    investor_qs = MyUser.objects.filter(is_deleted=False, datasource=datasource, groups__in=investorgroups)
+def getInvestorCoverage(tables, datasource, excel_path, tempfile_path):
+    try:
+        ECM_traderids, IBD_traderids = getOnjobTraders(datasource)
+        wb = xlwt.Workbook(encoding='utf-8')
+        style = xlwt.XFStyle()  # 初始化样式
+        alignment = xlwt.Formatting.Alignment()
+        alignment.horz = xlwt.Alignment.HORZ_CENTER  # 垂直对齐
+        alignment.vert = xlwt.Alignment.VERT_CENTER  # 水平对齐
+        alignment.wrap = xlwt.Alignment.WRAP_AT_RIGHT  # 自动换行
+        style.alignment = alignment
+        ws_org = wb.add_sheet('机构列表')
+        ws_org.write(0, 0, '机构名称')
+        ws_org.write(0, 1, '机构id')
+        ws_org.write(0, 2, '投资人总数')
+        ws_org.write(0, 3, '覆盖投资人 数量')
+        ws_org.write(0, 4, '覆盖投资人（IBD）')
+        ws_org.write(0, 5, '覆盖投资人（仅IBD）')
+        ws_org.write(0, 6, '覆盖投资人（ECM）')
+        ws_org.write(0, 7, '覆盖投资人（仅ECM）')
+        ws_org.write(0, 8, '覆盖投资人 职位')
+        if '投资频次' in tables[0]:
+            ws_org.write(0, 9, '投资频次')
+        investorgroups = Group.objects.filter(permissions__codename__in=['as_investor'], is_deleted=False, datasource=datasource).values_list('id', flat=True)
+        investor_qs = MyUser.objects.filter(is_deleted=False, datasource=datasource, groups__in=investorgroups)
 
-    ws_org_hang = 1
-    for row in tables:
-        orgname = row['机构名称']
-        org_id = row['系统ID']
-        ws_org.write(ws_org_hang, 0, orgname)
-        if org_id:
-            allinvestors = investor_qs.filter(org=org_id)
-            alluserid = allinvestors.values_list('id', flat=True)
+        ws_org_hang = 1
+        for row in tables:
+            orgname = row['机构名称']
+            org_id = row['系统ID']
+            ws_org.write(ws_org_hang, 0, orgname)
+            if '投资频次' in row:
+                ws_org.write(ws_org_hang, 9,  row['投资频次'])
+            if org_id:
+                allinvestors = investor_qs.filter(org=org_id)
+                alluserid = allinvestors.values_list('id', flat=True)
 
-            fugaiinvestors = []
-            ibdinvestors_id = []
-            ecminvestors_id = []
-            titleids = []
+                fugaiinvestors = []
+                ibdinvestors_id = []
+                ecminvestors_id = []
+                titleids = []
 
-            remarks = UserRemarks.objects.filter(is_deleted=False, datasource=datasource, user__in=alluserid).values_list('user', flat=True)
-            remarkuserids = list(set(remarks))
-            for investor in allinvestors:
-                trader_relations = investor.investor_relations.filter(is_deleted=False)
-                if trader_relations.exists():
-                    hasIBDtrader = False
-                    hasECMtrader = False
-                    if trader_relations.filter(traderuser__in=IBD_traderids).exists():
-                            hasIBDtrader = True
-                    elif trader_relations.filter(traderuser__in=ECM_traderids).exists():
-                            hasECMtrader = True
-                    if hasIBDtrader or hasECMtrader:
-
-                        if investor.id in remarkuserids or checkMobileTrue(investor.mobile, investor.mobileAreaCode):
-                            if hasIBDtrader:
-                                ibdinvestors_id.append((investor.id))
-                            if hasECMtrader:
-                                ecminvestors_id.append((investor.id))
-                            fugaiinvestors.append((investor))
-                        else:
-                            hasIBDtrader = False
-                            hasECMtrader = False
-                            if trader_relations.filter(~Q(familiar=99)).filter(traderuser__in=IBD_traderids).exists():
+                remarks = UserRemarks.objects.filter(is_deleted=False, datasource=datasource, user__in=alluserid).values_list('user', flat=True)
+                remarkuserids = list(set(remarks))
+                for investor in allinvestors:
+                    trader_relations = investor.investor_relations.filter(is_deleted=False)
+                    if trader_relations.exists():
+                        hasIBDtrader = False
+                        hasECMtrader = False
+                        if trader_relations.filter(traderuser__in=IBD_traderids).exists():
                                 hasIBDtrader = True
-                            elif trader_relations.filter(~Q(familiar=99)).filter(traderuser__in=ECM_traderids).exists():
+                        elif trader_relations.filter(traderuser__in=ECM_traderids).exists():
                                 hasECMtrader = True
-                            if hasIBDtrader or hasECMtrader:
+                        if hasIBDtrader or hasECMtrader:
+
+                            if investor.id in remarkuserids or checkMobileTrue(investor.mobile, investor.mobileAreaCode):
                                 if hasIBDtrader:
                                     ibdinvestors_id.append((investor.id))
                                 if hasECMtrader:
                                     ecminvestors_id.append((investor.id))
                                 fugaiinvestors.append((investor))
+                            else:
+                                hasIBDtrader = False
+                                hasECMtrader = False
+                                if trader_relations.filter(~Q(familiar=99)).filter(traderuser__in=IBD_traderids).exists():
+                                    hasIBDtrader = True
+                                elif trader_relations.filter(~Q(familiar=99)).filter(traderuser__in=ECM_traderids).exists():
+                                    hasECMtrader = True
+                                if hasIBDtrader or hasECMtrader:
+                                    if hasIBDtrader:
+                                        ibdinvestors_id.append((investor.id))
+                                    if hasECMtrader:
+                                        ecminvestors_id.append((investor.id))
+                                    fugaiinvestors.append((investor))
 
-            onlyibd = [investor for investor in ibdinvestors_id if investor not in ecminvestors_id]
-            onlyecm = [investor for investor in ecminvestors_id if investor not in ibdinvestors_id]
-            titles = []
-            for investor in fugaiinvestors:
-                if investor.title and not investor.title.is_deleted:
-                    titles.append(investor.title)
-            data_dict = {}
-            for title in titleids:
-                data_dict[title.nameC] = data_dict.get(title.nameC, 0) + 1
-            ws_org.write(ws_org_hang, 1, org_id)
-            ws_org.write(ws_org_hang, 2, str(len(allinvestors)))
-            ws_org.write(ws_org_hang, 3, str(len(fugaiinvestors)))
-            ws_org.write(ws_org_hang, 4, str(len(ibdinvestors_id)))
-            ws_org.write(ws_org_hang, 5, str(len(onlyibd)))
-            ws_org.write(ws_org_hang, 6, str(len(ecminvestors_id)))
-            ws_org.write(ws_org_hang, 7, str(len(onlyecm)))
-            ws_org.write(ws_org_hang, 8, str(data_dict))
-        ws_org_hang += 1
-    wb.save(APILOG_PATH['investorCoverageExcelPath'])
+                onlyibd = [investor for investor in ibdinvestors_id if investor not in ecminvestors_id]
+                onlyecm = [investor for investor in ecminvestors_id if investor not in ibdinvestors_id]
+                titles = []
+                for investor in fugaiinvestors:
+                    if investor.title and not investor.title.is_deleted:
+                        titles.append(investor.title)
+                data_dict = {}
+                for title in titleids:
+                    data_dict[title.nameC] = data_dict.get(title.nameC, 0) + 1
+                ws_org.write(ws_org_hang, 1, org_id)
+                ws_org.write(ws_org_hang, 2, str(len(allinvestors)))
+                ws_org.write(ws_org_hang, 3, str(len(fugaiinvestors)))
+                ws_org.write(ws_org_hang, 4, str(len(ibdinvestors_id)))
+                ws_org.write(ws_org_hang, 5, str(len(onlyibd)))
+                ws_org.write(ws_org_hang, 6, str(len(ecminvestors_id)))
+                ws_org.write(ws_org_hang, 7, str(len(onlyecm)))
+                ws_org.write(ws_org_hang, 8, str(data_dict))
+            ws_org_hang += 1
+        wb.save(excel_path)
+        remove_file(tempfile_path)
+    except Exception:
+        logexcption(msg='投资人覆盖率任务失败')
+
+
+@api_view(['POST'])
+@checkRequestToken()
+def getInvestorCoverageRequest(request):
+    try:
+        file_key = request.data.get('key')
+        if not file_key:
+            raise InvestError(2007, msg='文件key不能为空')
+        inputfile_path = os.path.join(APILOG_PATH['uploadFilePath'], file_key)
+        savefile_path = os.path.join(APILOG_PATH['investorCoverageExcelPath'], file_key)
+        tempfile_path = savefile_path + '.temp'
+        if os.path.exists(savefile_path):
+            return JSONResponse(SuccessResponse({'status': 1, 'msg': '任务已完成'}))
+        else:
+            if os.path.exists(tempfile_path):
+                return JSONResponse(SuccessResponse({'status': 0, 'msg': '任务进行中'}))
+            else:
+                tables = excel_table_byindex(inputfile_path)
+                thread_name = 'getInvestorCoverageThread'
+                f = open(tempfile_path, 'w')
+                f.close()
+                d = threading.Thread(target=getInvestorCoverage, name=thread_name, args=(tables, request.user.datasource, savefile_path, tempfile_path))
+                d.start()
+                return JSONResponse(SuccessResponse({'status': 0, 'msg': '任务进行中'}))
+    except InvestError as err:
+        return JSONResponse(InvestErrorResponse(err))
+    except Exception:
+        catchexcption(request)
+        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+@api_view(['GET'])
+def getInvestorCoverageJsonOrExcelFile(request):
+    try:
+        file_key = request.GET.get('key')
+        if not file_key:
+            raise InvestError(2007, msg='文件key不能为空')
+        type = request.GET.get('type', 'excel')
+        savefile_path = os.path.join(APILOG_PATH['investorCoverageExcelPath'], file_key)
+        if os.path.exists(savefile_path):
+            if type == 'json':
+                tables = excel_table_byindex(savefile_path)
+                response = JSONResponse(SuccessResponse(tables))
+            else:
+                fn = open(savefile_path, 'rb')
+                response = StreamingHttpResponse(file_iterator(fn))
+                zipFileSize = os.path.getsize(savefile_path)
+                response['Content-Length'] = zipFileSize
+                response['Content-Type'] = 'application/octet-stream'
+                response["content-disposition"] = 'attachment;filename=%s' % file_key
+        else:
+            raise InvestError(8002, msg='文件不存在')
+        return response
+    except InvestError as err:
+        return JSONResponse(InvestErrorResponse(err))
+    except Exception:
+        catchexcption(request)
+        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
