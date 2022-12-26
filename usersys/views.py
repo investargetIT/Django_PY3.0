@@ -2740,7 +2740,7 @@ def get_traders_by_names(names):
 def getOnjobTraders(datasource):
     """获取在职交易师 """
     tradergroups = Group.objects.filter(permissions__codename__in=['as_trader'], is_deleted=False, datasource=datasource).values_list('id', flat=True)
-    onjobtraders = MyUser.objects.filter(is_deleted=False, datasource=datasource, groups__in=tradergroups, onjob=True, userstatus=2, workType=1)
+    onjobtraders = MyUser.objects.filter(is_deleted=False, datasource=datasource, groups__in=tradergroups, onjob=True, userstatus=2)
     ecmtraders = onjobtraders.filter(workType=1).values_list('id', flat=True)
     ibdtraders = onjobtraders.filter(workType=0).values_list('id', flat=True)
     return ecmtraders, ibdtraders
@@ -2797,11 +2797,10 @@ def getInvestorCoverage(tables, datasource, excel_path, tempfile_path):
                         hasIBDtrader = False
                         hasECMtrader = False
                         if trader_relations.filter(traderuser__in=IBD_traderids).exists():
-                                hasIBDtrader = True
-                        elif trader_relations.filter(traderuser__in=ECM_traderids).exists():
-                                hasECMtrader = True
+                            hasIBDtrader = True
+                        if trader_relations.filter(traderuser__in=ECM_traderids).exists():
+                            hasECMtrader = True
                         if hasIBDtrader or hasECMtrader:
-
                             if investor.id in remarkuserids or checkMobileTrue(investor.mobile, investor.mobileAreaCode):
                                 if hasIBDtrader:
                                     ibdinvestors_id.append((investor.id))
