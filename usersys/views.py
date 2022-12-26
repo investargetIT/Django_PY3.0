@@ -2779,6 +2779,8 @@ def getInvestorCoverage(tables, datasource, excel_path, tempfile_path):
             if '投资频次' in row:
                 ws_org.write(ws_org_hang, 9,  row['投资频次'])
             if org_id:
+                if isinstance(org_id, (int, float)):
+                    org_id = str(int(org_id))
                 allinvestors = investor_qs.filter(org=org_id)
                 alluserid = allinvestors.values_list('id', flat=True)
 
