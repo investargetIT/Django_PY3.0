@@ -2813,7 +2813,7 @@ def getInvestorCoverage(tables, datasource, excel_path, tempfile_path):
                                 hasECMtrader = False
                                 if trader_relations.filter(~Q(familiar=99)).filter(traderuser__in=IBD_traderids).exists():
                                     hasIBDtrader = True
-                                elif trader_relations.filter(~Q(familiar=99)).filter(traderuser__in=ECM_traderids).exists():
+                                if trader_relations.filter(~Q(familiar=99)).filter(traderuser__in=ECM_traderids).exists():
                                     hasECMtrader = True
                                 if hasIBDtrader or hasECMtrader:
                                     if hasIBDtrader:
