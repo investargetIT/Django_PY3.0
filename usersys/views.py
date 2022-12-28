@@ -43,7 +43,7 @@ from utils.sendMessage import sendmessage_userauditstatuchange, sendmessage_user
 from utils.somedef import excel_table_byindex, file_iterator
 from utils.util import loginTokenIsAvailable, catchexcption, returnDictChangeToLanguage, returnListChangeToLanguage, \
     SuccessResponse, InvestErrorResponse, ExceptionResponse, mySortQuery, checkRequestToken, checkMobileTrue, \
-    logexcption
+    logexcption, deleteExpireDir
 from django_filters import FilterSet
 
 
@@ -2854,6 +2854,7 @@ def getInvestorCoverageRequest(request):
         inputfile_path = os.path.join(APILOG_PATH['uploadFilePath'], file_key)
         savefile_path = os.path.join(APILOG_PATH['investorCoverageExcelPath'], file_key)
         tempfile_path = savefile_path + '.temp'
+        deleteExpireDir(APILOG_PATH['investorCoverageExcelPath'])
         if os.path.exists(savefile_path):
             return JSONResponse(SuccessResponse({'status': 1, 'msg': '任务已完成'}))
         else:
@@ -2881,6 +2882,7 @@ def getInvestorCoverageJsonOrExcelFile(request):
             raise InvestError(2007, msg='文件key不能为空')
         type = request.GET.get('type', 'excel')
         savefile_path = os.path.join(APILOG_PATH['investorCoverageExcelPath'], file_key)
+        deleteExpireDir(APILOG_PATH['investorCoverageExcelPath'])
         if os.path.exists(savefile_path):
             if type == 'json':
                 tables = excel_table_byindex(savefile_path)
