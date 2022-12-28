@@ -2880,9 +2880,26 @@ class InvestorCoverageTaskView(viewsets.ModelViewSet):
     filter_class = InvestorCoverageTaskFilter
     serializer_class = InvestorCoverageTaskSerializer
 
+    def get_queryset(self):
+        assert self.queryset is not None, (
+                "'%s' should either include a `queryset` attribute, "
+                "or override the `get_queryset()` method."
+                % self.__class__.__name__
+        )
+        queryset = self.queryset
+        if isinstance(queryset, QuerySet):
+            if self.request.user.is_authenticated:
+                queryset = queryset.filter(datasource=self.request.user.datasource)
+            else:
+                queryset = queryset.all()
+        else:
+            raise InvestError(code=8890)
+        return queryset
+
     @loginTokenIsAvailable()
     def list(self, request, *args, **kwargs):
         try:
+            deleteExpireInvestorCoverageTask()
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)
             queryset = self.filter_queryset(self.get_queryset())
