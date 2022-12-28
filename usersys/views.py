@@ -2847,71 +2847,6 @@ def getInvestorCoverage(tables, datasource, excel_path, tempfile_path, file_key)
         logexcption(msg='投资人覆盖率任务失败')
 
 
-@api_view(['POST'])
-@checkRequestToken()
-def getInvestorCoverageRequest(request):
-    try:
-        file_key = request.data.get('key')
-        file_name = request.data.get('file_name')
-        if not file_key or not file_name:
-            raise InvestError(20071, msg='文件key/名称不能为空')
-        inputfile_path = os.path.join(APILOG_PATH['uploadFilePath'], file_key)
-        savefile_path = os.path.join(APILOG_PATH['investorCoverageExcelPath'], file_key)
-        tempfile_path = savefile_path + '.temp'
-        deleteExpireInvestorCoverageTask()
-        if os.path.exists(savefile_path):
-            return JSONResponse(SuccessResponse({'status': 1, 'msg': '任务已完成'}))
-        else:
-            if os.path.exists(tempfile_path):
-                return JSONResponse(SuccessResponse({'status': 0, 'msg': '任务进行中'}))
-            else:
-                InvestorCoverageTask(key=file_key, filename=file_name, datasource=request.user.datasource, status=0).save()
-                tables = excel_table_byindex(inputfile_path)
-                thread_name = 'getInvestorCoverageThread'
-                f = open(tempfile_path, 'w')
-                f.close()
-                d = threading.Thread(target=getInvestorCoverage, name=thread_name, args=(tables, request.user.datasource, savefile_path, tempfile_path, file_key))
-                d.start()
-                return JSONResponse(SuccessResponse({'status': 0, 'msg': '任务进行中'}))
-    except InvestError as err:
-        return JSONResponse(InvestErrorResponse(err))
-    except Exception:
-        catchexcption(request)
-        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
-@api_view(['GET'])
-def getInvestorCoverageJsonOrExcelFile(request):
-    try:
-        file_key = request.GET.get('key')
-        if not file_key:
-            raise InvestError(20071, msg='文件key不能为空')
-        type = request.GET.get('type', 'excel')
-        if InvestorCoverageTask.objects.filter(key=file_key).exists():
-            ins = InvestorCoverageTask.objects.filter(key=file_key).first()
-        else:
-            raise InvestError(20071, msg='未找到对应任务')
-        savefile_path = os.path.join(APILOG_PATH['investorCoverageExcelPath'], ins.key)
-        deleteExpireInvestorCoverageTask()
-        if os.path.exists(savefile_path):
-            if type == 'json':
-                tables = excel_table_byindex(savefile_path)
-                response = JSONResponse(SuccessResponse(tables))
-            else:
-                fn = open(savefile_path, 'rb')
-                response = StreamingHttpResponse(file_iterator(fn))
-                zipFileSize = os.path.getsize(savefile_path)
-                response['Content-Length'] = zipFileSize
-                response['Content-Type'] = 'application/octet-stream'
-                response["content-disposition"] = 'attachment;filename=%s' % ins.filename
-        else:
-            raise InvestError(8002, msg='文件不存在')
-        return response
-    except InvestError as err:
-        return JSONResponse(InvestErrorResponse(err))
-    except Exception:
-        catchexcption(request)
-        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
-
 def deleteExpireInvestorCoverageTask():
     onedayago = datetime.datetime.now() - datetime.timedelta(hours=24 * 1)
     qs = InvestorCoverageTask.objects.filter(createdtime__lt=onedayago)
@@ -2936,6 +2871,8 @@ class InvestorCoverageTaskFilter(FilterSet):
 class InvestorCoverageTaskView(viewsets.ModelViewSet):
     """
             list:获取投资人覆盖率任务
+            post: 新建投资人覆盖率任务
+            getInvestorCoverageJsonOrExcelFile: 获取覆盖率
             destroy:删除投资人覆盖率任务
             """
     filter_backends = (filters.DjangoFilterBackend,)
@@ -2963,6 +2900,7 @@ class InvestorCoverageTaskView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
+    @loginTokenIsAvailable()
     def create(self, request, *args, **kwargs):
         try:
             data = request.data
@@ -2993,6 +2931,34 @@ class InvestorCoverageTaskView(viewsets.ModelViewSet):
         except Exception:
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+    def getInvestorCoverageJsonOrExcelFile(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            type = request.GET.get('type', 'excel')
+            savefile_path = os.path.join(APILOG_PATH['investorCoverageExcelPath'], instance.key)
+            deleteExpireInvestorCoverageTask()
+            if os.path.exists(savefile_path):
+                if type == 'json':
+                    tables = excel_table_byindex(savefile_path)
+                    response = JSONResponse(SuccessResponse(tables))
+                else:
+                    fn = open(savefile_path, 'rb')
+                    response = StreamingHttpResponse(file_iterator(fn))
+                    zipFileSize = os.path.getsize(savefile_path)
+                    response['Content-Length'] = zipFileSize
+                    response['Content-Type'] = 'application/octet-stream'
+                    response["content-disposition"] = 'attachment;filename=%s' % instance.filename
+            else:
+                raise InvestError(8002, msg='文件不存在')
+            return response
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
 
     @loginTokenIsAvailable()
     def destroy(self, request, *args, **kwargs):

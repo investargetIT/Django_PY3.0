@@ -194,9 +194,11 @@ userGetStarInvestorCount = views.UserGetStarInvestorView.as_view({
 
 investorcoverage = views.InvestorCoverageTaskView.as_view({
         'get': 'list',
+        'post': 'create',
 })
 
 investorcoverageone = views.InvestorCoverageTaskView.as_view({
+        'get': 'getInvestorCoverageJsonOrExcelFile',
         'delete': 'destroy',
 })
 
@@ -244,8 +246,6 @@ urlpatterns = [
     url(r'^mentortracking/(?P<pk>\d+)/$', userMentorTrackingRecords_deteil, name='usermentortracking-detail'),
     url(r'^getStarInvestor/$', userGetStarInvestor, name='userGetStarInvestor'),
     url(r'^getStarInvestor/count/$', userGetStarInvestorCount, name='userGetStarInvestorCount'),
-    url(r'^makecoverage/$', views.getInvestorCoverageRequest),
-    url(r'^getcoverage/$', views.getInvestorCoverageJsonOrExcelFile),
     url(r'^coverage/$', investorcoverage),
     url(r'^coverage/(?P<pk>\d+)/$', investorcoverageone)
 ]
