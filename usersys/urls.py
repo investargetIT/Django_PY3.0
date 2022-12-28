@@ -192,6 +192,14 @@ userGetStarInvestorCount = views.UserGetStarInvestorView.as_view({
         'get': 'getAvailableCount',
 })
 
+investorcoverage = views.InvestorCoverageTaskView.as_view({
+        'get': 'list',
+})
+
+investorcoverageone = views.InvestorCoverageTaskView.as_view({
+        'delete': 'destroy',
+})
+
 urlpatterns = [
     url(r'^$', user_list,name='user-list',),
     url(r'^simple$', getuserinfo_simple,name='getuserinfo_simple',),
@@ -237,5 +245,7 @@ urlpatterns = [
     url(r'^getStarInvestor/$', userGetStarInvestor, name='userGetStarInvestor'),
     url(r'^getStarInvestor/count/$', userGetStarInvestorCount, name='userGetStarInvestorCount'),
     url(r'^makecoverage/$', views.getInvestorCoverageRequest),
-    url(r'^getcoverage/$', views.getInvestorCoverageJsonOrExcelFile)
+    url(r'^getcoverage/$', views.getInvestorCoverageJsonOrExcelFile),
+    url(r'^coverage/$', investorcoverage),
+    url(r'^coverage/(?P<pk>\d+)/$', investorcoverageone)
 ]

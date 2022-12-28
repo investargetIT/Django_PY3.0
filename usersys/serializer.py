@@ -13,7 +13,7 @@ from third.views.qiniufile import getUrlWithBucketAndKey
 from utils.util import checkMobileTrue
 from .models import MyUser, UserRelation, UnreachUser, UserRemarks, userAttachments, userEvents, \
     UserPerformanceAppraisalRecord, UserPersonnelRelations, UserTrainingRecords, UserMentorTrackingRecords, \
-    UserWorkingPositionRecords, UserGetStarInvestor
+    UserWorkingPositionRecords, UserGetStarInvestor, InvestorCoverageTask
 
 
 class UnreachUserSerializer(serializers.ModelSerializer):
@@ -609,4 +609,10 @@ class UserGetStarInvestorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserGetStarInvestor
+        fields = '__all__'
+
+
+class InvestorCoverageTaskSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InvestorCoverageTask
         fields = '__all__'

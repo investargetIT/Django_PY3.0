@@ -808,3 +808,24 @@ class UserIndGroups(models.Model):
     def save(self, *args, **kwargs):
         self.datasource = self.user.datasource
         super(UserIndGroups, self).save(*args, **kwargs)
+
+
+class InvestorCoverageTask(models.Model):
+    taskchoice = (
+        (0, '未完成'),
+        (1, '已完成'),
+    )
+    key = models.CharField(max_length=128, blank=True, unique=True)
+    filename = models.CharField(max_length=128, blank=True)
+    status = models.IntegerField(blank=True, choices=taskchoice, default=0)
+    createdtime = models.DateTimeField(blank=True, null=True)
+    datasource = MyForeignKey(DataSource, help_text='数据源', default=1)
+
+    class Meta:
+        db_table = "user_investorcoverage"
+        ordering = ['createdtime']
+
+    def save(self, *args, **kwargs):
+        if self.createdtime is None:
+            self.createdtime = datetime.datetime.now()
+        super(InvestorCoverageTask, self).save(*args, **kwargs)

@@ -25,7 +25,7 @@ from third.views.qiniufile import deleteqiniufile, remove_file
 from usersys.models import MyUser, UserRelation, userTags, MyToken, UnreachUser, UserRemarks, \
     userAttachments, userEvents, UserContrastThirdAccount, registersourcechoice, UserPerformanceAppraisalRecord, \
     UserPersonnelRelations, UserTrainingRecords, UserMentorTrackingRecords, UserWorkingPositionRecords, \
-    UserGetStarInvestor, TraderNameIdContrast
+    UserGetStarInvestor, TraderNameIdContrast, InvestorCoverageTask
 from usersys.serializer import UserSerializer, UserListSerializer, UserRelationSerializer, \
     CreatUserSerializer, UserCommenSerializer, UserRelationCreateSerializer, GroupSerializer, GroupDetailSerializer, \
     GroupCreateSerializer, PermissionSerializer, \
@@ -35,7 +35,7 @@ from usersys.serializer import UserSerializer, UserListSerializer, UserRelationS
     UserPersonnelRelationsSerializer, UserPersonnelRelationsCreateSerializer, UserTrainingRecordsSerializer, \
     UserTrainingRecordsCreateSerializer, UserMentorTrackingRecordsSerializer, UserMentorTrackingRecordsCreateSerializer, \
     UserWorkingPositionRecordsSerializer, UserWorkingPositionRecordsCreateSerializer, UserInfoSerializer, \
-    UserGetStarInvestorCreateSerializer, UserGetStarInvestorSerializer
+    UserGetStarInvestorCreateSerializer, UserGetStarInvestorSerializer, InvestorCoverageTaskSerializer
 from sourcetype.models import Tag, DataSource, TagContrastTable, IndustryGroup
 from utils.customClass import JSONResponse, InvestError, RelationFilter, MySearchFilter
 from utils.logicJudge import is_userInvestor, is_userTrader, is_dataroomTrader
@@ -2746,7 +2746,7 @@ def getOnjobTraders(datasource):
     return ecmtraders, ibdtraders
 
 
-def getInvestorCoverage(tables, datasource, excel_path, tempfile_path):
+def getInvestorCoverage(tables, datasource, excel_path, tempfile_path, file_key):
     try:
         ECM_traderids, IBD_traderids = getOnjobTraders(datasource)
         wb = xlwt.Workbook(encoding='utf-8')
@@ -2840,6 +2840,8 @@ def getInvestorCoverage(tables, datasource, excel_path, tempfile_path):
             ws_org_hang += 1
         wb.save(excel_path)
         remove_file(tempfile_path)
+        if InvestorCoverageTask.objects.filter(key=file_key).exists():
+            InvestorCoverageTask.objects.filter(key=file_key).update(status=1)
     except Exception:
         logexcption(msg='投资人覆盖率任务失败')
 
@@ -2849,23 +2851,25 @@ def getInvestorCoverage(tables, datasource, excel_path, tempfile_path):
 def getInvestorCoverageRequest(request):
     try:
         file_key = request.data.get('key')
-        if not file_key:
-            raise InvestError(2007, msg='文件key不能为空')
+        file_name = request.data.get('file_name')
+        if not file_key or not file_name:
+            raise InvestError(2007, msg='文件key/名称不能为空')
         inputfile_path = os.path.join(APILOG_PATH['uploadFilePath'], file_key)
         savefile_path = os.path.join(APILOG_PATH['investorCoverageExcelPath'], file_key)
         tempfile_path = savefile_path + '.temp'
-        deleteExpireDir(APILOG_PATH['investorCoverageExcelPath'])
+        deleteExpireInvestorCoverageTask()
         if os.path.exists(savefile_path):
             return JSONResponse(SuccessResponse({'status': 1, 'msg': '任务已完成'}))
         else:
             if os.path.exists(tempfile_path):
                 return JSONResponse(SuccessResponse({'status': 0, 'msg': '任务进行中'}))
             else:
+                InvestorCoverageTask(key=file_key, filename=file_name, datasource=request.user.datasource_id, status=0).save()
                 tables = excel_table_byindex(inputfile_path)
                 thread_name = 'getInvestorCoverageThread'
                 f = open(tempfile_path, 'w')
                 f.close()
-                d = threading.Thread(target=getInvestorCoverage, name=thread_name, args=(tables, request.user.datasource, savefile_path, tempfile_path))
+                d = threading.Thread(target=getInvestorCoverage, name=thread_name, args=(tables, request.user.datasource, savefile_path, tempfile_path, file_key))
                 d.start()
                 return JSONResponse(SuccessResponse({'status': 0, 'msg': '任务进行中'}))
     except InvestError as err:
@@ -2882,7 +2886,7 @@ def getInvestorCoverageJsonOrExcelFile(request):
             raise InvestError(2007, msg='文件key不能为空')
         type = request.GET.get('type', 'excel')
         savefile_path = os.path.join(APILOG_PATH['investorCoverageExcelPath'], file_key)
-        deleteExpireDir(APILOG_PATH['investorCoverageExcelPath'])
+        deleteExpireInvestorCoverageTask()
         if os.path.exists(savefile_path):
             if type == 'json':
                 tables = excel_table_byindex(savefile_path)
@@ -2902,4 +2906,74 @@ def getInvestorCoverageJsonOrExcelFile(request):
     except Exception:
         catchexcption(request)
         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+def deleteExpireInvestorCoverageTask():
+    onedayago = datetime.datetime.now() - datetime.timedelta(hours=24 * 1)
+    qs = InvestorCoverageTask.objects.filter(createdtime__lt=onedayago)
+    for ins in qs:
+        file_path = os.path.join(APILOG_PATH['investorCoverageExcelPath'], ins.key)
+        tempfile_path = file_path + '.temp'
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        if os.path.exists(tempfile_path):
+            os.remove(tempfile_path)
+        ins.delete()
+
+
+class InvestorCoverageTaskFilter(FilterSet):
+    key = RelationFilter(filterstr='key', lookup_method='in')
+    filename = RelationFilter(filterstr='filename')
+    status = RelationFilter(filterstr='status', lookup_method='in')
+    class Meta:
+        model = InvestorCoverageTask
+        fields = ('key', 'filename', 'status')
+
+class InvestorCoverageTaskView(viewsets.ModelViewSet):
+    """
+            list:获取投资人覆盖率任务
+            destroy:删除投资人覆盖率任务
+            """
+    filter_backends = (filters.DjangoFilterBackend,)
+    queryset = InvestorCoverageTask.objects.all()
+    filter_class = InvestorCoverageTaskFilter
+    serializer_class = InvestorCoverageTaskSerializer
+
+    @loginTokenIsAvailable()
+    def list(self, request, *args, **kwargs):
+        try:
+            page_size = request.GET.get('page_size', 10)
+            page_index = request.GET.get('page_index', 1)
+            queryset = self.filter_queryset(self.get_queryset())
+            try:
+                count = queryset.count()
+                queryset = Paginator(queryset, page_size)
+                queryset = queryset.page(page_index)
+            except EmptyPage:
+                return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(SuccessResponse({'count': count, 'data': serializer.data}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable()
+    def destroy(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            with transaction.atomic():
+                file_path = os.path.join(APILOG_PATH['investorCoverageExcelPath'], instance.key)
+                tempfile_path = file_path + '.temp'
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                if os.path.exists(tempfile_path):
+                    os.remove(tempfile_path)
+                instance.delete()
+                return JSONResponse(SuccessResponse({'isdeleted': True}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
