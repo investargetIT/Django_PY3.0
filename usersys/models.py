@@ -819,6 +819,8 @@ class InvestorCoverageTask(models.Model):
     filename = models.CharField(max_length=128, blank=True)
     status = models.IntegerField(blank=True, choices=taskchoice, default=0)
     createdtime = models.DateTimeField(blank=True, null=True)
+    starttime = models.DateTimeField(blank=True, null=True)
+    endtime = models.DateTimeField(blank=True, null=True)
     datasource = MyForeignKey(DataSource, help_text='数据源', default=1)
 
     class Meta:
