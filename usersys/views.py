@@ -2853,7 +2853,7 @@ def getInvestorCoverageRequest(request):
         file_key = request.data.get('key')
         file_name = request.data.get('file_name')
         if not file_key or not file_name:
-            raise InvestError(2007, msg='文件key/名称不能为空')
+            raise InvestError(20071, msg='文件key/名称不能为空')
         inputfile_path = os.path.join(APILOG_PATH['uploadFilePath'], file_key)
         savefile_path = os.path.join(APILOG_PATH['investorCoverageExcelPath'], file_key)
         tempfile_path = savefile_path + '.temp'
@@ -2864,7 +2864,7 @@ def getInvestorCoverageRequest(request):
             if os.path.exists(tempfile_path):
                 return JSONResponse(SuccessResponse({'status': 0, 'msg': '任务进行中'}))
             else:
-                InvestorCoverageTask(key=file_key, filename=file_name, datasource=request.user.datasource_id, status=0).save()
+                InvestorCoverageTask(key=file_key, filename=file_name, datasource=request.user.datasource, status=0).save()
                 tables = excel_table_byindex(inputfile_path)
                 thread_name = 'getInvestorCoverageThread'
                 f = open(tempfile_path, 'w')
@@ -2883,9 +2883,13 @@ def getInvestorCoverageJsonOrExcelFile(request):
     try:
         file_key = request.GET.get('key')
         if not file_key:
-            raise InvestError(2007, msg='文件key不能为空')
+            raise InvestError(20071, msg='文件key不能为空')
         type = request.GET.get('type', 'excel')
-        savefile_path = os.path.join(APILOG_PATH['investorCoverageExcelPath'], file_key)
+        if InvestorCoverageTask.objects.filter(key=file_key).exists():
+            ins = InvestorCoverageTask.objects.filter(key=file_key).first()
+        else:
+            raise InvestError(20071, msg='未找到对应任务')
+        savefile_path = os.path.join(APILOG_PATH['investorCoverageExcelPath'], ins.key)
         deleteExpireInvestorCoverageTask()
         if os.path.exists(savefile_path):
             if type == 'json':
@@ -2897,7 +2901,7 @@ def getInvestorCoverageJsonOrExcelFile(request):
                 zipFileSize = os.path.getsize(savefile_path)
                 response['Content-Length'] = zipFileSize
                 response['Content-Type'] = 'application/octet-stream'
-                response["content-disposition"] = 'attachment;filename=%s' % file_key
+                response["content-disposition"] = 'attachment;filename=%s' % ins.filename
         else:
             raise InvestError(8002, msg='文件不存在')
         return response
