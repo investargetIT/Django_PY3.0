@@ -2787,7 +2787,6 @@ def getInvestorCoverage(tables, datasource, excel_path, tempfile_path):
                 fugaiinvestors = []
                 ibdinvestors_id = []
                 ecminvestors_id = []
-                titleids = []
 
                 remarks = UserRemarks.objects.filter(is_deleted=False, datasource=datasource, user__in=alluserid).values_list('user', flat=True)
                 remarkuserids = list(set(remarks))
@@ -2827,9 +2826,9 @@ def getInvestorCoverage(tables, datasource, excel_path, tempfile_path):
                 for investor in fugaiinvestors:
                     if investor.title and not investor.title.is_deleted:
                         titles.append(investor.title)
-                data_dict = {}
-                for title in titleids:
-                    data_dict[title.nameC] = data_dict.get(title.nameC, 0) + 1
+                title_dict = {}
+                for title in titles:
+                    title_dict[title.nameC] = title_dict.get(title.nameC, 0) + 1
                 ws_org.write(ws_org_hang, 1, org_id)
                 ws_org.write(ws_org_hang, 2, str(len(allinvestors)))
                 ws_org.write(ws_org_hang, 3, str(len(fugaiinvestors)))
@@ -2837,7 +2836,7 @@ def getInvestorCoverage(tables, datasource, excel_path, tempfile_path):
                 ws_org.write(ws_org_hang, 5, str(len(onlyibd)))
                 ws_org.write(ws_org_hang, 6, str(len(ecminvestors_id)))
                 ws_org.write(ws_org_hang, 7, str(len(onlyecm)))
-                ws_org.write(ws_org_hang, 8, str(data_dict))
+                ws_org.write(ws_org_hang, 8, str(title_dict))
             ws_org_hang += 1
         wb.save(excel_path)
         remove_file(tempfile_path)
