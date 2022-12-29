@@ -812,16 +812,20 @@ class UserIndGroups(models.Model):
 
 class InvestorCoverageTask(models.Model):
     taskchoice = (
-        (0, '未完成'),
-        (1, '已完成'),
+        (1, '未开始'),
+        (2, '进行中'),
+        (3, '已完成'),
+        (4, '任务失败'),
     )
     key = models.CharField(max_length=128, blank=True, unique=True)
     filename = models.CharField(max_length=128, blank=True)
-    status = models.IntegerField(blank=True, choices=taskchoice, default=0)
+    status = models.IntegerField(blank=True, choices=taskchoice, default=1)
+    msg = models.TextField(blank=True, null=True)
     createdtime = models.DateTimeField(blank=True, null=True)
     starttime = models.DateTimeField(blank=True, null=True)
     endtime = models.DateTimeField(blank=True, null=True)
-    datasource = MyForeignKey(DataSource, help_text='数据源', default=1)
+    createuser = MyForeignKey(MyUser, blank=True, null=True)
+    datasource = MyForeignKey(DataSource, help_text='数据源', blank=True, default=1, on_delete=models.CASCADE)
 
     class Meta:
         db_table = "user_investorcoverage"

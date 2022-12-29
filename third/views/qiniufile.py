@@ -382,7 +382,7 @@ def uploadFileToQiniu():
                     uploadtask.save()
         else:
             remove_file(markfilepath)
-            d = startdotaskthread()
+            d = startdotaskthread(name=thread_name)
             d.start()
             f = open(markfilepath, 'w')
             f.close()
