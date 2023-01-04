@@ -35,7 +35,8 @@ from usersys.serializer import UserSerializer, UserListSerializer, UserRelationS
     UserPersonnelRelationsSerializer, UserPersonnelRelationsCreateSerializer, UserTrainingRecordsSerializer, \
     UserTrainingRecordsCreateSerializer, UserMentorTrackingRecordsSerializer, UserMentorTrackingRecordsCreateSerializer, \
     UserWorkingPositionRecordsSerializer, UserWorkingPositionRecordsCreateSerializer, UserInfoSerializer, \
-    UserGetStarInvestorCreateSerializer, UserGetStarInvestorSerializer, InvestorCoverageTaskSerializer
+    UserGetStarInvestorCreateSerializer, UserGetStarInvestorSerializer, InvestorCoverageTaskSerializer, \
+    UserListPersonnelSerializer
 from sourcetype.models import Tag, DataSource, TagContrastTable, IndustryGroup
 from utils.customClass import JSONResponse, InvestError, RelationFilter, MySearchFilter
 from utils.logicJudge import is_userInvestor, is_userTrader, is_dataroomTrader
@@ -150,17 +151,22 @@ class UserView(viewsets.ModelViewSet):
             except EmptyPage:
                 return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
             responselist = []
+            type = request.GET.get('type', 'alluser')
+            if type == 'alluser':
+                listserializerclass = UserListSerializer
+            else:
+                listserializerclass = UserListPersonnelSerializer
             if request.user.has_perm('usersys.admin_manageuser'):
-                responselist = UserListSerializer(queryset, many=True).data
+                responselist = listserializerclass(queryset, many=True).data
             else:
                 for instance in queryset:
                     if is_userTrader(request.user, instance.id):
-                        instancedata = UserListSerializer(instance).data
+                        instancedata = listserializerclass(instance).data
                     elif (not UserRelation.objects.filter(investoruser=instance, traderuser__onjob=True, is_deleted=False).exists()) and \
                                 UserRelation.objects.filter(investoruser=instance, is_deleted=False).exists() and request.user.has_perm('usersys.as_trader'):
-                        instancedata = UserListSerializer(instance).data     # 显示
+                        instancedata = listserializerclass(instance).data     # 显示
                     elif UserGetStarInvestor.objects.filter(is_deleted=False, user=request.user, investor=instance).exists():
-                        instancedata = UserListSerializer(instance).data  # 显示
+                        instancedata = listserializerclass(instance).data  # 显示
                     else:
                         instancedata = UserListCommenSerializer(instance).data  # 隐藏
                     responselist.append(instancedata)
