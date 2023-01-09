@@ -379,7 +379,7 @@ class UserView(viewsets.ModelViewSet):
                     if tags:
                         usertaglist = []
                         for tag in tags:
-                            usertaglist.append(userTags(user=user, tag_id=tag, ))
+                            usertaglist.append(userTags(user=user, tag_id=tag, createuser=request.user))
                         user.user_usertags.bulk_create(usertaglist)
                 else:
                     raise InvestError(20071, msg='新用户创建失败', detail='参数有误%s' % userserializer.error_messages)
@@ -502,8 +502,9 @@ class UserView(viewsets.ModelViewSet):
                                 removelist = [item for item in user.tags.all() if item not in taglist]
                                 user.user_usertags.filter(tag__in=removelist,is_deleted=False).delete()
                                 usertaglist = []
+                                createuser = data.get('createuser', request.user.id)
                                 for tag in addlist:
-                                    usertaglist.append(userTags(user=user, tag_id=tag, createuser=request.user,createdtime=datetime.datetime.now()))
+                                    usertaglist.append(userTags(user=user, tag_id=tag, createuser_id=createuser,createdtime=datetime.datetime.now()))
                                 user.user_usertags.bulk_create(usertaglist)
                         else:
                             raise InvestError(20071, msg='用户信息修改失败', detail='%s' % userserializer.error_messages)
@@ -1050,13 +1051,13 @@ class UserEventView(viewsets.ModelViewSet):
                         for tag_id in TagContrastTable.objects.filter(cat_name=industrytype).values_list('tag_id'):
                             useP = True
                             if not userTags.objects.filter(user_id=user_id, tag_id=tag_id[0], is_deleted=False).exists():
-                                userTags(user_id=user_id, tag_id=tag_id[0]).save()
+                                userTags(user_id=user_id, tag_id=tag_id[0], createuser=request.user).save()
                     if not useP:
                         if Pindustrytype:
                             for tag_id in TagContrastTable.objects.filter(cat_name=Pindustrytype).values_list('tag_id'):
                                 if not userTags.objects.filter(user_id=user_id, tag_id=tag_id[0],
                                                                is_deleted=False).exists():
-                                    userTags(user_id=user_id, tag_id=tag_id[0]).save()
+                                    userTags(user_id=user_id, tag_id=tag_id[0], createuser=request.user).save()
                 else:
                     raise InvestError(20071, msg='新增用户投资经历失败', detail='%s' % insserializer.error_messages)
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(insserializer.data, lang)))
@@ -1087,13 +1088,13 @@ class UserEventView(viewsets.ModelViewSet):
                         for tag_id in TagContrastTable.objects.filter(cat_name=industrytype).values_list('tag_id'):
                             useP = True
                             if not userTags.objects.filter(user=instance.user, tag_id=tag_id[0], is_deleted=False).exists():
-                                userTags(user=instance.user, tag_id=tag_id[0]).save()
+                                userTags(user=instance.user, tag_id=tag_id[0], createuser=request.user).save()
                     if not useP:
                         if Pindustrytype:
                             for tag_id in TagContrastTable.objects.filter(cat_name=Pindustrytype).values_list('tag_id'):
                                 if not userTags.objects.filter(user=instance.user, tag_id=tag_id[0],
                                                                is_deleted=False).exists():
-                                    userTags(user=instance.user, tag_id=tag_id[0]).save()
+                                    userTags(user=instance.user, tag_id=tag_id[0], createuser=request.user).save()
                 else:
                     raise InvestError(20071, msg='修改用户投资经历失败', detail='%s' % serializer.error_messages)
                 return JSONResponse(
