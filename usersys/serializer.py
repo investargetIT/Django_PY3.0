@@ -340,7 +340,7 @@ class CreatUserSerializer(serializers.ModelSerializer):
 class UpdateUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
-        exclude = ('password','datasource')
+        exclude = ('password', 'datasource', 'createuser')
 
 
 # 用户列表显示信息
