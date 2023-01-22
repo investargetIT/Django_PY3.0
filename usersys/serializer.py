@@ -347,20 +347,14 @@ class UpdateUserSerializer(serializers.ModelSerializer):
 class UserListSerializer(serializers.ModelSerializer):
     org = OrgCommonSerializer()
     tags = serializers.SerializerMethodField()
-    indGroup = industryGroupSerializer()
     indGroups = serializers.SerializerMethodField()
     mobiletrue = serializers.SerializerMethodField()
-    trader_relation = serializers.SerializerMethodField()
     trader_relations = serializers.SerializerMethodField()
-    photourl = serializers.SerializerMethodField()
-    directSupervisor = UserNameSerializer()
-    mentor = UserNameSerializer()
 
     class Meta:
         model = MyUser
-        fields = ('id','groups','tags','country', 'usernameC', 'usernameE', 'mobile', 'mobileAreaCode','mobiletrue', 'indGroup', 'indGroups', 'trader_relations', 'workType',
-                  'email', 'title', 'userstatus', 'org', 'trader_relation', 'photourl','is_active', 'wechat', 'directSupervisor', 'mentor', 'entryTime', 'bornTime', 'isMarried',
-                  'school', 'specialty', 'education', 'specialtyhobby', 'others')
+        fields = ('id', 'groups', 'tags', 'usernameC', 'usernameE', 'mobiletrue', 'indGroups', 'trader_relations', 'workType',
+                 'title', 'userstatus', 'org', 'is_active',)
 
     def get_tags(self, obj):
         qs = obj.tags.filter(tag_usertags__is_deleted=False, is_deleted=False)
@@ -380,17 +374,37 @@ class UserListSerializer(serializers.ModelSerializer):
     def get_mobiletrue(self, obj):
         return checkMobileTrue(obj.mobile, obj.mobileAreaCode)
 
-    def get_trader_relation(self, obj):
-        usertrader = obj.investor_relations.filter(is_deleted=False, relationtype=True)
-        if usertrader.exists():
-            return UserTraderSimpleSerializer(usertrader.first()).data
-        return None
-
     def get_trader_relations(self, obj):
         usertrader = obj.investor_relations.filter(is_deleted=False)
         if usertrader.exists():
             return UserTraderSimpleSerializer(usertrader, many=True).data
         return None
+
+    def get_photourl(self, obj):
+        if obj.photoKey:
+            return getUrlWithBucketAndKey('image',obj.photoKey)
+        else:
+            return None
+
+
+class UserListPersonnelSerializer(serializers.ModelSerializer):
+    indGroups = serializers.SerializerMethodField()
+    photourl = serializers.SerializerMethodField()
+
+
+    class Meta:
+        model = MyUser
+        fields = ('id', 'usernameC', 'usernameE', 'indGroups', 'photourl', 'workType', 'title', 'entryTime')
+
+
+    def get_indGroups(self, obj):
+        indGroup_ids = []
+        if obj.indGroup and not obj.indGroup.is_deleted:
+            indGroup_ids.append(obj.indGroup.id)
+        qs = obj.user_indgroups.filter(indGroup__is_deleted=False)
+        if qs.exists():
+            indGroup_ids.extend(qs.values_list('indGroup', flat=True))
+        return list(set(indGroup_ids))
 
     def get_photourl(self, obj):
         if obj.photoKey:
