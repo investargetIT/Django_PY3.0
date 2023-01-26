@@ -350,11 +350,12 @@ class UserListSerializer(serializers.ModelSerializer):
     indGroups = serializers.SerializerMethodField()
     mobiletrue = serializers.SerializerMethodField()
     trader_relations = serializers.SerializerMethodField()
+    photourl = serializers.SerializerMethodField()
 
     class Meta:
         model = MyUser
         fields = ('id', 'groups', 'tags', 'usernameC', 'usernameE', 'mobiletrue', 'indGroups', 'trader_relations', 'workType',
-                 'title', 'userstatus', 'org', 'is_active',)
+                 'title', 'userstatus', 'org', 'is_active', 'photourl')
 
     def get_tags(self, obj):
         qs = obj.tags.filter(tag_usertags__is_deleted=False, is_deleted=False)
