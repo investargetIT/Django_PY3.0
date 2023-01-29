@@ -347,7 +347,7 @@ class UpdateUserSerializer(serializers.ModelSerializer):
 class UserListSerializer(serializers.ModelSerializer):
     org = OrgCommonSerializer()
     tags = serializers.SerializerMethodField()
-    indGroups = serializers.SerializerMethodField()
+    # indGroups = serializers.SerializerMethodField()
     mobiletrue = serializers.SerializerMethodField()
     trader_relations = serializers.SerializerMethodField()
     # photourl = serializers.SerializerMethodField()
