@@ -347,15 +347,11 @@ class UpdateUserSerializer(serializers.ModelSerializer):
 class UserListSerializer(serializers.ModelSerializer):
     org = OrgCommonSerializer()
     tags = serializers.SerializerMethodField()
-    # indGroups = serializers.SerializerMethodField()
     mobiletrue = serializers.SerializerMethodField()
     trader_relations = serializers.SerializerMethodField()
-    # photourl = serializers.SerializerMethodField()
 
     class Meta:
         model = MyUser
-        # fields = ('id', 'groups', 'tags', 'usernameC', 'usernameE', 'mobiletrue', 'indGroups', 'trader_relations', 'workType',
-        #          'title', 'userstatus', 'org', 'is_active', 'photourl')
         fields = ('id', 'groups', 'tags', 'usernameC', 'usernameE', 'mobiletrue', 'trader_relations', 'workType',
         'title', 'userstatus', 'org', 'is_active')
 
@@ -365,15 +361,6 @@ class UserListSerializer(serializers.ModelSerializer):
             return qs.values_list('id', flat=True)
         return None
 
-    # def get_indGroups(self, obj):
-    #     indGroup_ids = []
-    #     if obj.indGroup and not obj.indGroup.is_deleted:
-    #         indGroup_ids.append(obj.indGroup.id)
-    #     qs = obj.user_indgroups.filter(indGroup__is_deleted=False)
-    #     if qs.exists():
-    #         indGroup_ids.extend(qs.values_list('indGroup', flat=True))
-    #     return list(set(indGroup_ids))
-
     def get_mobiletrue(self, obj):
         return checkMobileTrue(obj.mobile, obj.mobileAreaCode)
 
@@ -382,12 +369,6 @@ class UserListSerializer(serializers.ModelSerializer):
         if usertrader.exists():
             return UserTraderSimpleSerializer(usertrader, many=True).data
         return None
-
-    # def get_photourl(self, obj):
-    #     if obj.photoKey:
-    #         return getUrlWithBucketAndKey('image',obj.photoKey)
-    #     else:
-    #         return None
 
 
 class UserListPersonnelSerializer(serializers.ModelSerializer):
