@@ -143,7 +143,6 @@ class UserView(viewsets.ModelViewSet):
             sortfield = request.GET.get('sort', 'createdtime')
             desc = request.GET.get('desc', 1)
             queryset = mySortQuery(queryset, sortfield, desc, True)
-            queryset = queryset.select_related("org", "indGroup", "directSupervisor", "mentor")
             count = queryset.count()
             try:
                 queryset = Paginator(queryset, page_size)
