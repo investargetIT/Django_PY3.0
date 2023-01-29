@@ -347,12 +347,13 @@ class UpdateUserSerializer(serializers.ModelSerializer):
 class UserListSerializer(serializers.ModelSerializer):
     org = OrgCommonSerializer()
     tags = serializers.SerializerMethodField()
+    indGroups = serializers.SerializerMethodField()
     mobiletrue = serializers.SerializerMethodField()
     trader_relations = serializers.SerializerMethodField()
 
     class Meta:
         model = MyUser
-        fields = ('id', 'groups', 'tags', 'usernameC', 'usernameE', 'mobiletrue', 'trader_relations', 'workType',
+        fields = ('id', 'groups', 'tags', 'usernameC', 'usernameE', 'mobiletrue', 'indGroups', 'trader_relations', 'workType',
         'title', 'userstatus', 'org', 'is_active')
 
     def get_tags(self, obj):
@@ -360,6 +361,15 @@ class UserListSerializer(serializers.ModelSerializer):
         if qs.exists():
             return qs.values_list('id', flat=True)
         return None
+
+    def get_indGroups(self, obj):
+        indGroup_ids = []
+        if obj.indGroup and not obj.indGroup.is_deleted:
+            indGroup_ids.append(obj.indGroup.id)
+        qs = obj.user_indgroups.filter(indGroup__is_deleted=False)
+        if qs.exists():
+            indGroup_ids.extend(qs.values_list('indGroup', flat=True))
+        return list(set(indGroup_ids))
 
     def get_mobiletrue(self, obj):
         return checkMobileTrue(obj.mobile, obj.mobileAreaCode)
