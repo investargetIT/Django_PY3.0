@@ -577,6 +577,13 @@ class UserTrainingRecords(MyModel):
 
     def save(self, *args, **kwargs):
         self.datasource = self.user.datasource
+        if not self.is_deleted:
+            if self.trainingFile:
+                if UserTrainingRecords.objects.exclude(pk=self.pk).filter(is_deleted=False, user=self.user, trainingFile=self.trainingFile).exists():
+                    raise InvestError(2030, msg='已存在相同培训记录')
+            elif self.trainingContent:
+                if UserTrainingRecords.objects.exclude(pk=self.pk).filter(is_deleted=False, user=self.user, trainingContent=self.trainingContent).exists():
+                    raise InvestError(2030, msg='已存在相同培训记录')
         super(UserTrainingRecords, self).save(*args, **kwargs)
 
 #入职后导师计划跟踪记录表
