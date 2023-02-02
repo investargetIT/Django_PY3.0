@@ -2003,6 +2003,7 @@ class UserTrainingRecordsView(viewsets.ModelViewSet):
                 queryset = queryset.filter(Q(user=request.user)| Q(user__directSupervisor=request.user) | Q(user__mentor=request.user))
             sortfield = request.GET.get('sort', 'createdtime')
             desc = request.GET.get('desc', 1)
+            queryset = queryset.distinct()
             queryset = mySortQuery(queryset, sortfield, desc, True)
             try:
                 count = queryset.count()
