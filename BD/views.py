@@ -131,7 +131,7 @@ class ProjectBDView(viewsets.ModelViewSet):
                 for source in results:
                     if source['_source'].get('projectBD'):
                         searchIds.add(source['_source']['projectBD'])
-                queryset = queryset.filter(id__in=searchIds).distinct()
+                queryset = queryset.filter(Q(id__in=searchIds)|Q(ProjectBD_comments__comments__icontains=search)|Q(com_name__icontains=search)).distinct()
             queryset = queryset.distinct()
             sortfield = request.GET.get('sort', 'lastmodifytime')
             desc = request.GET.get('desc', 1)
