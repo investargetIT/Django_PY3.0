@@ -12,7 +12,8 @@ from django.http import StreamingHttpResponse
 from rest_framework.decorators import api_view
 
 from invest.settings import APILOG_PATH
-from third.thirdconfig import baiduaip_appid, baiduaip_secretkey, baiduaip_appkey
+from third.thirdconfig import baiduaip_appid, baiduaip_secretkey, baiduaip_appkey, OPENAI_API_KEY, OPENAI_URL, \
+    OPENAI_MODEL
 from third.views.qiniufile import deleteqiniufile
 from utils.customClass import JSONResponse, InvestError
 from utils.somedef import file_iterator
@@ -262,6 +263,32 @@ def deleteUpload(request):
             deleteqiniufile(key=file['realfilekey'], bucket=file['bucket'])
         cache_delete_key(record)
         return JSONResponse(SuccessResponse({record: read_from_cache(record)}))
+    except InvestError as err:
+        return JSONResponse(InvestErrorResponse(err))
+    except Exception:
+        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+
+
+
+
+@api_view(['POST'])
+@checkRequestToken()
+def getopenaitextcompletions(request):
+    try:
+        data = request.data
+        text = data.get('text')
+        body = {
+            'model': OPENAI_MODEL,
+            "prompt": text
+        }
+        headers = {
+            'Content-Type': "application/json",
+            'Authorization': "Bearer {}".format(OPENAI_API_KEY)
+        }
+        res = requests.post(OPENAI_URL, data=json.dumps(body), headers=headers).content
+        return JSONResponse(SuccessResponse(res))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
     except Exception:

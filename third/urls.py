@@ -45,4 +45,5 @@ urlpatterns = [
     url(r'^feishu/approval/$', feishuyun.request_GetApprovals, name='request_GetApprovals', ),
     url(r'^feishu/approval/instance/$', feishuyun.request_GetApprovalInstance, name='request_GetApprovalInstance', ),
     url(r'^feishu/approval/task/$', feishuyun.request_handleApprovalsTask, name='request_handleApprovalsTask', ),
+    url(r'^openai/text/completions$', others.getopenaitextcompletions, name='getopenaitextcompletions', ),
 ]
