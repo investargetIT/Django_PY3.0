@@ -64,8 +64,10 @@ def catchexcption(request):
     f.close()
 
 #记录error
-def logexcption(msg=None):
+def logexcption(msg=None, err=None):
     errmsg = msg if msg else ''
+    if isinstance(err, InvestError):
+        errmsg = errmsg + err.msg + err.detail_msg
     now = datetime.datetime.now()
     filepath = APILOG_PATH['excptionlogpath'] + '/' + now.strftime('%Y-%m-%d')
     f = open(filepath, 'a')
