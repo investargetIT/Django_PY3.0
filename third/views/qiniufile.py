@@ -312,36 +312,43 @@ def uploadFileToQiniu():
         @func_set_timeout(300)
         def convertAndUploadOffice(self, inputpath, outputpath):
             job = cloudconvert_create_job(inputpath, 'pdf')
-
-            import_task_id = job['tasks'][0]['id']
-            convert_task_id = job['tasks'][1]['id']
-            export_task_id = job['tasks'][2]['id']
-            while True:
-                import_task = cloudconvert_show_a_task(import_task_id)
-                if import_task['data']['status'] == 'error':
-                    cloudconvert_delete_a_job(job['id'])
-                    raise InvestError(8311, msg='文档格式转化失败--import task fail', detail=import_task['message'])
-                elif import_task['data']['status'] == 'finished':
-                    break
-            while True:
-                convert_task = cloudconvert_show_a_task(convert_task_id)
-                if convert_task['data']['status'] == 'error':
-                    cloudconvert_delete_a_job(job['id'])
-                    raise InvestError(8311, msg='文档格式转化失败--convert task fail', detail=convert_task['message'])
-                elif convert_task['data']['status'] == 'finished':
-                    break
-            while True:
-                export_task = cloudconvert_show_a_task(export_task_id)
-                if export_task['data']['status'] == 'error':
-                    cloudconvert_delete_a_job(job['id'])
-                    raise InvestError(8311, msg='文档格式转化失败--export task fail', detail=export_task['message'])
-                elif export_task['data']['status'] == 'finished':
-                    file_url = export_task['data']['result']['files'][0]['url']
-                    r = requests.get(file_url, stream=True)
-                    with open(outputpath, "wb") as f:
-                        shutil.copyfileobj(r.raw, f)
-                    cloudconvert_delete_a_job(job['id'])
-                    break
+            import_task_id, convert_task_id, export_task_id = None, None, None
+            for task in job['tasks']:
+                if task['operation'] == 'import/upload':
+                    import_task_id = task['id']
+                elif task['operation'] == 'convert':
+                    convert_task_id = task['id']
+                else:
+                    export_task_id = task['id']
+            if import_task_id:
+                while True:
+                    import_task = cloudconvert_show_a_task(import_task_id)
+                    if import_task['data']['status'] == 'error':
+                        cloudconvert_delete_a_job(job['id'])
+                        raise InvestError(8311, msg='文档格式转化失败--import task fail', detail=import_task['message'])
+                    elif import_task['data']['status'] == 'finished':
+                        break
+                if convert_task_id:
+                    while True:
+                        convert_task = cloudconvert_show_a_task(convert_task_id)
+                        if convert_task['data']['status'] == 'error':
+                            cloudconvert_delete_a_job(job['id'])
+                            raise InvestError(8311, msg='文档格式转化失败--convert task fail', detail=convert_task['message'])
+                        elif convert_task['data']['status'] == 'finished':
+                            break
+                    if export_task_id:
+                        while True:
+                            export_task = cloudconvert_show_a_task(export_task_id)
+                            if export_task['data']['status'] == 'error':
+                                cloudconvert_delete_a_job(job['id'])
+                                raise InvestError(8311, msg='文档格式转化失败--export task fail', detail=export_task['message'])
+                            elif export_task['data']['status'] == 'finished':
+                                file_url = export_task['data']['result']['files'][0]['url']
+                                r = requests.get(file_url, stream=True)
+                                with open(outputpath, "wb") as f:
+                                    shutil.copyfileobj(r.raw, f)
+                                cloudconvert_delete_a_job(job['id'])
+                                break
 
 
         def executeTask(self, task_qs):
@@ -365,7 +372,7 @@ def uploadFileToQiniu():
                                     try:
                                         self.convertAndUploadOffice(file_path, converfile_path)
                                     except Exception as err:
-                                        logexcption(msg='文件转换失败')
+                                        logexcption(msg='文件转换失败', err=err)
                                 if os.path.exists(converfile_path):
                                     ret2, info2 = self.qiniuuploadfile(filepath=converfile_path, bucket_name=uploadtask.bucket, bucket_key=uploadtask.convertKey)
                                     uploadtask.success2 = ret2
