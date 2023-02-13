@@ -278,16 +278,12 @@ def deleteUpload(request):
 def getopenaitextcompletions(request):
     try:
         data = request.data
-        text = data.get('text')
-        body = {
-            'model': OPENAI_MODEL,
-            "prompt": text
-        }
+        data['model'] = OPENAI_MODEL
         headers = {
             'Content-Type': "application/json",
             'Authorization': "Bearer {}".format(OPENAI_API_KEY)
         }
-        res = requests.post(OPENAI_URL, data=json.dumps(body), headers=headers).content
+        res = requests.post(OPENAI_URL, data=json.dumps(data), headers=headers).content
         return JSONResponse(SuccessResponse(res))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
