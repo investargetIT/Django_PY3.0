@@ -12,6 +12,7 @@ from django.http import StreamingHttpResponse
 from rest_framework.decorators import api_view
 
 from invest.settings import APILOG_PATH
+from mongoDoc.views import saveOpenAiChatDataToMongo
 from third.thirdconfig import baiduaip_appid, baiduaip_secretkey, baiduaip_appkey, OPENAI_API_KEY, OPENAI_URL, \
     OPENAI_MODEL
 from third.views.qiniufile import deleteqiniufile
@@ -283,8 +284,18 @@ def getopenaitextcompletions(request):
             'Content-Type': "application/json",
             'Authorization': "Bearer {}".format(OPENAI_API_KEY)
         }
+        saveOpenAiChatDataToMongo({
+            'user_id': request.user.id,
+            'content': data['prompt'],
+            'isAI': False
+        })
         res = requests.post(OPENAI_URL, data=json.dumps(data), headers=headers).content
-        return JSONResponse(SuccessResponse(res))
+        saveOpenAiChatDataToMongo( {
+            'user_id': request.user.id,
+            'content': str(res),
+            'isAI': True
+        })
+        return JSONResponse(SuccessResponse(str(res)))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
     except Exception:
