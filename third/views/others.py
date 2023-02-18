@@ -289,13 +289,13 @@ def getopenaitextcompletions(request):
             'content': data['prompt'],
             'isAI': False
         })
-        res = requests.post(OPENAI_URL, data=json.dumps(data), headers=headers).content
+        res = requests.post(OPENAI_URL, data=json.dumps(data), headers=headers).content.decode()
         saveOpenAiChatDataToMongo( {
             'user_id': request.user.id,
-            'content': str(res),
+            'content': res,
             'isAI': True
         })
-        return JSONResponse(SuccessResponse(str(res)))
+        return JSONResponse(SuccessResponse(res))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
     except Exception:
