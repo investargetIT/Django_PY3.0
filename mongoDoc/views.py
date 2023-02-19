@@ -824,6 +824,23 @@ class OpenAiChatDataView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
+    @loginTokenIsAvailable()
+    def destroy(self, request, *args, **kwargs):
+        try:
+            id = request.GET.get('id')
+            instance = self.queryset.get(id=ObjectId(id))
+            if instance.user_id == request.user.id:
+                pass
+            else:
+                raise InvestError(2009, msg='无权限删除')
+            instance.delete()
+            return JSONResponse(SuccessResponse({'isDeleted': True}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
 def saveOpenAiChatDataToMongo(data):
     serializer = OpenAiChatDataSerializer(data=data)
     try:

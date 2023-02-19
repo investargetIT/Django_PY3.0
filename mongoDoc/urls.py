@@ -67,6 +67,7 @@ com_search = views.ProjectSearchNameView.as_view({
 
 OpenAiChatDataList = views.OpenAiChatDataView.as_view({
         'get': 'list',
+        'delete': 'destroy',
 })
 
 
