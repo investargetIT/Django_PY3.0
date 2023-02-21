@@ -65,6 +65,16 @@ com_search = views.ProjectSearchNameView.as_view({
         'get':'list',
 })
 
+
+
+OpenAiChatTopicDataList = views.OpenAiChatTopicDataView.as_view({
+        'get': 'list',
+        'post': 'create',
+        'put': 'update',
+        'delete': 'destroy',
+})
+
+
 OpenAiChatDataList = views.OpenAiChatDataView.as_view({
         'get': 'list',
         'delete': 'destroy',
@@ -85,5 +95,6 @@ urlpatterns = [
     url(r'^email$', EmailGroupList,name='WXContent-list',),
     url(r'^wxmsg$', WXChatDataList, name='WXChatData-list', ),
     url(r'^count', getCount, name='count', ),
+    url(r'^aichattopic', OpenAiChatTopicDataList, name='openaichattopicdata', ),
     url(r'^aichat', OpenAiChatDataList, name='openaichatdata', ),
 ]
