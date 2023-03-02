@@ -290,7 +290,7 @@ def getopenaitextcompletions(request):
         saveOpenAiChatDataToMongo({
             'topic_id': topic_id,
             'user_id': request.user.id,
-            'content': data['prompt'],
+            'content': str(data['messages']),
             'isAI': False
         })
         res = requests.post(OPENAI_URL, data=json.dumps(data), headers=headers).content.decode()
