@@ -14,7 +14,7 @@ from rest_framework.decorators import api_view
 from invest.settings import APILOG_PATH
 from mongoDoc.views import saveOpenAiChatDataToMongo, updateOpenAiChatTopicChat
 from third.thirdconfig import baiduaip_appid, baiduaip_secretkey, baiduaip_appkey, OPENAI_API_KEY, OPENAI_URL, \
-    OPENAI_MODEL, proxy_user, proxy_pass, proxy_host, proxy_port
+    OPENAI_MODEL, proxies
 from third.views.qiniufile import deleteqiniufile
 from utils.customClass import JSONResponse, InvestError
 from utils.somedef import file_iterator
@@ -294,11 +294,8 @@ def getopenaitextcompletions(request):
             'isAI': False
         })
         # 构造代理地址
-        proxy_address = f'http://{proxy_user}:{proxy_pass}@{proxy_host}:{proxy_port}'
-        proxies = {
-            'http': proxy_address,
-            'https': proxy_address
-        }
+
+
         res = requests.post(OPENAI_URL, data=json.dumps(data), headers=headers, proxies=proxies).content.decode()
         saveOpenAiChatDataToMongo({
             'topic_id': topic_id,
