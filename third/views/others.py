@@ -281,6 +281,7 @@ def getopenaitextcompletions(request):
         data = request.data
         data['model'] = OPENAI_MODEL
         headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3',
             'Content-Type': "application/json",
             'Authorization': "Bearer {}".format(OPENAI_API_KEY)
         }
@@ -294,8 +295,6 @@ def getopenaitextcompletions(request):
             'isAI': False
         })
         # 构造代理地址
-
-
         res = requests.post(OPENAI_URL, data=json.dumps(data), headers=headers, proxies=proxies).content.decode()
         saveOpenAiChatDataToMongo({
             'topic_id': topic_id,
