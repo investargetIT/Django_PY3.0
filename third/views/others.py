@@ -294,15 +294,8 @@ def getopenaitextcompletions(request):
             'content': str(data['messages']),
             'isAI': False
         })
-        proxy_host = '5.78.50.231'
-        proxy_port = '8888'
-
-        # 设置代理用户名和密码
-        proxy_user = ''
-        proxy_pass = ''
-
         # 构造代理地址
-        proxy_address = f'http://{proxy_user}:{proxy_pass}@{proxy_host}:{proxy_port}'
+        proxy_address = 'http://:@5.78.50.231:8888'
 
         # 构造请求头
         headers = {
