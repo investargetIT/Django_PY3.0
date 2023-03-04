@@ -14,7 +14,7 @@ from rest_framework.decorators import api_view
 from invest.settings import APILOG_PATH
 from mongoDoc.views import saveOpenAiChatDataToMongo, updateOpenAiChatTopicChat
 from third.thirdconfig import baiduaip_appid, baiduaip_secretkey, baiduaip_appkey, OPENAI_API_KEY, OPENAI_URL, \
-    OPENAI_MODEL
+    OPENAI_MODEL, proxies
 from third.views.qiniufile import deleteqiniufile
 from utils.customClass import JSONResponse, InvestError
 from utils.somedef import file_iterator
@@ -280,11 +280,6 @@ def getopenaitextcompletions(request):
     try:
         data = request.data
         data['model'] = OPENAI_MODEL
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3',
-            'Content-Type': "application/json",
-            'Authorization': "Bearer {}".format(OPENAI_API_KEY)
-        }
         topic_id = data.pop('topic_id', None)
         if not topic_id:
             raise InvestError(20072, msg='会话id不能为空')
@@ -294,20 +289,12 @@ def getopenaitextcompletions(request):
             'content': str(data['messages']),
             'isAI': False
         })
-        # 构造代理地址
-        proxy_address = 'http://:@5.78.50.231:8888'
 
         # 构造请求头
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3',
             'Content-Type': "application/json",
             'Authorization': "Bearer {}".format(OPENAI_API_KEY)
-        }
-
-        # 设置代理
-        proxies = {
-            'http': proxy_address,
-            'https': proxy_address
         }
 
         # 构造代理地址
