@@ -14,7 +14,7 @@ from rest_framework.decorators import api_view
 from invest.settings import APILOG_PATH
 from mongoDoc.views import saveOpenAiChatDataToMongo, updateOpenAiChatTopicChat
 from third.thirdconfig import baiduaip_appid, baiduaip_secretkey, baiduaip_appkey, OPENAI_API_KEY, OPENAI_URL, \
-    OPENAI_MODEL, proxies
+    OPENAI_MODEL
 from third.views.qiniufile import deleteqiniufile
 from utils.customClass import JSONResponse, InvestError
 from utils.somedef import file_iterator
@@ -294,6 +294,29 @@ def getopenaitextcompletions(request):
             'content': str(data['messages']),
             'isAI': False
         })
+        proxy_host = '5.78.50.231'
+        proxy_port = '8888'
+
+        # 设置代理用户名和密码
+        proxy_user = ''
+        proxy_pass = ''
+
+        # 构造代理地址
+        proxy_address = f'http://{proxy_user}:{proxy_pass}@{proxy_host}:{proxy_port}'
+
+        # 构造请求头
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3',
+            'Content-Type': "application/json",
+            'Authorization': "Bearer {}".format(OPENAI_API_KEY)
+        }
+
+        # 设置代理
+        proxies = {
+            'http': proxy_address,
+            'https': proxy_address
+        }
+
         # 构造代理地址
         res = requests.post(OPENAI_URL, data=json.dumps(data), headers=headers, proxies=proxies).content.decode()
         saveOpenAiChatDataToMongo({
