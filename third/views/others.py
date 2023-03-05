@@ -14,7 +14,7 @@ from rest_framework.decorators import api_view
 from invest.settings import APILOG_PATH
 from mongoDoc.views import saveOpenAiChatDataToMongo, updateOpenAiChatTopicChat
 from third.thirdconfig import baiduaip_appid, baiduaip_secretkey, baiduaip_appkey, OPENAI_API_KEY, OPENAI_URL, \
-    OPENAI_MODEL
+    OPENAI_MODEL, hokong_URL
 from third.views.qiniufile import deleteqiniufile
 from utils.customClass import JSONResponse, InvestError
 from utils.somedef import file_iterator
@@ -289,15 +289,12 @@ def getopenaitextcompletions(request):
             'content': str(data['messages']),
             'isAI': False
         })
-
-        # 构造请求头
-        headers = {
-            'Content-Type': "application/json",
-            'Authorization': "Bearer {}".format(OPENAI_API_KEY)
+        hokongdata = {
+            "aidata" : {'url': OPENAI_URL,'key': OPENAI_API_KEY},
+            "chatdata": data
         }
-
         # 构造代理地址
-        res = requests.post(OPENAI_URL, data=json.dumps(data), headers=headers).content.decode()
+        res = requests.post(hokong_URL, data=json.dumps(hokongdata), headers={'Content-Type': "application/json"}).content.decode()
         saveOpenAiChatDataToMongo({
             'topic_id': topic_id,
             'user_id': request.user.id,
