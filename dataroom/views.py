@@ -227,6 +227,8 @@ class DataroomView(viewsets.ModelViewSet):
             password = request.GET.get('password')
             nowater = True if request.GET.get('nowater') in ['1', 1, u'1'] else False
             is_adminPerm = True if request.user.has_perm('dataroom.admin_managedataroom') or is_dataroomTrader(request.user, dataroominstance) else False
+            if not is_adminPerm and not request.user.has_perm('dataroom.downloadfile'):
+                raise InvestError(2009, msg='下载dataroom文件失败', detail='没有下载权限')
             if nowater:
                 zipfile_prefix = 'novirtual_dataroom'
                 if (not is_adminPerm) and (not request.user.has_perm('dataroom.downloadNoWatermarkFile')):
@@ -287,6 +289,8 @@ class DataroomView(viewsets.ModelViewSet):
             ispart = request.GET.get('part')
             nowater = True if request.GET.get('nowater') in ['1', 1, u'1'] else False
             is_adminPerm = True if request.user.has_perm('dataroom.admin_managedataroom') or is_dataroomTrader(request.user, dataroominstance) else False
+            if not is_adminPerm and not request.user.has_perm('dataroom.downloadfile'):
+                raise InvestError(2009, msg='下载dataroom文件失败', detail='没有下载权限')
             if nowater:
                 zipfile_prefix = 'novirtual_dataroom'
                 if (not is_adminPerm) and (not request.user.has_perm('dataroom.downloadNoWatermarkFile')):
