@@ -240,8 +240,7 @@ class Industry(models.Model):
     key = models.CharField(max_length=64, blank=True, null=True)
     is_deleted = models.BooleanField(blank=True, default=False)
     datasource = MyForeignKey(DataSource, help_text='数据源', blank=True, default=1)
-    def __str__(self):
-        return self.countryC
+
 
 
 class Tag(models.Model):

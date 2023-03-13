@@ -42,7 +42,8 @@ class dataroom(MyModel):
             ('admin_managedataroom','管理dataroom'),
             ('downloadNoWatermarkFile', '下载无水印文件'),
             ('onlydataroom', '只看dataroom菜单'),
-            ('get_companydataroom', '查看公司dataroom')
+            ('get_companydataroom', '查看公司dataroom'),
+            ('downloadfile', '下载dataroom文件')
         )
 
     def save(self, *args, **kwargs):
