@@ -16,7 +16,6 @@ from org.models import organization
 from sourcetype.views import getmenulist
 from third.models import MobileAuthCode
 from third.views.qiniufile import deleteqiniufile
-from third.views.weixinlogin import get_openid
 from usersys.models import MyUser, UserRelation, userTags, MyToken, UnreachUser, UserRemarks, \
     userAttachments, userEvents, UserContrastThirdAccount, registersourcechoice, UserPerformanceAppraisalRecord, \
     UserPersonnelRelations, UserTrainingRecords, UserMentorTrackingRecords, UserWorkingPositionRecords, \
@@ -25,18 +24,19 @@ from usersys.serializer import UserSerializer, UserListSerializer, UserRelationS
     CreatUserSerializer, UserCommenSerializer, UserRelationCreateSerializer, GroupSerializer, GroupDetailSerializer, \
     GroupCreateSerializer, PermissionSerializer, \
     UpdateUserSerializer, UnreachUserSerializer, UserRemarkSerializer, UserRemarkCreateSerializer, \
-    UserListCommenSerializer, UserAttachmentSerializer, UserEventSerializer, UserSimpleSerializer, \
+    UserAttachmentSerializer, UserEventSerializer, UserSimpleSerializer, \
     InvestorUserSerializer, UserPerformanceAppraisalRecordSerializer, UserPerformanceAppraisalRecordCreateSerializer, \
     UserPersonnelRelationsSerializer, UserPersonnelRelationsCreateSerializer, UserTrainingRecordsSerializer, \
     UserTrainingRecordsCreateSerializer, UserMentorTrackingRecordsSerializer, UserMentorTrackingRecordsCreateSerializer, \
     UserWorkingPositionRecordsSerializer, UserWorkingPositionRecordsCreateSerializer, UserInfoSerializer, \
-    UserGetStarInvestorCreateSerializer, UserGetStarInvestorSerializer, UserListPersonnelSerializer
-from sourcetype.models import Tag, DataSource, TagContrastTable, IndustryGroup, ProjProgressContrastTable
+    UserGetStarInvestorCreateSerializer, UserGetStarInvestorSerializer, \
+    UserListPersonnelSerializer
+from sourcetype.models import Tag, DataSource, TagContrastTable, IndustryGroup
 from utils.customClass import JSONResponse, InvestError, RelationFilter, MySearchFilter
 from utils.logicJudge import is_userInvestor, is_userTrader, is_dataroomTrader
 from utils.sendMessage import sendmessage_userauditstatuchange, sendmessage_userregister, sendmessage_traderadd
-from utils.util import loginTokenIsAvailable, catchexcption, returnDictChangeToLanguage, returnListChangeToLanguage,\
-    SuccessResponse, InvestErrorResponse, ExceptionResponse,  mySortQuery, checkRequestToken
+from utils.util import loginTokenIsAvailable, catchexcption, returnDictChangeToLanguage, returnListChangeToLanguage, \
+    SuccessResponse, InvestErrorResponse, ExceptionResponse, mySortQuery, checkRequestToken
 from django_filters import FilterSet
 
 

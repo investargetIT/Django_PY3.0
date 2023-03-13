@@ -12,7 +12,9 @@ from django.http import StreamingHttpResponse
 from rest_framework.decorators import api_view
 
 from invest.settings import APILOG_PATH
-from third.thirdconfig import baiduaip_appid, baiduaip_secretkey, baiduaip_appkey
+from mongoDoc.views import saveOpenAiChatDataToMongo, updateOpenAiChatTopicChat
+from third.thirdconfig import baiduaip_appid, baiduaip_secretkey, baiduaip_appkey, OPENAI_API_KEY, OPENAI_URL, \
+    OPENAI_MODEL, hokong_URL
 from third.views.qiniufile import deleteqiniufile
 from utils.customClass import JSONResponse, InvestError
 from utils.somedef import file_iterator
@@ -262,6 +264,45 @@ def deleteUpload(request):
             deleteqiniufile(key=file['realfilekey'], bucket=file['bucket'])
         cache_delete_key(record)
         return JSONResponse(SuccessResponse({record: read_from_cache(record)}))
+    except InvestError as err:
+        return JSONResponse(InvestErrorResponse(err))
+    except Exception:
+        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+
+
+
+
+@api_view(['POST'])
+@checkRequestToken()
+def getopenaitextcompletions(request):
+    try:
+        data = request.data
+        data['model'] = OPENAI_MODEL
+        topic_id = data.pop('topic_id', None)
+        if not topic_id:
+            raise InvestError(20072, msg='会话id不能为空')
+        saveOpenAiChatDataToMongo({
+            'topic_id': topic_id,
+            'user_id': request.user.id,
+            'content': str(data['messages']),
+            'isAI': False
+        })
+        hokongdata = {
+            "aidata" : {'url': OPENAI_URL,'key': OPENAI_API_KEY},
+            "chatdata": data
+        }
+        # 构造代理地址
+        res = requests.post(hokong_URL, data=json.dumps(hokongdata), headers={'Content-Type': "application/json"}).content.decode()
+        saveOpenAiChatDataToMongo({
+            'topic_id': topic_id,
+            'user_id': request.user.id,
+            'content': res,
+            'isAI': True
+        })
+        updateOpenAiChatTopicChat(topic_id, {'lastchat_time': datetime.datetime.now()})
+        return JSONResponse(SuccessResponse(res))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
     except Exception:

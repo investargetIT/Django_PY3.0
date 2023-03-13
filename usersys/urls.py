@@ -236,5 +236,4 @@ urlpatterns = [
     url(r'^mentortracking/(?P<pk>\d+)/$', userMentorTrackingRecords_deteil, name='usermentortracking-detail'),
     url(r'^getStarInvestor/$', userGetStarInvestor, name='userGetStarInvestor'),
     url(r'^getStarInvestor/count/$', userGetStarInvestorCount, name='userGetStarInvestorCount'),
-    # url(r'^test/$',views.test)
 ]

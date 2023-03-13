@@ -23,10 +23,11 @@ from rest_framework.decorators import api_view
 from invest.settings import APILOG_PATH
 from third.models import QiNiuFileUploadRecord
 from third.serializer import QiNiuFileUploadRecordSerializer
-from third.thirdconfig import qiniu_url, ACCESS_KEY, SECRET_KEY, max_chunk_size
+from third.thirdconfig import qiniu_url, ACCESS_KEY, SECRET_KEY, max_chunk_size, cloudconvert_api_key, \
+    cloudconvert_endpoint
 from utils.customClass import JSONResponse, InvestError
 from utils.util import InvestErrorResponse, ExceptionResponse, SuccessResponse, logexcption, checkRequestToken, \
-    catchexcption
+    catchexcption, check_status
 
 
 @api_view(['POST'])
@@ -269,12 +270,7 @@ def check_file(file, file_path, file_path_temp):
         return {'code': '0', 'msg': '上传并提交文件块成功', 'is_end': False}
 
 
-def check_status(thread_name):
-    my_threads = threading.enumerate()
-    for elem in my_threads:
-        if elem.name == thread_name:
-            return elem.is_alive()
-    return False
+
 
 def uploadFileToQiniu():
     markfilepath = APILOG_PATH['qiniumarkFilePath']
@@ -312,17 +308,47 @@ def uploadFileToQiniu():
                 logexcption(msg='文件上传七牛服务器失败')
                 return False, traceback.format_exc()
 
+
+        @func_set_timeout(300)
         def convertAndUploadOffice(self, inputpath, outputpath):
-            try:
-                import subprocess
-                subprocess.check_output(['python3', '/var/www/DocumentConverter.py', inputpath, outputpath],
-                                        timeout=300)  # 执行完毕程序才会往下进行
-            except ImportError:
-                logexcption(msg='引入模块失败')
-            except TimeoutExpired:
-                logexcption(msg='文件转换超时')
-            except Exception:
-                logexcption(msg='文件转换失败')
+            job = cloudconvert_create_job(inputpath, 'pdf')
+            import_task_id, convert_task_id, export_task_id = None, None, None
+            for task in job['tasks']:
+                if task['operation'] == 'import/upload':
+                    import_task_id = task['id']
+                elif task['operation'] == 'convert':
+                    convert_task_id = task['id']
+                else:
+                    export_task_id = task['id']
+            if import_task_id:
+                while True:
+                    import_task = cloudconvert_show_a_task(import_task_id)
+                    if import_task['data']['status'] == 'error':
+                        cloudconvert_delete_a_job(job['id'])
+                        raise InvestError(8311, msg='文档格式转化失败--import task fail', detail=import_task['message'])
+                    elif import_task['data']['status'] == 'finished':
+                        break
+                if convert_task_id:
+                    while True:
+                        convert_task = cloudconvert_show_a_task(convert_task_id)
+                        if convert_task['data']['status'] == 'error':
+                            cloudconvert_delete_a_job(job['id'])
+                            raise InvestError(8311, msg='文档格式转化失败--convert task fail', detail=convert_task['message'])
+                        elif convert_task['data']['status'] == 'finished':
+                            break
+                    if export_task_id:
+                        while True:
+                            export_task = cloudconvert_show_a_task(export_task_id)
+                            if export_task['data']['status'] == 'error':
+                                cloudconvert_delete_a_job(job['id'])
+                                raise InvestError(8311, msg='文档格式转化失败--export task fail', detail=export_task['message'])
+                            elif export_task['data']['status'] == 'finished':
+                                file_url = export_task['data']['result']['files'][0]['url']
+                                r = requests.get(file_url, stream=True)
+                                with open(outputpath, "wb") as f:
+                                    shutil.copyfileobj(r.raw, f)
+                                cloudconvert_delete_a_job(job['id'])
+                                break
 
 
         def executeTask(self, task_qs):
@@ -343,7 +369,10 @@ def uploadFileToQiniu():
                             if uploadtask.convertToPDF:
                                 converfile_path = os.path.join(APILOG_PATH['uploadFilePath'], uploadtask.convertKey)
                                 if not os.path.exists(converfile_path):
-                                    self.convertAndUploadOffice(file_path, converfile_path)
+                                    try:
+                                        self.convertAndUploadOffice(file_path, converfile_path)
+                                    except Exception as err:
+                                        logexcption(msg='文件转换失败', err=err)
                                 if os.path.exists(converfile_path):
                                     ret2, info2 = self.qiniuuploadfile(filepath=converfile_path, bucket_name=uploadtask.bucket, bucket_key=uploadtask.convertKey)
                                     uploadtask.success2 = ret2
@@ -387,7 +416,7 @@ def uploadFileToQiniu():
                     uploadtask.save()
         else:
             remove_file(markfilepath)
-            d = startdotaskthread()
+            d = startdotaskthread(name=thread_name)
             d.start()
             f = open(markfilepath, 'w')
             f.close()
@@ -409,3 +438,70 @@ def getQiniuUploadRecordResponse(request):
         return JSONResponse(InvestErrorResponse(err))
     except Exception:
         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+# cloudconvert 服务 转换文档格式
+def cloudconvert_create_job(input_file, output_format):
+    endpoint = cloudconvert_endpoint + "v2/jobs"
+    data = {
+        "tasks": {
+            "import-1": {
+                "operation": "import/upload"
+            },
+            "task-1": {
+                "operation": "convert",
+                "input": [
+                    "import-1"
+                ],
+                "output_format": output_format
+            },
+            "export-1": {
+                "operation": "export/url",
+                "input": [
+                    "task-1"
+                ],
+                "inline": False,
+                "archive_multiple_files": False
+            }
+        },
+    }
+    headers = {
+        "Authorization": "Bearer {}".format(cloudconvert_api_key),
+        "Content-type": "application/json"
+    }
+    response = requests.post(endpoint, data=json.dumps(data), headers=headers)
+    response = json.loads(response.content.decode('utf-8'))
+    print(response)
+    form = response['data']['tasks'][0].get('result').get('form')
+    port_url = form.get('url')
+    params = form.get('parameters')
+    file = open(input_file, 'rb')
+    files = {'file': file}
+    requests.request(method='POST', url=port_url, files=files, data=params)
+    file.close()
+    return response['data']
+
+
+def cloudconvert_show_a_task(task_id):
+    endpoint = cloudconvert_endpoint + "v2/tasks/{}".format(task_id)
+    headers = {
+        "Authorization": "Bearer {}".format(cloudconvert_api_key)
+    }
+    response = requests.get(endpoint, headers=headers)
+    response = json.loads(response.content.decode('utf-8'))
+    return response
+
+
+
+
+def cloudconvert_delete_a_job(job_id):
+    endpoint = cloudconvert_endpoint + "v2/jobs/{}".format(job_id)
+    headers = {
+        "Authorization": "Bearer {}".format(cloudconvert_api_key)
+    }
+    response = requests.delete(endpoint, headers=headers)
+    if response.status_code == 204:
+        return True
+    else:
+        print('cloudconvert job delete fail--res: %s' % response.content)
+        return False

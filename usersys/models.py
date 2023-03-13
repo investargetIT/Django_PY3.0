@@ -800,7 +800,7 @@ class TraderNameIdContrast(MyModel):
         self.datasource = self.trader.datasource
         if not self.is_deleted:
             if TraderNameIdContrast.objects.exclude(id=self.id).filter(is_deleted=False, datasource=self.datasource, name=self.name).exists():
-                raise InvestError(2007, msg='一个姓名只能对应一个交易师')
+                raise InvestError(20071, msg='一个姓名只能对应一个交易师')
         super(TraderNameIdContrast, self).save(*args, **kwargs)
 
 class UserIndGroups(models.Model):

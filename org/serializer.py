@@ -71,7 +71,6 @@ class OrgListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = organization
-        depth = 1
         exclude = ('datasource', 'createdtime', 'is_deleted', 'deleteduser', 'deletedtime', 'lastmodifyuser', 'lastmodifytime',)
 
     def get_tags(self, obj):

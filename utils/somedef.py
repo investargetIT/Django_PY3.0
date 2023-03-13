@@ -295,7 +295,7 @@ def open_excel(filename=None, file_contents=None):
         data = xlrd.open_workbook(filename=filename, file_contents=file_contents)
         return data
     except Exception as e:
-        raise InvestError(2007, msg='读取文件失败', detail=str(e))
+        raise InvestError(20071, msg='读取文件失败', detail=str(e))
 
 #根据索引获取Excel表格中的数据   参数:file：Excel文件路径     colnameindex：表头列名所在行的索引  ，by_index：表的索引
 def excel_table_byindex(filename=None, file_contents=None, colnameindex=0, by_index=0):

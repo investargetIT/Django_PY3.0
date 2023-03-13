@@ -109,7 +109,7 @@ class orgalias(MyModel):
 
     def save(self, *args, **kwargs):
         if not self.alias:
-            raise InvestError(2007, msg='alias 不能为空')
+            raise InvestError(20071, msg='alias 不能为空')
         if not self.is_deleted:
             if orgalias.objects.exclude(pk=self.pk).filter(is_deleted=False, alias=self.alias).exists():
                 raise InvestError(code=5001, msg='同名机构已存在, 无法编辑别名')

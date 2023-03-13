@@ -5,7 +5,8 @@ import datetime
 from mongoengine import *
 from invest.settings import groupemailMongoTableName, projectDataMongoTableName, \
     mergeandfinanceeventMongoTableName, com_catMongoTableName, projremarkMongoTableName, wxchatdataMongoTableName, \
-    projectNewsMongoTableName, projIndustryInfoMongoTableName, companysearchMongoTableName
+    projectNewsMongoTableName, projIndustryInfoMongoTableName, companysearchMongoTableName, \
+    openAiChatDataMongoTableName, openAiChatTopicDataMongoTableName
 from utils.customClass import InvestError
 
 
@@ -188,4 +189,39 @@ class CompanySearchName(Document):
             self.createtime = datetime.datetime.now()
         if len(CompanySearchName.objects.filter(com_name=self.com_name)) == 0:
             super(CompanySearchName, self).save(force_insert, validate, clean, write_concern, cascade, cascade_kwargs, _refs,
+                                      save_condition, signal_kwargs, **kwargs)
+
+
+class OpenAiChatTopicData(Document):
+    topic_name = StringField(null=True)
+    create_time = DateTimeField(null=True)
+    lastchat_time = DateTimeField(null=True)
+    user_id = IntField(null=True)
+    meta = {"collection": openAiChatTopicDataMongoTableName}
+    def save(self, force_insert=False, validate=True, clean=True,
+             write_concern=None, cascade=None, cascade_kwargs=None,
+             _refs=None, save_condition=None, signal_kwargs=None, **kwargs):
+        if self.create_time is None:
+            self.create_time = datetime.datetime.now()
+        if self.lastchat_time is None:
+            self.lastchat_time = datetime.datetime.now()
+        super(OpenAiChatTopicData, self).save(force_insert, validate, clean, write_concern, cascade, cascade_kwargs, _refs,
+                                      save_condition, signal_kwargs, **kwargs)
+
+
+
+
+class OpenAiChatData(Document):
+    topic_id = StringField(null=True)
+    user_id = IntField(null=True)
+    content = StringField(null=True)
+    isAI = BooleanField(default=False)
+    msgtime = DateTimeField(null=True)
+    meta = {"collection": openAiChatDataMongoTableName}
+    def save(self, force_insert=False, validate=True, clean=True,
+             write_concern=None, cascade=None, cascade_kwargs=None,
+             _refs=None, save_condition=None, signal_kwargs=None, **kwargs):
+        if self.msgtime is None:
+            self.msgtime = datetime.datetime.now()
+        super(OpenAiChatData, self).save(force_insert, validate, clean, write_concern, cascade, cascade_kwargs, _refs,
                                       save_condition, signal_kwargs, **kwargs)
