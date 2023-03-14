@@ -40,6 +40,10 @@ SMSCODE_projectsign = {
         'in':'cWzJx',
         'out':None
         },
+    '6':{
+        'in':'dNody3',
+        'out':None
+        },
     }
 
 
