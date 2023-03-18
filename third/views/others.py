@@ -301,13 +301,14 @@ def getopenaitextcompletions(request):
                 'topic_id': topic_id,
                 'user_id': request.user.id,
                 'content': str(newmessages),
+                'isreset': False,
                 'isAI': False
             })
             saveOpenAiChatDataToMongo({
                 'topic_id': topic_id,
                 'user_id': request.user.id,
                 'content': res,
-                'reset': True if result['usage']['total_tokens'] >= 4000 else False,
+                'isreset': True if result['usage']['total_tokens'] >= 4000 else False,
                 'isAI': True
             })
         else:
@@ -317,4 +318,5 @@ def getopenaitextcompletions(request):
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
     except Exception:
+        catchexcption(request)
         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))

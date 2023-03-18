@@ -953,7 +953,7 @@ def getOpenAiChatConversationDataChat(topic_id):
     chatdata = []
     if queryset.count() > 0:
         for instance in queryset:
-            if instance.reset:
+            if instance.isreset:
                 break
             if instance.isAI:
                 result = json.loads(instance.content)['result']
