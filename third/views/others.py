@@ -286,8 +286,8 @@ def getopenaitextcompletions(request):
         isMultiple = data.pop('isMultiple', True)
         if isMultiple:
             historydata = getOpenAiChatConversationDataChat(topic_id)
-            chatmessages = historydata.extend(newmessages)
-            data['messages'] = chatmessages
+            historydata.extend(newmessages)
+            data['messages'] = historydata
         hokongdata = {
             "aidata" : {'url': OPENAI_URL,'key': OPENAI_API_KEY},
             "chatdata": data
