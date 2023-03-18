@@ -14,7 +14,7 @@ from rest_framework.decorators import api_view
 from invest.settings import APILOG_PATH
 from mongoDoc.views import saveOpenAiChatDataToMongo, updateOpenAiChatTopicChat, getOpenAiChatConversationDataChat
 from third.thirdconfig import baiduaip_appid, baiduaip_secretkey, baiduaip_appkey, OPENAI_API_KEY, OPENAI_URL, \
-    OPENAI_MODEL, hokong_URL
+    OPENAI_MODEL, hokong_URL, max_token
 from third.views.qiniufile import deleteqiniufile
 from utils.customClass import JSONResponse, InvestError
 from utils.somedef import file_iterator
@@ -293,26 +293,27 @@ def getopenaitextcompletions(request):
             "chatdata": data
         }
         # 构造代理地址
-        print('*********', data)
         res = requests.post(hokong_URL, data=json.dumps(hokongdata), headers={'Content-Type': "application/json"}).content.decode()
         response = json.loads(res)
-        print('---------', res)
         if response['success']:
             result = json.loads(response['result'])
-            saveOpenAiChatDataToMongo({
-                'topic_id': topic_id,
-                'user_id': request.user.id,
-                'content': json.dumps(newmessages),
-                'isreset': False,
-                'isAI': False
-            })
-            saveOpenAiChatDataToMongo({
-                'topic_id': topic_id,
-                'user_id': request.user.id,
-                'content': res,
-                'isreset': True if result['usage']['total_tokens'] >= 4000 else False,
-                'isAI': True
-            })
+            if result.get('choices'):
+                saveOpenAiChatDataToMongo({
+                    'topic_id': topic_id,
+                    'user_id': request.user.id,
+                    'content': json.dumps(newmessages),
+                    'isreset': False,
+                    'isAI': False
+                })
+                saveOpenAiChatDataToMongo({
+                    'topic_id': topic_id,
+                    'user_id': request.user.id,
+                    'content': res,
+                    'isreset': True if result['usage']['total_tokens'] >= max_token else False,
+                    'isAI': True
+                })
+            else:
+                raise InvestError(8312, msg=result['error'], detail=result['error'])
         else:
             raise InvestError(8312, msg=response['errmsg'], detail=response['errmsg'])
         updateOpenAiChatTopicChat(topic_id, {'lastchat_time': datetime.datetime.now()})
