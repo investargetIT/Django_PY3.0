@@ -216,6 +216,7 @@ class OpenAiChatData(Document):
     user_id = IntField(null=True)
     content = StringField(null=True)
     isAI = BooleanField(default=False)
+    reset = BooleanField(default=False)
     msgtime = DateTimeField(null=True)
     meta = {"collection": openAiChatDataMongoTableName}
     def save(self, force_insert=False, validate=True, clean=True,
