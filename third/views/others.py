@@ -278,12 +278,15 @@ def getopenaitextcompletions(request):
         data = request.data
         data['model'] = OPENAI_MODEL
         topic_id = data.pop('topic_id', None)
+        newmessages = data['messages']
         if not topic_id:
             raise InvestError(20072, msg='会话id不能为空')
+        if not newmessages:
+            raise InvestError(20072, msg='会话消息不能为空')
         isMultiple = data.pop('isMultiple', True)
         if isMultiple:
             historydata = getOpenAiChatConversationDataChat(topic_id)
-            chatmessages = historydata.append(data['messages'])
+            chatmessages = historydata.extend(newmessages)
             data['messages'] = chatmessages
         hokongdata = {
             "aidata" : {'url': OPENAI_URL,'key': OPENAI_API_KEY},
@@ -297,7 +300,7 @@ def getopenaitextcompletions(request):
             saveOpenAiChatDataToMongo({
                 'topic_id': topic_id,
                 'user_id': request.user.id,
-                'content': str(data['messages']),
+                'content': str(newmessages),
                 'isAI': False
             })
             saveOpenAiChatDataToMongo({
