@@ -304,7 +304,7 @@ def getopenaitextcompletions(request):
                 'topic_id': topic_id,
                 'user_id': request.user.id,
                 'content': res,
-                'reset': True if result['total_tokens'] >= 4000 else False,
+                'reset': True if result['usage']['total_tokens'] >= 4000 else False,
                 'isAI': True
             })
         else:
