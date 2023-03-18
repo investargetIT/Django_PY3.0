@@ -958,9 +958,10 @@ def getOpenAiChatConversationDataChat(topic_id):
             if instance.isAI:
                 result = json.loads(instance.content)['result']
                 content = json.loads(result)['choices'][0]['message']
+                chatdata.append(content)
             else:
                 content = json.loads(instance.content)
-            chatdata.append(content)
+                chatdata.extend(content)
     return chatdata
 
 
