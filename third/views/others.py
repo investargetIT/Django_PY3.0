@@ -12,7 +12,7 @@ from django.http import StreamingHttpResponse
 from rest_framework.decorators import api_view
 
 from invest.settings import APILOG_PATH
-from mongoDoc.views import saveOpenAiChatDataToMongo, updateOpenAiChatTopicChat
+from mongoDoc.views import saveOpenAiChatDataToMongo, updateOpenAiChatTopicChat, getOpenAiChatConversationDataChat
 from third.thirdconfig import baiduaip_appid, baiduaip_secretkey, baiduaip_appkey, OPENAI_API_KEY, OPENAI_URL, \
     OPENAI_MODEL, hokong_URL
 from third.views.qiniufile import deleteqiniufile
@@ -271,9 +271,6 @@ def deleteUpload(request):
 
 
 
-
-
-
 @api_view(['POST'])
 @checkRequestToken()
 def getopenaitextcompletions(request):
@@ -281,29 +278,47 @@ def getopenaitextcompletions(request):
         data = request.data
         data['model'] = OPENAI_MODEL
         topic_id = data.pop('topic_id', None)
+        newmessages = data['messages']
         if not topic_id:
             raise InvestError(20072, msg='会话id不能为空')
-        saveOpenAiChatDataToMongo({
-            'topic_id': topic_id,
-            'user_id': request.user.id,
-            'content': str(data['messages']),
-            'isAI': False
-        })
+        if not newmessages:
+            raise InvestError(20072, msg='会话消息不能为空')
+        isMultiple = data.pop('isMultiple', True)
+        if isMultiple:
+            historydata = getOpenAiChatConversationDataChat(topic_id)
+            historydata.extend(newmessages)
+            data['messages'] = historydata
         hokongdata = {
             "aidata" : {'url': OPENAI_URL,'key': OPENAI_API_KEY},
             "chatdata": data
         }
         # 构造代理地址
+        print('*********', data)
         res = requests.post(hokong_URL, data=json.dumps(hokongdata), headers={'Content-Type': "application/json"}).content.decode()
-        saveOpenAiChatDataToMongo({
-            'topic_id': topic_id,
-            'user_id': request.user.id,
-            'content': res,
-            'isAI': True
-        })
+        response = json.loads(res)
+        print('---------', res)
+        if response['success']:
+            result = json.loads(response['result'])
+            saveOpenAiChatDataToMongo({
+                'topic_id': topic_id,
+                'user_id': request.user.id,
+                'content': json.dumps(newmessages),
+                'isreset': False,
+                'isAI': False
+            })
+            saveOpenAiChatDataToMongo({
+                'topic_id': topic_id,
+                'user_id': request.user.id,
+                'content': res,
+                'isreset': True if result['usage']['total_tokens'] >= 4000 else False,
+                'isAI': True
+            })
+        else:
+            raise InvestError(8312, msg=response['errmsg'], detail=response['errmsg'])
         updateOpenAiChatTopicChat(topic_id, {'lastchat_time': datetime.datetime.now()})
         return JSONResponse(SuccessResponse(res))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
     except Exception:
+        catchexcption(request)
         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))

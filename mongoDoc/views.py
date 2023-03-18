@@ -1,5 +1,5 @@
 #coding:utf-8
-
+import json
 import traceback
 
 import datetime
@@ -946,6 +946,24 @@ class OpenAiChatDataView(viewsets.ModelViewSet):
         except Exception:
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+def getOpenAiChatConversationDataChat(topic_id):
+    queryset = OpenAiChatData.objects.all().filter(topic_id=topic_id).order_by('-msgtime')
+    chatdata = []
+    if queryset.count() > 0:
+        for instance in queryset:
+            if instance.isreset:
+                break
+            if instance.isAI:
+                result = json.loads(instance.content)['result']
+                content = json.loads(result)['choices'][0]['message']
+                chatdata.append(content)
+            else:
+                content = json.loads(instance.content)
+                chatdata.extend(content)
+    return chatdata
+
 
 def updateOpenAiChatTopicChat(topic_id, data):
     instance = OpenAiChatTopicData.objects.all().get(id=ObjectId(topic_id))
