@@ -294,9 +294,9 @@ def getopenaitextcompletions(request):
         }
         # 构造代理地址
         res = requests.post(hokong_URL, data=json.dumps(hokongdata), headers={'Content-Type': "application/json"}).content.decode()
-        res = json.loads(res)
-        if res['success']:
-            result = json.loads(res['result'])
+        response = json.loads(res)
+        if response['success']:
+            result = json.loads(response['result'])
             saveOpenAiChatDataToMongo({
                 'topic_id': topic_id,
                 'user_id': request.user.id,
@@ -312,7 +312,7 @@ def getopenaitextcompletions(request):
                 'isAI': True
             })
         else:
-            raise InvestError(8312, msg=res['errmsg'], detail=res['errmsg'])
+            raise InvestError(8312, msg=response['errmsg'], detail=response['errmsg'])
         updateOpenAiChatTopicChat(topic_id, {'lastchat_time': datetime.datetime.now()})
         return JSONResponse(SuccessResponse(res))
     except InvestError as err:
