@@ -299,20 +299,23 @@ def getopenaitextcompletions(request):
         print('---------', res)
         if response['success']:
             result = json.loads(response['result'])
-            saveOpenAiChatDataToMongo({
-                'topic_id': topic_id,
-                'user_id': request.user.id,
-                'content': json.dumps(newmessages),
-                'isreset': False,
-                'isAI': False
-            })
-            saveOpenAiChatDataToMongo({
-                'topic_id': topic_id,
-                'user_id': request.user.id,
-                'content': res,
-                'isreset': True if result['usage']['total_tokens'] >= 4000 else False,
-                'isAI': True
-            })
+            if result.get('choices'):
+                saveOpenAiChatDataToMongo({
+                    'topic_id': topic_id,
+                    'user_id': request.user.id,
+                    'content': json.dumps(newmessages),
+                    'isreset': False,
+                    'isAI': False
+                })
+                saveOpenAiChatDataToMongo({
+                    'topic_id': topic_id,
+                    'user_id': request.user.id,
+                    'content': res,
+                    'isreset': True if result['usage']['total_tokens'] >= 4000 else False,
+                    'isAI': True
+                })
+            else:
+                raise InvestError(8312, msg=result['error'], detail=result['error'])
         else:
             raise InvestError(8312, msg=response['errmsg'], detail=response['errmsg'])
         updateOpenAiChatTopicChat(topic_id, {'lastchat_time': datetime.datetime.now()})
