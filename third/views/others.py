@@ -293,14 +293,16 @@ def getopenaitextcompletions(request):
             "chatdata": data
         }
         # 构造代理地址
+        print('*********', data)
         res = requests.post(hokong_URL, data=json.dumps(hokongdata), headers={'Content-Type': "application/json"}).content.decode()
         response = json.loads(res)
+        print('---------', res)
         if response['success']:
             result = json.loads(response['result'])
             saveOpenAiChatDataToMongo({
                 'topic_id': topic_id,
                 'user_id': request.user.id,
-                'content': str(newmessages),
+                'content': json.dumps(newmessages),
                 'isreset': False,
                 'isAI': False
             })
