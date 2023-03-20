@@ -298,6 +298,7 @@ def getopenaitextcompletions(request):
         if response['success']:
             result = json.loads(response['result'])
             if result.get('choices'):
+                replymessage = result["choices"][0]["message"]
                 saveOpenAiChatDataToMongo({
                     'topic_id': topic_id,
                     'user_id': request.user.id,
@@ -308,7 +309,7 @@ def getopenaitextcompletions(request):
                 saveOpenAiChatDataToMongo({
                     'topic_id': topic_id,
                     'user_id': request.user.id,
-                    'content': res,
+                    'content': json.dumps(replymessage),
                     'isreset': True if result['usage']['total_tokens'] >= max_token else False,
                     'isAI': True
                 })
@@ -317,7 +318,7 @@ def getopenaitextcompletions(request):
         else:
             raise InvestError(8312, msg=response['errmsg'], detail=response['errmsg'])
         updateOpenAiChatTopicChat(topic_id, {'lastchat_time': datetime.datetime.now()})
-        return JSONResponse(SuccessResponse(res))
+        return JSONResponse(SuccessResponse(replymessage))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
     except Exception:
