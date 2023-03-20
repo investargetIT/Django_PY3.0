@@ -955,12 +955,10 @@ def getOpenAiChatConversationDataChat(topic_id):
         for instance in queryset:
             if instance.isreset:
                 break
+            content = json.loads(instance.content)
             if instance.isAI:
-                result = json.loads(instance.content)['result']
-                content = json.loads(result)['choices'][0]['message']
                 chatdata.append(content)
             else:
-                content = json.loads(instance.content)
                 chatdata.extend(content)
     return chatdata
 
