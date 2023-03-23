@@ -2544,14 +2544,19 @@ def bundThirdAccount(request):
     try:
         data = request.data
         union_id = data.get('union_id', None)
-        if not union_id:
-            raise InvestError(20071, msg='参数缺失', detail='union_id 不能为空')
+        wxcode = data.get('wxid', None)
+        if not union_id and not wxcode:
+            raise InvestError(20071, msg='参数缺失', detail='id 不能为空')
+        if wxcode:
+            union_id = get_openid(wxcode)
+            if not union_id:
+                raise  InvestError(20071, msg='获取openid 失败')
         try:
-            thirdaccount = UserContrastThirdAccount.objects.get(user=request.user, is_deleted=False, thirdUnionID__isnull=False)
+            thirdaccount = UserContrastThirdAccount.objects.get(is_deleted=False, thirdUnionID=union_id)
         except UserContrastThirdAccount.DoesNotExist:
             UserContrastThirdAccount(thirdUnionID=union_id, user=request.user).save()
         else:
-            thirdaccount.thirdUnionID = union_id
+            thirdaccount.user = request.user
             thirdaccount.save()
         return JSONResponse(SuccessResponse({'success': True}))
     except InvestError as err:
