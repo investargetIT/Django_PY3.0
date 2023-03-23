@@ -22,6 +22,7 @@ from org.models import organization
 from sourcetype.views import getmenulist
 from third.models import MobileAuthCode
 from third.views.qiniufile import deleteqiniufile, remove_file
+from third.views.weixinlogin import get_openid
 from usersys.models import MyUser, UserRelation, userTags, MyToken, UnreachUser, UserRemarks, \
     userAttachments, userEvents, UserContrastThirdAccount, registersourcechoice, UserPerformanceAppraisalRecord, \
     UserPersonnelRelations, UserTrainingRecords, UserMentorTrackingRecords, UserWorkingPositionRecords, \
@@ -2452,6 +2453,7 @@ def login(request):
         username = receive['account']
         password = receive['password']
         union_id = receive.get('union_id', None)
+        wxcode = receive.get('wxid', None)
         source = request.META.get('HTTP_SOURCE')
         if source:
             datasource = DataSource.objects.filter(id=source, is_deleted=False)
@@ -2472,28 +2474,42 @@ def login(request):
                 try:
                     thirdaccount = UserContrastThirdAccount.objects.get(thirdUnionID=union_id, is_deleted=False)
                 except UserContrastThirdAccount.DoesNotExist:
-                    try:
-                        thirdaccount = UserContrastThirdAccount.objects.get(user=user, is_deleted=False, thirdUnionID__isnull=False)
-                    except UserContrastThirdAccount.DoesNotExist:
-                        UserContrastThirdAccount(thirdUnionID=union_id, user=user).save()
-                    else:
-                        if thirdaccount.thirdUnionID != union_id:
-                            thirdaccount.thirdUnionID = union_id
-                            thirdaccount.save()
+                    UserContrastThirdAccount(thirdUnionID=union_id, user=user).save()
                 else:
                     if thirdaccount.user.id != user.id:
                         raise InvestError(2048, msg='登录失败，该飞书账号已绑定过平台账号', detail='该飞书账号已绑定过平台账号')
+            elif wxcode:
+                openid = get_openid(wxcode)
+                if openid:
+                    try:
+                        thirdaccount = UserContrastThirdAccount.objects.get(thirdUnionID=openid, is_deleted=False)
+                    except UserContrastThirdAccount.DoesNotExist:
+                        UserContrastThirdAccount(thirdUnionID=openid, user=user).save()
+                    else:
+                        if thirdaccount.user.id != user.id:
+                            raise InvestError(2048, msg='登录失败，该微信号已绑定过其他账号')
+                else:
+                    raise InvestError(2048, msg='登录失败，获取小程序openid失败', detail='获取小程序openid失败')
         else:
             user = None
             if union_id:
+                try:
+                    thirdaccount = UserContrastThirdAccount.objects.get(thirdUnionID=union_id, is_deleted=False)
+                except UserContrastThirdAccount.DoesNotExist:
+                    raise InvestError(2009, msg='登录失败，用户未绑定账号', detail='用户未绑定账号')
+                else:
+                    user = thirdaccount.user
+            elif wxcode:
+                openid = get_openid(wxcode)
+                if openid:
                     try:
-                        thirdaccount = UserContrastThirdAccount.objects.get(thirdUnionID=union_id, is_deleted=False)
+                        thirdaccount = UserContrastThirdAccount.objects.get(thirdUnionID=openid, is_deleted=False)
                     except UserContrastThirdAccount.DoesNotExist:
-                        raise InvestError(2009, msg='登录失败，用户未绑定账号', detail='用户未绑定账号')
+                        raise InvestError(2009, msg='用户未绑定账号')
                     else:
                         user = thirdaccount.user
             if not user:
-                raise InvestError(2009, msg='登录失败，飞书快捷登录无效', detail='飞书快捷登录无效')
+                raise InvestError(2009, msg='登录失败，快捷登录无效', detail='快捷登录无效')
         if user.userstatus_id == 3:
             raise InvestError(2022, msg='登录失败，用户审核未通过，如有疑问请咨询工作人员。', detail='用户审核未通过')
         user.last_login = datetime.datetime.now()
