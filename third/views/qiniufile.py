@@ -318,7 +318,7 @@ def uploadFileToQiniu():
                     import_task_id = task['id']
                 elif task['operation'] == 'convert':
                     convert_task_id = task['id']
-                else:
+                elif task['operation'] == 'export/url':
                     export_task_id = task['id']
             if import_task_id:
                 while True:
@@ -472,7 +472,14 @@ def cloudconvert_create_job(input_file, output_format):
     response = requests.post(endpoint, data=json.dumps(data), headers=headers)
     response = json.loads(response.content.decode('utf-8'))
     print(response)
-    form = response['data']['tasks'][0].get('result').get('form')
+    tasks = response['data']['tasks']
+    form = None
+    for task in tasks:
+        if task['name'] == 'import-1':
+            form = task.get('result').get('form')
+            break
+    if not form:
+        raise InvestError(8311, msg='import task form获取失败', detail=json.dumps(tasks))
     port_url = form.get('url')
     params = form.get('parameters')
     file = open(input_file, 'rb')
