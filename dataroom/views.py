@@ -454,11 +454,11 @@ def makeDirWithdirectoryobjs(directory_objs ,rootpath):
 
 def getPathWithFile(file_obj,rootpath,currentpath=None):
     if currentpath is None:
-        currentpath = file_obj.filename
+        currentpath = file_obj.filename.replace('*', '')
     if file_obj.parent is None:
         return rootpath + '/' + currentpath
     else:
-        currentpath = file_obj.parent.filename + '/' + currentpath
+        currentpath = file_obj.parent.filename.replace('*', '') + '/' + currentpath
         return getPathWithFile(file_obj.parent, rootpath, currentpath)
 
 
