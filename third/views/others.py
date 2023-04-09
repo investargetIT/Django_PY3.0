@@ -14,7 +14,7 @@ from rest_framework.decorators import api_view
 from invest.settings import APILOG_PATH
 from mongoDoc.views import saveOpenAiChatDataToMongo, updateOpenAiChatTopicChat, getOpenAiChatConversationDataChat
 from third.thirdconfig import baiduaip_appid, baiduaip_secretkey, baiduaip_appkey, OPENAI_API_KEY, OPENAI_URL, \
-    OPENAI_MODEL, hokong_URL, max_token
+    OPENAI_MODEL, hokong_URL, max_token, aliyun_appcode
 from third.views.qiniufile import deleteqiniufile
 from utils.customClass import JSONResponse, InvestError
 from utils.somedef import file_iterator
@@ -143,6 +143,24 @@ def ccupload_baidu(request):
         headers = {'content-type': 'application/x-www-form-urlencoded'}
         params = {"image": base64.b64encode(uploaddata.read())}
         response = requests.post(urlstr, data=params, headers=headers)
+        return JSONResponse(SuccessResponse(response.content))
+    except InvestError as err:
+        return JSONResponse(InvestErrorResponse(err))
+    except Exception:
+        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+@checkRequestToken()
+def ccupload_aliyun(request):
+    try:
+        data_dict = request.FILES
+        uploaddata = None
+        for keya in data_dict.keys():
+            uploaddata = data_dict[keya]
+        urlstr = "https://bizcard.market.alicloudapi.com/rest/160601/ocr/ocr_business_card.json"
+        headers = {'content-type': 'application/json; charset=UTF-8',
+                   'Authorization': 'APPCODE ' + aliyun_appcode}
+        params = {"image": base64.b64encode(uploaddata.read()).decode()}
+        response = requests.post(urlstr, data=json.dumps(params), headers=headers, verify=False)
         return JSONResponse(SuccessResponse(response.content))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
