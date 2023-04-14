@@ -226,3 +226,17 @@ class OpenAiChatData(Document):
             self.msgtime = datetime.datetime.now()
         super(OpenAiChatData, self).save(force_insert, validate, clean, write_concern, cascade, cascade_kwargs, _refs,
                                       save_condition, signal_kwargs, **kwargs)
+
+
+class DiscordImageData(Document):
+    msg = StringField(null=True)
+    image_url = StringField(default=False)
+    msgtime = DateTimeField(null=True)
+    meta = {"collection": 'discordimage'}
+    def save(self, force_insert=False, validate=True, clean=True,
+             write_concern=None, cascade=None, cascade_kwargs=None,
+             _refs=None, save_condition=None, signal_kwargs=None, **kwargs):
+        if self.msgtime is None:
+            self.msgtime = datetime.datetime.now()
+        super(DiscordImageData, self).save(force_insert, validate, clean, write_concern, cascade, cascade_kwargs, _refs,
+                                      save_condition, signal_kwargs, **kwargs)
