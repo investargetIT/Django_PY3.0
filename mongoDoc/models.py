@@ -229,7 +229,8 @@ class OpenAiChatData(Document):
 
 
 class DiscordImageData(Document):
-    msg = StringField(null=True)
+    message = StringField(null=True)
+    attachment = StringField(null=True)
     image_url = StringField(default=False)
     msgtime = DateTimeField(null=True)
     meta = {"collection": 'discordimage'}
