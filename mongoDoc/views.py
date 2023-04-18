@@ -1025,14 +1025,35 @@ class DiscordImageDataView(viewsets.ModelViewSet):
         '''
     queryset = DiscordImageData.objects.all()
     serializer_class = DiscordImageDataSerializer
+    filter_class = {'prompt': 'exact',
+                    'message_id': 'in',
+                    'channel_id': 'in',
+                    'guild_id': 'in',
+                    'user_id': 'in'
+                    }
 
+    def filterqueryset(self, request, queryset):
+        for key, method in self.filter_class.items():
+            value = request.GET.get(key)
+            if value:
+                if method == 'in':
+                    value = value.split(',')
+                queryset = queryset.filter(**{'%s__%s' % (key, method): value})
+        return queryset
 
     @loginTokenIsAvailable()
     def list(self, request, *args, **kwargs):
         try:
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)  # 从第一页开始
-            queryset = self.queryset().order_by('-msgtime')
+            completed = request.GET.get('completed')
+            queryset = self.filterqueryset(request, self.queryset())
+            if completed:
+                if completed in ['True', 'true', True, 1, '1', 'Yes', 'yes', 'YES', 'TRUE']:
+                    queryset = queryset(completed=True)
+                else:
+                    queryset = queryset(completed=False)
+            queryset = queryset.order_by('-promtime')
             try:
                 count = queryset.count()
                 queryset = Paginator(queryset, page_size)
@@ -1055,7 +1076,7 @@ class DiscordImageDataView(viewsets.ModelViewSet):
             if serializer.is_valid():
                 serializer.save()
             else:
-                raise InvestError(4014, msg='创建绘画图片地址失败', detail=serializer.error_messages)
+                raise InvestError(4014, msg='创建discord绘画任务失败', detail=serializer.error_messages)
             return JSONResponse(SuccessResponse(serializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
@@ -1074,7 +1095,7 @@ class DiscordImageDataView(viewsets.ModelViewSet):
                 if serializer.is_valid():
                     serializer.save()
                 else:
-                    raise InvestError(4012, msg='修改绘画图片地址失败', detail=serializer.error_messages)
+                    raise InvestError(4012, msg='保存绘画图片地址失败', detail=serializer.error_messages)
                 return JSONResponse(SuccessResponse(serializer.data))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
