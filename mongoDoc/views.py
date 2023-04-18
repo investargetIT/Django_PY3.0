@@ -1072,6 +1072,7 @@ class DiscordImageDataView(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         try:
             data = request.data
+            data['user_id'] = request.user.id
             serializer = self.serializer_class(data=data)
             if serializer.is_valid():
                 serializer.save()
