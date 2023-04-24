@@ -195,6 +195,7 @@ class CompanySearchName(Document):
 class OpenAiChatTopicData(Document):
     topic_name = StringField(null=True)
     create_time = DateTimeField(null=True)
+    type = IntField(default=1) #    (1 gptchat)(2 discord image)
     lastchat_time = DateTimeField(null=True)
     user_id = IntField(null=True)
     meta = {"collection": openAiChatTopicDataMongoTableName}
@@ -225,4 +226,29 @@ class OpenAiChatData(Document):
         if self.msgtime is None:
             self.msgtime = datetime.datetime.now()
         super(OpenAiChatData, self).save(force_insert, validate, clean, write_concern, cascade, cascade_kwargs, _refs,
+                                      save_condition, signal_kwargs, **kwargs)
+
+
+class DiscordImageData(Document):
+    topic_id = StringField(null=True)
+    user_id = IntField(null=True)
+    message_id = StringField(null=True)      # 消息id
+    channel_id = StringField(null=True)      # 频道id
+    guild_id = StringField(null=True)        # 服务器id
+    attachment = DictField(null=True)        # 附件信息
+    url = StringField(null=True)             # 附件url
+    proxy_url = StringField(null=True)       # 附件proxy_url
+    content_type = StringField(null=True)    # 附件类型
+    completed = BooleanField(default=False)  # 已完成画图任务
+    prompt = StringField(null=True)          # 文字画图片内容  prompt
+    content = StringField(null=True)         # 图片内容 message.content
+    promtime = DateTimeField(null=True)      # 文字画图片内容创建时间
+    attatime = DateTimeField(null=True)      # 附件时间
+    meta = {"collection": 'discordimage'}
+    def save(self, force_insert=False, validate=True, clean=True,
+             write_concern=None, cascade=None, cascade_kwargs=None,
+             _refs=None, save_condition=None, signal_kwargs=None, **kwargs):
+        if self.promtime is None:
+            self.promtime = datetime.datetime.now()
+        super(DiscordImageData, self).save(force_insert, validate, clean, write_concern, cascade, cascade_kwargs, _refs,
                                       save_condition, signal_kwargs, **kwargs)
