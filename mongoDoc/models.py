@@ -195,6 +195,7 @@ class CompanySearchName(Document):
 class OpenAiChatTopicData(Document):
     topic_name = StringField(null=True)
     create_time = DateTimeField(null=True)
+    type = IntField(default=1) #    (1 gptchat)(2 discord image)
     lastchat_time = DateTimeField(null=True)
     user_id = IntField(null=True)
     meta = {"collection": openAiChatTopicDataMongoTableName}
@@ -229,6 +230,7 @@ class OpenAiChatData(Document):
 
 
 class DiscordImageData(Document):
+    topic_id = StringField(null=True)
     user_id = IntField(null=True)
     message_id = StringField(null=True)      # 消息id
     channel_id = StringField(null=True)      # 频道id

@@ -804,7 +804,16 @@ class OpenAiChatTopicDataView(viewsets.ModelViewSet):
         '''
     queryset = OpenAiChatTopicData.objects.all()
     serializer_class = OpenAiChatTopicDataSerializer
+    filter_class = {'topic_name': 'icontains', 'type': 'in'}
 
+    def filterqueryset(self, request, queryset):
+        for key, method in self.filter_class.items():
+            value = request.GET.get(key)
+            if value:
+                if method == 'in':
+                    value = value.split(',')
+                queryset = queryset.filter(**{'%s__%s' % (key, method): value})
+        return queryset
 
     @loginTokenIsAvailable()
     def list(self, request, *args, **kwargs):
@@ -812,9 +821,7 @@ class OpenAiChatTopicDataView(viewsets.ModelViewSet):
             page_size = request.GET.get('page_size', 10)
             page_index = request.GET.get('page_index', 1)  # 从第一页开始
             queryset = self.queryset(user_id=request.user.id)
-            topic_name = request.GET.get('topic_name')
-            if topic_name:
-                queryset = queryset.filter(topic_name__icontains=topic_name)
+            queryset = self.filterqueryset(request, queryset)
             queryset = queryset.order_by('-create_time')
             try:
                 count = queryset.count()
@@ -822,8 +829,8 @@ class OpenAiChatTopicDataView(viewsets.ModelViewSet):
                 queryset = queryset.page(page_index)
             except EmptyPage:
                 return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
-            serializer = self.serializer_class(queryset,many=True)
-            return JSONResponse(SuccessResponse({'count':count, 'data':serializer.data}))
+            serializer = self.serializer_class(queryset, many=True)
+            return JSONResponse(SuccessResponse({'count': count, 'data': serializer.data}))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
         except Exception:
@@ -1029,7 +1036,8 @@ class DiscordImageDataView(viewsets.ModelViewSet):
                     'message_id': 'in',
                     'channel_id': 'in',
                     'guild_id': 'in',
-                    'user_id': 'in'
+                    'user_id': 'in',
+                    'topic_id': 'in'
                     }
 
     def filterqueryset(self, request, queryset):
