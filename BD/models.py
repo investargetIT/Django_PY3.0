@@ -123,6 +123,8 @@ class ProjectBDComments(MyModel):
         if self.projectBD and not self.projectBD.is_deleted:
             self.projectBD.lastmodifytime = self.lastmodifytime if self.lastmodifytime else datetime.datetime.now()
             self.projectBD.save(update_fields=['lastmodifytime',])
+        if len(self.filename) > 128:
+            raise InvestError(20072, msg='文件名过长')
         kwargs['automodifytime'] = False
         return super(ProjectBDComments, self).save(*args, **kwargs)
 
