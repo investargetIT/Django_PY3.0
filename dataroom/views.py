@@ -607,6 +607,11 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
             lang = request.GET.get('lang')
             dataroomid = data.get('dataroom', None)
             dataroominstance = dataroom.objects.get(id=dataroomid, is_deleted=False)
+            filename = data.get('filename')
+            if not filename:
+                raise InvestError(20071, msg='文件名不能为空')
+            if len(filename) > 128:
+                raise InvestError(20071, msg='文件名过长')
             if not data.get('createuser'):
                 data['createuser'] = request.user.id
             data['datasource'] = request.user.datasource.id
