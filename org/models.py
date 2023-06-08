@@ -297,6 +297,6 @@ class orgAttachments(MyModel):
 
 
     def save(self, *args, **kwargs):
-        if len(self.filename) > 128:
+        if self.filename and len(self.filename) > 128:
             raise InvestError(20072, msg='文件名过长')
         return super(orgAttachments, self).save(*args, **kwargs)
