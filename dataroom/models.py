@@ -92,7 +92,7 @@ class dataroomdirectoryorfile(MyModel):
                 raise InvestError(7007,msg='非目录结构不能存储文件')
         if self.filename is None:
             raise InvestError(20072,msg='名称不能为空')
-        if len(self.filename) > 128:
+        if self.filename and len(self.filename) > 128:
             raise InvestError(20072, msg='文件名过长')
         super(dataroomdirectoryorfile, self).save(*args, **kwargs)
 
