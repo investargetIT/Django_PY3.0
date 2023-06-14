@@ -1,6 +1,7 @@
 #coding=utf-8
 import traceback
 import datetime
+import threading
 from django.contrib import auth
 from django.contrib.auth.models import Group, Permission
 from django.contrib.sessions.backends.cache import SessionStore
@@ -15,6 +16,7 @@ from dataroom.models import dataroom
 from org.models import organization
 from sourcetype.views import getmenulist
 from third.models import MobileAuthCode
+from third.views.qimingpianapi import updatePersonTag
 from third.views.qiniufile import deleteqiniufile
 from third.views.weixinlogin import get_openid
 from usersys.models import MyUser, UserRelation, userTags, MyToken, UnreachUser, UserRemarks, \
@@ -484,6 +486,10 @@ class UserView(viewsets.ModelViewSet):
                                 for tag in addset:
                                     usertaglist.append(userTags(user=user, tag_id=tag, createuser_id=createuser, createdtime=datetime.datetime.now()))
                                 user.user_usertags.bulk_create(usertaglist)
+                                if user.org:  # 企名片投资人标签
+                                    tag_qs = Tag.objects.filter(is_deleted=False, id__in=tags)
+                                    if tag_qs.exists():
+                                        threading.Thread(target=updatePersonTag, args=(user.usernameC, user.org.orgfullname, tag_qs)).start()
                         else:
                             raise InvestError(20071, msg='用户信息修改失败', detail='%s' % userserializer.error_messages)
                         newuserdata = UserSerializer(user)
