@@ -51,23 +51,11 @@ class DataroomdirectoryorfileUpdateSerializer(serializers.ModelSerializer):
 
 
 class DataroomdirectoryorfileSerializer(serializers.ModelSerializer):
-    fileurl = serializers.SerializerMethodField()
-    uploadstatus = serializers.SerializerMethodField()
+
     class Meta:
         model = dataroomdirectoryorfile
         exclude = ('is_deleted', 'deleteduser', 'deletedtime', 'lastmodifyuser', 'lastmodifytime',)
 
-    def get_fileurl(self, obj):
-        if obj.bucket and obj.key:
-            return getUrlWithBucketAndKey(obj.bucket, obj.key)
-        else:
-            return None
-    def get_uploadstatus(self, obj):
-        if obj.bucket and obj.key:
-            qs = QiNiuFileUploadRecord.objects.filter(key=obj.key, is_deleted=False)
-            if qs.exists():
-                return QiNiuFileUploadRecordSerializer(qs, many=True).data
-        return None
 
 class DataroomdirectoryorfilePathSerializer(serializers.ModelSerializer):
     fileurl = serializers.SerializerMethodField()
