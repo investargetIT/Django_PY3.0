@@ -334,7 +334,7 @@ def sendmessage_dataroomuserfileupdate(model,receiver,types,sender=None):
                 if 'email' in types and sendEmail and checkEmailTrue(receiver.email):
                     try:
                         destination = receiver.email
-                        projectsign = 'oQGaH3'
+                        projectsign = '3a6W92'
                         filestr = ''
                         projectUrl = getDataroomTitleWithSuperLink(model.dataroom, 'cn')
                         dataroomUrl = '%s/app/dataroom/detail?id=%s&isClose=false&projectID=%s'% (getbase_domain(model.datasource), model.dataroom.id, model.dataroom.proj.id)
