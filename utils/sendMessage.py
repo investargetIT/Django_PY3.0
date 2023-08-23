@@ -281,7 +281,7 @@ def sendmessage_dataroomuseradd(model,receiver,types,sender=None):
                         elif receiver.datasource_id == 6:
                             projectsign = 'yMgMP'
                         else:
-                            projectsign = 'umZlP3'
+                            projectsign = '3a6W92'
                         vars = {'name': receiver.usernameC, 'projectC': getDataroomTitleWithSuperLink(model.dataroom, 'cn'), 'projectE': getDataroomTitleWithSuperLink(model.dataroom, 'en')}
                         xsendEmail(destination, projectsign, vars)
                     except Exception:
@@ -334,7 +334,7 @@ def sendmessage_dataroomuserfileupdate(model,receiver,types,sender=None):
                 if 'email' in types and sendEmail and checkEmailTrue(receiver.email):
                     try:
                         destination = receiver.email
-                        projectsign = '3a6W92'
+                        projectsign = 'oQGaH3'
                         filestr = ''
                         projectUrl = getDataroomTitleWithSuperLink(model.dataroom, 'cn')
                         dataroomUrl = '%s/app/dataroom/detail?id=%s&isClose=false&projectID=%s'% (getbase_domain(model.datasource), model.dataroom.id, model.dataroom.proj.id)
