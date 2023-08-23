@@ -67,7 +67,7 @@ MESSAGE_DICT = {
 
     'dataroomuseradd':{
         'sms_sign': None,
-        'email_sign': 'umZlP3',
+        'email_sign': '3a6W92',
         'title_cn': "新增dataroom",
         'title_en': "Dataroom added",
         'content_cn': "您已被加入项目【%s】的dataroom",
