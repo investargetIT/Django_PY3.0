@@ -360,10 +360,11 @@ def embeddingFileAndUploadToZillizCloud(request):
             'zilliz_collection_name': zilliz_collection_name,
             'embedding_model': openai_embedding_model,
             'open_ai_key': OPENAI_API_KEY,
-            'file': uploaddata
+
         }
+        files = {'file': uploaddata}
         url = hokong_URL + 'embedzilliz/'
-        res = requests.post(url, data=hokongdata, headers={'Content-Type': 'multipart/form-data'}).content
+        res = requests.post(url, files=files, data=hokongdata, headers={'Content-Type': 'multipart/form-data'}).content
         response = json.loads(res.decode())
         return JSONResponse(SuccessResponse(response))
     except InvestError as err:
@@ -385,7 +386,7 @@ def chatgptWithZillizCloud(request):
             'question': request.data['question']
         }
         url = hokong_URL + 'zillizchat/'
-        res = requests.post(url, data=hokongdata, headers={'Content-Type': 'multipart/form-data'}).content
+        res = requests.post(url, data=json.dumps(hokongdata), headers={'Content-Type': 'application/json'}).content
         response = json.loads(res.decode())
         return JSONResponse(SuccessResponse(response))
     except InvestError as err:
