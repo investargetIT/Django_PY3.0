@@ -47,4 +47,6 @@ urlpatterns = [
     url(r'^feishu/approval/instance/$', feishuyun.request_GetApprovalInstance, name='request_GetApprovalInstance', ),
     url(r'^feishu/approval/task/$', feishuyun.request_handleApprovalsTask, name='request_handleApprovalsTask', ),
     url(r'^openai/text/completions$', others.getopenaitextcompletions, name='getopenaitextcompletions', ),
+    url(r'^openai/file/embedding$', others.embeddingFileAndUploadToZillizCloud, name='embeddingFileAndUploadToZillizCloud', ),
+    url(r'^openai/file/completions$', others.chatgptWithZillizCloud, name='chatgptWithZillizCloud', )
 ]

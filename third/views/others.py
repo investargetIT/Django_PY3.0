@@ -14,7 +14,8 @@ from rest_framework.decorators import api_view
 from invest.settings import APILOG_PATH
 from mongoDoc.views import saveOpenAiChatDataToMongo, updateOpenAiChatTopicChat, getOpenAiChatConversationDataChat
 from third.thirdconfig import baiduaip_appid, baiduaip_secretkey, baiduaip_appkey, OPENAI_API_KEY, OPENAI_URL, \
-    OPENAI_MODEL, hokong_URL, max_token, aliyun_appcode
+    OPENAI_MODEL, hokong_URL, max_token, aliyun_appcode, ZILLIZ_ENDPOINT, ZILLIZ_token, zilliz_collection_name, \
+    openai_embedding_model
 from third.views.qiniufile import deleteqiniufile
 from utils.customClass import JSONResponse, InvestError
 from utils.somedef import file_iterator
@@ -311,8 +312,8 @@ def getopenaitextcompletions(request):
             "aidata" : {'url': OPENAI_URL,'key': OPENAI_API_KEY},
             "chatdata": data
         }
-        # 构造代理地址
-        res = requests.post(hokong_URL, data=json.dumps(hokongdata), headers={'Content-Type': "application/json"}).content.decode()
+        url = hokong_URL + 'ai/'
+        res = requests.post(url, data=json.dumps(hokongdata), headers={'Content-Type': "application/json"}).content.decode()
         response = json.loads(res)
         if response['success']:
             result = json.loads(response['result'])
@@ -338,6 +339,53 @@ def getopenaitextcompletions(request):
             raise InvestError(8312, msg=response['errmsg'], detail=response['errmsg'])
         updateOpenAiChatTopicChat(topic_id, {'lastchat_time': datetime.datetime.now()})
         return JSONResponse(SuccessResponse(replymessage))
+    except InvestError as err:
+        return JSONResponse(InvestErrorResponse(err))
+    except Exception:
+        catchexcption(request)
+        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+@api_view(['POST'])
+@checkRequestToken()
+def embeddingFileAndUploadToZillizCloud(request):
+    try:
+        data_dict = request.FILES
+        uploaddata = None
+        for key in data_dict.keys():
+            uploaddata = data_dict[key]
+        files = {'file': uploaddata}
+        hokongdata = {
+            "zillizdata": {'zilliz_url': ZILLIZ_ENDPOINT,
+                           'zilliz_key': ZILLIZ_token,
+                           'zilliz_collection_name': zilliz_collection_name},
+            "aidata": {'embedding_model': openai_embedding_model},
+        }
+        url = hokong_URL + 'embedzilliz/'
+        res = requests.post(url, files=files, data=json.dumps(hokongdata)).content
+        response = json.loads(res)
+        return JSONResponse(SuccessResponse(response))
+    except InvestError as err:
+        return JSONResponse(InvestErrorResponse(err))
+    except Exception:
+        catchexcption(request)
+        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+@api_view(['POST'])
+@checkRequestToken()
+def chatgptWithZillizCloud(request):
+    try:
+        hokongdata = {
+            "zillizdata": {'zilliz_url': ZILLIZ_ENDPOINT,
+                           'zilliz_key': ZILLIZ_token,
+                           'zilliz_collection_name': zilliz_collection_name},
+            "aidata": {'embedding_model': openai_embedding_model, 'key': OPENAI_API_KEY},
+            "chatdata": {'question': request.data['question']}
+        }
+        url = hokong_URL + 'zillizchat/'
+        res = requests.post(url, data=json.dumps(hokongdata), headers={'Content-Type': "application/json"}).content
+        response = json.loads(res)
+        return JSONResponse(SuccessResponse(response))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
     except Exception:
