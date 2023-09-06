@@ -354,16 +354,17 @@ def embeddingFileAndUploadToZillizCloud(request):
         uploaddata = None
         for key in data_dict.keys():
             uploaddata = data_dict[key]
-        files = {'file': uploaddata}
         hokongdata = {
-            "zillizdata": {'zilliz_url': ZILLIZ_ENDPOINT,
-                           'zilliz_key': ZILLIZ_token,
-                           'zilliz_collection_name': zilliz_collection_name},
-            "aidata": {'embedding_model': openai_embedding_model},
+            'zilliz_url': ZILLIZ_ENDPOINT,
+            'zilliz_key': ZILLIZ_token,
+            'zilliz_collection_name': zilliz_collection_name,
+            'embedding_model': openai_embedding_model,
+            'open_ai_key': OPENAI_API_KEY,
+            'file': uploaddata
         }
         url = hokong_URL + 'embedzilliz/'
-        res = requests.post(url, files=files, data=json.dumps(hokongdata)).content
-        response = json.loads(res)
+        res = requests.post(url, data=hokongdata, headers={'Content-Type': 'multipart/form-data'}).content
+        response = json.loads(res.decode())
         return JSONResponse(SuccessResponse(response))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
@@ -376,15 +377,16 @@ def embeddingFileAndUploadToZillizCloud(request):
 def chatgptWithZillizCloud(request):
     try:
         hokongdata = {
-            "zillizdata": {'zilliz_url': ZILLIZ_ENDPOINT,
-                           'zilliz_key': ZILLIZ_token,
-                           'zilliz_collection_name': zilliz_collection_name},
-            "aidata": {'embedding_model': openai_embedding_model, 'key': OPENAI_API_KEY},
-            "chatdata": {'question': request.data['question']}
+            'zilliz_url': ZILLIZ_ENDPOINT,
+            'zilliz_key': ZILLIZ_token,
+            'zilliz_collection_name': zilliz_collection_name,
+            'embedding_model': openai_embedding_model,
+            'open_ai_key': OPENAI_API_KEY,
+            'question': request.data['question']
         }
         url = hokong_URL + 'zillizchat/'
-        res = requests.post(url, data=json.dumps(hokongdata), headers={'Content-Type': "application/json"}).content
-        response = json.loads(res)
+        res = requests.post(url, data=hokongdata, headers={'Content-Type': 'multipart/form-data'}).content
+        response = json.loads(res.decode())
         return JSONResponse(SuccessResponse(response))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
