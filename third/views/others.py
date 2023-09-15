@@ -383,6 +383,7 @@ def chatgptWithZillizCloud(request):
             'zilliz_collection_name': zilliz_collection_name,
             'embedding_model': openai_embedding_model,
             'open_ai_key': OPENAI_API_KEY,
+            'chat_model': OPENAI_MODEL,
             'question': request.data['question']
         }
         url = hokong_URL + 'zillizchat/'
