@@ -395,3 +395,19 @@ def chatgptWithZillizCloud(request):
     except Exception:
         catchexcption(request)
         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
+@api_view(['POST'])
+@checkRequestToken()
+def getChatgptWithZillizCloudChatHistory(request):
+    try:
+
+        url = hokong_URL + 'zillizchat/history/'
+        res = requests.get(url, headers={'Content-Type': "application/json"}).content
+        response = json.loads(res.decode())
+        return JSONResponse(SuccessResponse(response))
+    except InvestError as err:
+        return JSONResponse(InvestErrorResponse(err))
+    except Exception:
+        catchexcption(request)
+        return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
