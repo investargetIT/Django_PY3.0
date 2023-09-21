@@ -80,6 +80,11 @@ OpenAiChatDataList = views.OpenAiChatDataView.as_view({
         'delete': 'destroy',
 })
 
+OpenAiZillizChatDataList = views.OpenAiZillizChatDataView.as_view({
+        'get': 'list',
+        'delete': 'destroy',
+})
+
 DiscordImageDataList = views.DiscordImageDataView.as_view({
         'get': 'list',
         'post': 'create',
@@ -103,5 +108,6 @@ urlpatterns = [
     url(r'^count', getCount, name='count', ),
     url(r'^aichattopic', OpenAiChatTopicDataList, name='openaichattopicdata', ),
     url(r'^aichat', OpenAiChatDataList, name='openaichatdata', ),
+    url(r'^aizillizchat', OpenAiZillizChatDataList, name='OpenAiZillizChatData', ),
     url(r'^discordimage', DiscordImageDataList, name='DiscordImageDataList', ),
 ]
