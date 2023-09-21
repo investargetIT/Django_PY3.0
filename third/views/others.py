@@ -408,7 +408,7 @@ def chatgptWithZillizCloud(request):
                     'topic_id': topic_id,
                     'user_id': request.user.id,
                     'user_content': question,
-                    'ai_content': response['result'],
+                    'ai_content': response['result']['answer'],
                     'isreset': response['reset'],
             })
         else:
