@@ -434,8 +434,8 @@ def chatgptWithPDFFile(request):
             'question': request.data['question']
         }
         url = hokong_URL + 'pdfchat/'
-        res = requests.get(url, data=json.dumps(hokongdata), headers={'Content-Type': "application/json"}).content
-        response = json.loads(res.decode())
+        res = requests.get(url, data=json.dumps(hokongdata), headers={'Content-Type': "application/json"}).content.decode()
+        response = json.loads(res)
         return JSONResponse(SuccessResponse(response))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
