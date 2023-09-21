@@ -433,8 +433,8 @@ def chatgptWithPDFFile(request):
             'chat_model': OPENAI_MODEL,
             'question': request.data['question']
         }
-        url = hokong_URL + 'zillizchat/history/'
-        res = requests.get(url, data=hokongdata).content
+        url = hokong_URL + 'pdfchat/'
+        res = requests.get(url, data=json.dumps(hokongdata), headers={'Content-Type': "application/json"}).content
         response = json.loads(res.decode())
         return JSONResponse(SuccessResponse(response))
     except InvestError as err:
