@@ -11,11 +11,12 @@ from mongoengine import Q
 from rest_framework import viewsets
 from bson.objectid import ObjectId
 from mongoDoc.models import GroupEmailData, ProjectData, MergeFinanceData, CompanyCatData, ProjRemark, \
-    WXChatdata, ProjectNews, ProjIndustryInfo, CompanySearchName, OpenAiChatData, OpenAiChatTopicData, DiscordImageData
+    WXChatdata, ProjectNews, ProjIndustryInfo, CompanySearchName, OpenAiChatData, OpenAiChatTopicData, DiscordImageData, \
+    OpenAiZillizChatData
 from mongoDoc.serializers import GroupEmailDataSerializer, ProjectDataSerializer, \
     MergeFinanceDataSerializer, CompanyCatDataSerializer, ProjRemarkSerializer, WXChatdataSerializer, \
     ProjectNewsSerializer, ProjIndustryInfoSerializer, GroupEmailListSerializer, CompanySearchNameSerializer, \
-    OpenAiChatDataSerializer, OpenAiChatTopicDataSerializer, DiscordImageDataSerializer
+    OpenAiChatDataSerializer, OpenAiChatTopicDataSerializer, DiscordImageDataSerializer, OpenAiZillizChatDataSerializer
 from utils.customClass import JSONResponse, InvestError, AppEventRateThrottle
 from utils.util import SuccessResponse, InvestErrorResponse, ExceptionResponse, catchexcption, logexcption, \
     loginTokenIsAvailable, read_from_cache, write_to_cache
@@ -954,6 +955,64 @@ class OpenAiChatDataView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
+class OpenAiZillizChatDataView(viewsets.ModelViewSet):
+    '''
+                list: 获取ai聊天会话列表
+                destroy： 删除聊天会话
+            '''
+    queryset = OpenAiZillizChatData.objects.all()
+    serializer_class = OpenAiZillizChatDataSerializer
+    filter_class = {'topic_id': 'in'}
+
+    def filterqueryset(self, request, queryset):
+        for key, method in self.filter_class.items():
+            value = request.GET.get(key)
+            if value:
+                if method == 'in':
+                    value = value.split(',')
+                queryset = queryset.filter(**{'%s__%s' % (key, method): value})
+        return queryset
+
+    @loginTokenIsAvailable()
+    def list(self, request, *args, **kwargs):
+        try:
+            page_size = request.GET.get('page_size', 10)
+            page_index = request.GET.get('page_index', 1)  # 从第一页开始
+            queryset = self.queryset(user_id=request.user.id)
+            queryset = self.filterqueryset(request, queryset)
+            queryset = queryset.order_by('-msgtime')
+            try:
+                count = queryset.count()
+                queryset = Paginator(queryset, page_size)
+                queryset = queryset.page(page_index)
+            except EmptyPage:
+                return JSONResponse(SuccessResponse({'count': 0, 'data': []}))
+            serializer = self.serializer_class(queryset,many=True)
+            return JSONResponse(SuccessResponse({'count':count, 'data':serializer.data}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+    @loginTokenIsAvailable()
+    def destroy(self, request, *args, **kwargs):
+        try:
+            id = request.GET.get('id')
+            instance = self.queryset.get(id=ObjectId(id))
+            if instance.user_id == request.user.id:
+                pass
+            else:
+                raise InvestError(2009, msg='无权限删除')
+            instance.delete()
+            return JSONResponse(SuccessResponse({'isDeleted': True}))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
+
 
 def getOpenAiChatConversationDataChat(topic_id):
     queryset = OpenAiChatData.objects.all().filter(topic_id=topic_id).order_by('-msgtime')
@@ -969,6 +1028,18 @@ def getOpenAiChatConversationDataChat(topic_id):
                 chatdata.extend(content)
     return chatdata
 
+def getOpenAiZillizChatConversationDataChat(topic_id):
+    queryset = OpenAiZillizChatData.objects.all().filter(topic_id=topic_id).order_by('-msgtime')
+    chatdata = []
+    if queryset.count() > 0:
+        for instance in queryset:
+            if instance.isreset:
+                break
+            chatdata.append((instance.ai_content, instance.user_content))
+            if len(chatdata) >= 5:
+                break
+    return chatdata
+
 
 def updateOpenAiChatTopicChat(topic_id, data):
     instance = OpenAiChatTopicData.objects.all().get(id=ObjectId(topic_id))
@@ -977,7 +1048,7 @@ def updateOpenAiChatTopicChat(topic_id, data):
         if serializer.is_valid():
             serializer.save()
         else:
-            raise InvestError(4012, msg='更新OpenAi 聊天会话失败', detail=serializer.error_messages)
+            raise InvestError(4012, msg='更新GPTChat 聊天会话失败', detail=serializer.error_messages)
     except Exception as err:
         logexcption(err=err)
 
@@ -991,6 +1062,15 @@ def saveOpenAiChatDataToMongo(data):
     except Exception as err:
         logexcption(err=err)
 
+def saveOpenAiZillizChatDataToMongo(data):
+    serializer = OpenAiZillizChatDataSerializer(data=data)
+    try:
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            raise InvestError(4012, msg='保存OpenAi langchain 聊天记录失败', detail=serializer.error_messages)
+    except Exception as err:
+        logexcption(err=err)
 
 
 def saveSendEmailDataToMongo(data):

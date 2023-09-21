@@ -195,7 +195,7 @@ class CompanySearchName(Document):
 class OpenAiChatTopicData(Document):
     topic_name = StringField(null=True)
     create_time = DateTimeField(null=True)
-    type = IntField(default=1) #    (1 gptchat)(2 discord image)
+    type = IntField(default=1) #    (1 gptchat)(2 discord image)(3 zilliz chat)(4 pdffile chat)
     lastchat_time = DateTimeField(null=True)
     user_id = IntField(null=True)
     meta = {"collection": openAiChatTopicDataMongoTableName}
@@ -227,6 +227,24 @@ class OpenAiChatData(Document):
             self.msgtime = datetime.datetime.now()
         super(OpenAiChatData, self).save(force_insert, validate, clean, write_concern, cascade, cascade_kwargs, _refs,
                                       save_condition, signal_kwargs, **kwargs)
+
+
+class OpenAiZillizChatData(Document):
+    topic_id = StringField(null=True)
+    user_id = IntField(null=True)
+    ai_content = StringField(null=True)
+    user_content = BooleanField(default=False)
+    isreset = BooleanField(default=False)
+    msgtime = DateTimeField(null=True)
+    meta = {"collection": 'openaizillizchatdata'}
+    def save(self, force_insert=False, validate=True, clean=True,
+             write_concern=None, cascade=None, cascade_kwargs=None,
+             _refs=None, save_condition=None, signal_kwargs=None, **kwargs):
+        if self.msgtime is None:
+            self.msgtime = datetime.datetime.now()
+        super(OpenAiZillizChatData, self).save(force_insert, validate, clean, write_concern, cascade, cascade_kwargs, _refs,
+                                      save_condition, signal_kwargs, **kwargs)
+
 
 
 class DiscordImageData(Document):

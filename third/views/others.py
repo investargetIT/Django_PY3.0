@@ -12,7 +12,8 @@ from django.http import StreamingHttpResponse
 from rest_framework.decorators import api_view
 
 from invest.settings import APILOG_PATH
-from mongoDoc.views import saveOpenAiChatDataToMongo, updateOpenAiChatTopicChat, getOpenAiChatConversationDataChat
+from mongoDoc.views import saveOpenAiChatDataToMongo, updateOpenAiChatTopicChat, getOpenAiChatConversationDataChat, \
+    getOpenAiZillizChatConversationDataChat, saveOpenAiZillizChatDataToMongo
 from third.thirdconfig import baiduaip_appid, baiduaip_secretkey, baiduaip_appkey, OPENAI_API_KEY, OPENAI_URL, \
     OPENAI_MODEL, hokong_URL, max_token, aliyun_appcode, ZILLIZ_ENDPOINT, ZILLIZ_token, zilliz_collection_name, \
     openai_embedding_model
@@ -360,12 +361,11 @@ def embeddingFileAndUploadToZillizCloud(request):
             'zilliz_collection_name': zilliz_collection_name,
             'embedding_model': openai_embedding_model,
             'open_ai_key': OPENAI_API_KEY,
-
         }
         files = {'file': uploaddata}
         url = hokong_URL + 'embedzilliz/'
-        res = requests.post(url, files=files, data=hokongdata).content
-        response = json.loads(res.decode())
+        res = requests.post(url, files=files, data=hokongdata).content.decode()
+        response = json.loads(res)
         return JSONResponse(SuccessResponse(response))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
@@ -377,18 +377,43 @@ def embeddingFileAndUploadToZillizCloud(request):
 @checkRequestToken()
 def chatgptWithZillizCloud(request):
     try:
+        data = request.data
+        topic_id = data.get('topic_id')
+        question = data.get('question')
+        if not topic_id:
+            raise InvestError(20072, msg='会话id不能为空')
+        if not question:
+            raise InvestError(20072, msg='会话消息不能为空')
+        isMultiple = data.get('isMultiple', True)
+        if isMultiple:
+            historydata = getOpenAiZillizChatConversationDataChat(topic_id)
+        else:
+            historydata = []
         hokongdata = {
+            "aidata": {'url': OPENAI_URL, 'key': OPENAI_API_KEY},
+            "chat_history": historydata,
             'zilliz_url': ZILLIZ_ENDPOINT,
             'zilliz_key': ZILLIZ_token,
             'zilliz_collection_name': zilliz_collection_name,
             'embedding_model': openai_embedding_model,
             'open_ai_key': OPENAI_API_KEY,
             'chat_model': OPENAI_MODEL,
-            'question': request.data['question']
+            'question': question
         }
         url = hokong_URL + 'zillizchat/'
-        res = requests.post(url, data=hokongdata).content
-        response = json.loads(res.decode())
+        res = requests.post(url, data=json.dumps(hokongdata), headers={'Content-Type': "application/json"}).content.decode()
+        response = json.loads(res)
+        if response['success']:
+            saveOpenAiZillizChatDataToMongo({
+                    'topic_id': topic_id,
+                    'user_id': request.user.id,
+                    'user_content': question,
+                    'ai_content': response['result'],
+                    'isreset': response['reset'],
+            })
+        else:
+            raise InvestError(8312, msg=response['errmsg'], detail=response['errmsg'])
+        updateOpenAiChatTopicChat(topic_id, {'lastchat_time': datetime.datetime.now()})
         return JSONResponse(SuccessResponse(response))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
@@ -399,11 +424,17 @@ def chatgptWithZillizCloud(request):
 
 @api_view(['POST'])
 @checkRequestToken()
-def getChatgptWithZillizCloudChatHistory(request):
+def chatgptWithPDFFile(request):
     try:
-
+        file_key = request.data['file_key']
+        hokongdata = {
+            'file_key': file_key,
+            'open_ai_key': OPENAI_API_KEY,
+            'chat_model': OPENAI_MODEL,
+            'question': request.data['question']
+        }
         url = hokong_URL + 'zillizchat/history/'
-        res = requests.get(url, headers={'Content-Type': "application/json"}).content
+        res = requests.get(url, data=hokongdata).content
         response = json.loads(res.decode())
         return JSONResponse(SuccessResponse(response))
     except InvestError as err:

@@ -1,7 +1,8 @@
 from rest_framework_mongoengine.serializers import DocumentSerializer
 
 from mongoDoc.models import GroupEmailData, ProjectData, MergeFinanceData, CompanyCatData, ProjRemark, \
-    WXChatdata, ProjectNews, ProjIndustryInfo, CompanySearchName, OpenAiChatData, OpenAiChatTopicData, DiscordImageData
+    WXChatdata, ProjectNews, ProjIndustryInfo, CompanySearchName, OpenAiChatData, OpenAiChatTopicData, DiscordImageData, \
+    OpenAiZillizChatData
 
 
 class CompanyCatDataSerializer(DocumentSerializer):
@@ -70,6 +71,11 @@ class OpenAiChatTopicDataSerializer(DocumentSerializer):
 class OpenAiChatDataSerializer(DocumentSerializer):
     class Meta:
         model = OpenAiChatData
+        fields = '__all__'
+
+class OpenAiZillizChatDataSerializer(DocumentSerializer):
+    class Meta:
+        model = OpenAiZillizChatData
         fields = '__all__'
 
 class DiscordImageDataSerializer(DocumentSerializer):
