@@ -24,6 +24,7 @@ from dataroom.serializer import DataroomSerializer, DataroomCreateSerializer, Da
     DataroomUserDiscussUpdateSerializer, DataroomUserReadFileRecordSerializer
 from invest.settings import APILOG_PATH, HAYSTACK_CONNECTIONS
 from proj.models import project
+from third.views.qimingpianapi import addProductSummary
 from third.views.qiniufile import deleteqiniufile, downloadFileToPath
 from utils.customClass import InvestError, JSONResponse, RelationFilter, MySearchFilter
 from utils.logicJudge import is_dataroomTrader, is_dataroomInvestor, is_projTrader
@@ -635,6 +636,8 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
                     destquery = directoryorfile.parent.asparent_directories.exclude(pk=directoryorfile.pk).filter(is_deleted=False,orderNO__gte=directoryorfile.orderNO)
                     if destquery.exists():
                         destquery.update(orderNO = F('orderNO') + 1)
+                if directoryorfile.isFile and directoryorfile.realfilekey:
+                    threading.Thread(target=addProductSummary, args=(directoryorfile.createuser.usernameC, dataroominstance.proj.realname, directoryorfile.realfilekey, filename)).start()
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(DataroomdirectoryorfileSerializer(directoryorfile).data, lang)))
         except InvestError as err:
             return JSONResponse(InvestErrorResponse(err))
