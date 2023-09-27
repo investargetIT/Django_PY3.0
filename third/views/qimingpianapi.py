@@ -77,7 +77,7 @@ def addProductSummary(username, projectname, file_key, filename):
                 print('导入dataroom文件（项目：%s, 文件：%s）成功' % (projectname, filename))
             elif res['status'] == 60004:
                 print('导入dataroom文件（%s)失败，用户(%s)不存在' % (projectname, filename))
-                data['user_name'] = 'Summer'
+                data['user_name'] = 'Investarget'
                 res = requests.post(url, data=data,
                                     headers={'Content-Type': 'application/x-www-form-urlencoded'}).content
                 res = json.loads(res.decode())
