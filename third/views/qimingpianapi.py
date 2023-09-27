@@ -66,28 +66,34 @@ def addProductSummary(username, projectname, file_key, filename):
             data = {
                 'open_id': qimingpian_open_id,
                 'name': projectname,    # 企名片项目名称
+                'summary': '',
                 'file': json.dumps([{"file_name": filename, "url": file_url}]),
                 'user_name': username,   # 创建人
             }
             url = 'https://qimingpianapi.investarget.com/Summary/addProductSummary'
             res = requests.post(url, data=data, headers={'Content-Type': 'application/x-www-form-urlencoded'}).content
-            res = json.loads(res)
+            res = json.loads(res.decode())
             if res['status'] == 0:
                 print('导入dataroom文件（项目：%s, 文件：%s）成功' % (projectname, filename))
             elif res['status'] == 60004:
+                print('导入dataroom文件（%s)失败，用户(%s)不存在' % (projectname, filename))
                 data['user_name'] = 'Summer'
                 res = requests.post(url, data=data,
                                     headers={'Content-Type': 'application/x-www-form-urlencoded'}).content
-                res = json.loads(res)
+                res = json.loads(res.decode())
                 if res['status'] == 0:
                     print('导入dataroom文件（项目：%s, 文件：%s）成功' % (projectname, filename))
                 else:
+                    print('导入dataroom文件（%s)失败，(%s)' % (projectname, res['message']))
                     raise InvestError(20071, msg='添加项目开发纪要（项目：%s, 文件：%s）失败' % (projectname, filename),
                                       detail=res['message'])
             else:
+                print('导入dataroom文件（%s)失败，(%s)' % (projectname, res['message']))
                 raise InvestError(20071, msg='添加项目开发纪要（项目：%s, 文件：%s）失败' % (projectname, filename),
                                   detail=res['message'])
         else:
+            print('上传企名片文件err（username：%s, projectname：%s, file_key：%s, filename：%s）' %
+                        (username, projectname, file_key, filename))
             logexcption('上传企名片文件err（username：%s, projectname：%s, file_key：%s, filename：%s）' %
                         (username, projectname, file_key, filename))
     except Exception:
