@@ -46,7 +46,7 @@ def uploadfile(file_path, key):
     url = 'https://qimingpianapi.investarget.com/Upload/file'
     try:
         res = requests.post(url, data=form_data,  headers={'Content-Type': form_data.content_type}).content
-        res = json.loads(res)
+        res = json.loads(res.decode())
         if res['status'] == 0:
             print('上传企名片文件（文件id：%s, 文件url：%s）成功' % (key, res['data']['list']['url']))
             return res['data']['list']['url']
