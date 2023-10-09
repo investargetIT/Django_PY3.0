@@ -65,20 +65,25 @@ def addProductSummary(username, projectname, file_key, filename):
         if username and projectname and file_url and filename:
             data = {
                 'open_id': qimingpian_open_id,
-                'name': projectname,    # 企名片项目名称
-                'summary': 'dataroom文件',
-                'file': json.dumps([{"file_name": filename, "url": file_url}]),
+                'product': projectname,    # 企名片项目名称
+                'file_name': filename,
+                'url': file_url,
                 'user_name': username,   # 创建人
             }
-            url = 'https://qimingpianapi.investarget.com/Summary/addProductSummary'
+            url = 'https://qimingpianapi.investarget.com/ProductFile/addProductFileOpen'
             res = requests.post(url, data=data, headers={'Content-Type': 'application/x-www-form-urlencoded'}).content
             res = json.loads(res.decode())
             if res['status'] == 0:
                 print('导入dataroom文件（项目：%s, 文件：%s）成功' % (projectname, filename))
-            elif res['status'] == 60004:
-                print('导入dataroom文件（%s)失败，用户(%s)不存在' % (projectname, filename))
+            elif res['status'] == 60008:
+                print('导入dataroom文件（%s)失败，项目(%s)不存在' % (filename, projectname))
+                raise InvestError(20071, msg='添加项目开发纪要（项目：%s, 文件：%s）失败' % (projectname, filename),
+                                      detail=res['message'])
+            else:
+                print('导入dataroom文件（%s)失败，项目不存在' % (projectname))
                 data['user_name'] = 'Investarget'
-                res = requests.post(url, data=data, headers={'Content-Type': 'application/x-www-form-urlencoded'}).content
+                res = requests.post(url, data=data,
+                                    headers={'Content-Type': 'application/x-www-form-urlencoded'}).content
                 res = json.loads(res.decode())
                 if res['status'] == 0:
                     print('导入dataroom文件（项目：%s, 文件：%s）成功' % (projectname, filename))
@@ -86,10 +91,6 @@ def addProductSummary(username, projectname, file_key, filename):
                     print('导入dataroom文件（%s)失败，(%s)' % (projectname, res['message']))
                     raise InvestError(20071, msg='添加项目开发纪要（项目：%s, 文件：%s）失败' % (projectname, filename),
                                       detail=res['message'])
-            else:
-                print('导入dataroom文件（%s)失败，(%s)' % (projectname, res['message']))
-                raise InvestError(20071, msg='添加项目开发纪要（项目：%s, 文件：%s）失败' % (projectname, filename),
-                                  detail=res['message'])
         else:
             print('上传企名片文件err（username：%s, projectname：%s, file_key：%s, filename：%s）' %
                         (username, projectname, file_key, filename))
