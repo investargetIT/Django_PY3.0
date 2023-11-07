@@ -427,6 +427,7 @@ def chatgptWithZillizCloud(request):
 def chatgptWithPDFFile(request):
     try:
         file_key = request.data['file_key']
+        topic_id = request.data.get('topic_id')
         hokongdata = {
             'file_key': file_key,
             'open_ai_key': OPENAI_API_KEY,
@@ -436,6 +437,15 @@ def chatgptWithPDFFile(request):
         url = hokong_URL + 'pdfchat/'
         res = requests.post(url, data=json.dumps(hokongdata), headers={'Content-Type': "application/json"}).content.decode()
         response = json.loads(res)
+        if topic_id and response['success']:
+            saveOpenAiZillizChatDataToMongo({
+                'topic_id': topic_id,
+                'user_id': request.user.id,
+                'user_content': request.data['question'],
+                'ai_content': response['result'],
+                'isreset': response['reset'],
+            })
+            updateOpenAiChatTopicChat(topic_id, {'lastchat_time': datetime.datetime.now()})
         return JSONResponse(SuccessResponse(response))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
