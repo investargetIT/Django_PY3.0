@@ -4,6 +4,7 @@ import json
 import os
 import random
 import string
+import threading
 import traceback
 
 import datetime
@@ -17,7 +18,7 @@ from mongoDoc.views import saveOpenAiChatDataToMongo, updateOpenAiChatTopicChat,
 from third.thirdconfig import baiduaip_appid, baiduaip_secretkey, baiduaip_appkey, OPENAI_API_KEY, OPENAI_URL, \
     OPENAI_MODEL, hokong_URL, max_token, aliyun_appcode, ZILLIZ_ENDPOINT, ZILLIZ_token, zilliz_collection_name, \
     openai_embedding_model
-from third.views.qiniufile import deleteqiniufile
+from third.views.qiniufile import deleteqiniufile, qiniuuploadfile, qiniuuploaddata
 from utils.customClass import JSONResponse, InvestError
 from utils.somedef import file_iterator
 from utils.util import SuccessResponse, catchexcption, ExceptionResponse, InvestErrorResponse, checkrequesttoken, \
@@ -352,6 +353,7 @@ def getopenaitextcompletions(request):
 def embeddingFileAndUploadToZillizCloud(request):
     try:
         data_dict = request.FILES
+        topic_id = request.data.get('topic_id')
         uploaddata = None
         for key in data_dict.keys():
             uploaddata = data_dict[key]
@@ -366,6 +368,17 @@ def embeddingFileAndUploadToZillizCloud(request):
         url = hokong_URL + 'embedzilliz/'
         res = requests.post(url, files=files, data=hokongdata).content.decode()
         response = json.loads(res)
+        file_key = response['result']
+        if topic_id and response['success']:
+            saveOpenAiZillizChatDataToMongo({
+                'topic_id': topic_id,
+                'user_id': request.user.id,
+                'file_key': file_key,
+                'user_content': uploaddata.name,
+                'isreset': response['reset'],
+            })
+            updateOpenAiChatTopicChat(topic_id, {'lastchat_time': datetime.datetime.now()})
+        threading.Thread(target=qiniuuploaddata, args=(uploaddata, 'file', file_key)).start()
         return JSONResponse(SuccessResponse(response))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))

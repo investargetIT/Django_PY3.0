@@ -234,6 +234,7 @@ class OpenAiZillizChatData(Document):
     user_id = IntField(null=True)
     ai_content = StringField(null=True)
     user_content = StringField(default=False)
+    file_key = StringField(null=True)
     isreset = BooleanField(default=False)
     msgtime = DateTimeField(null=True)
     meta = {"collection": 'openaizillizchatdata'}

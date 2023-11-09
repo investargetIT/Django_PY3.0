@@ -18,7 +18,7 @@ from django.core.cache import caches
 from django.db.models import Q
 
 from qiniu import BucketManager
-from qiniu.services.storage.uploader import  put_file
+from qiniu.services.storage.uploader import put_file, put_data
 from rest_framework.decorators import api_view
 from invest.settings import APILOG_PATH
 from third.models import QiNiuFileUploadRecord
@@ -186,7 +186,18 @@ def qiniuuploadfile(filepath, bucket_name, bucket_key=None):
             return False, str(info),None
     else:
         return False,None,None
-
+#上传二进制文件
+def qiniuuploaddata(data, bucket_name, bucket_key):
+    q = qiniu.Auth(ACCESS_KEY, SECRET_KEY)
+    token = q.upload_token(bucket_name, bucket_key, 3600, policy={}, strict_policy=True)
+    ret, info = put_data(token, bucket_key, data)
+    if info is not None:
+        if info.status_code == 200:
+            return True, getUrlWithBucketAndKey(bucket_name, ret["key"]),bucket_key
+        else:
+            return False, str(info),None
+    else:
+        return False,None,None
 
 #下载文件到本地
 def downloadFileToPath(key,bucket,path):
