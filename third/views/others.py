@@ -375,7 +375,7 @@ def embeddingFileAndUploadToZillizCloud(request):
                 'user_id': request.user.id,
                 'file_key': file_key,
                 'user_content': uploaddata.name,
-                'isreset': response['reset'],
+                'isreset': False,
             })
             updateOpenAiChatTopicChat(topic_id, {'lastchat_time': datetime.datetime.now()})
         threading.Thread(target=qiniuuploaddata, args=(uploaddata, 'file', file_key)).start()
