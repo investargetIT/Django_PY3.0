@@ -188,9 +188,16 @@ def qiniuuploadfile(filepath, bucket_name, bucket_key=None):
         return False,None,None
 #上传二进制文件
 def qiniuuploaddata(data, bucket_name, bucket_key):
+    dirpath = APILOG_PATH['uploadFilePath']
+    if not os.path.exists(dirpath):
+        os.makedirs(dirpath)
+    filepath = os.path.join(dirpath, bucket_key)
+    with open(filepath, 'wb+') as destination:
+        for chunk in data.chunks():
+            destination.write(chunk)
     q = qiniu.Auth(ACCESS_KEY, SECRET_KEY)
     token = q.upload_token(bucket_name, bucket_key, 3600, policy={}, strict_policy=True)
-    ret, info = put_data(token, bucket_key, data)
+    ret, info = put_file(token, bucket_key, filepath, version='v2')
     if info is not None:
         if info.status_code == 200:
             return True, getUrlWithBucketAndKey(bucket_name, ret["key"]),bucket_key
