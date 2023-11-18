@@ -19,7 +19,7 @@ def searchPerson(keywords):
     }
     url = 'https://qimingpianapi.investarget.com/Person/searchPerson'
     res = requests.post(url, data=data, headers={'Content-Type': 'application/x-www-form-urlencoded'}).content
-    res = json.loads(res)
+    res = json.loads(res.decode())
     if res['status'] == 0:
         if res['data']['count'] >= 1:
             return res['data']['list']
