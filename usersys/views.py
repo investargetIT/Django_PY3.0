@@ -489,7 +489,7 @@ class UserView(viewsets.ModelViewSet):
                                 if user.org:  # 企名片投资人标签
                                     tag_qs = Tag.objects.filter(is_deleted=False, id__in=tags)
                                     if tag_qs.exists():
-                                        threading.Thread(target=updatePersonTag, args=(user.usernameC, user.org.orgfullname, tag_qs)).start()
+                                        threading.Thread(target=updatePersonTag, args=(user.mobile, tag_qs)).start()
                         else:
                             raise InvestError(20071, msg='用户信息修改失败', detail='%s' % userserializer.error_messages)
                         newuserdata = UserSerializer(user)
