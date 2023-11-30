@@ -1035,7 +1035,8 @@ def getOpenAiZillizChatConversationDataChat(topic_id):
         for instance in queryset:
             if instance.isreset:
                 break
-            chatdata.append((instance.user_content, instance.ai_content))
+            if instance.user_content and instance.ai_content:
+                chatdata.append((instance.user_content, instance.ai_content))
             if len(chatdata) >= 5:
                 break
     return chatdata
