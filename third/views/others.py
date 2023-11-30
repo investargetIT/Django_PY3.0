@@ -378,7 +378,11 @@ def embeddingFileAndUploadToZillizCloud(request):
                 'isreset': False,
             })
             updateOpenAiChatTopicChat(topic_id, {'lastchat_time': datetime.datetime.now()})
-        threading.Thread(target=qiniuuploaddata, args=(uploaddata, 'file', file_key)).start()
+        file_path = os.path.join(APILOG_PATH['uploadFilePath'], file_key)
+        with open(file_path,  "ab") as destination:
+            for chunk in uploaddata.chunks():
+                destination.write(chunk)
+        threading.Thread(target=qiniuuploadfile, args=(file_path, 'file', file_key)).start()
         return JSONResponse(SuccessResponse(response))
     except InvestError as err:
         return JSONResponse(InvestErrorResponse(err))
