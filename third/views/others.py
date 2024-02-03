@@ -15,9 +15,9 @@ from rest_framework.decorators import api_view
 from invest.settings import APILOG_PATH
 from mongoDoc.views import saveOpenAiChatDataToMongo, updateOpenAiChatTopicChat, getOpenAiChatConversationDataChat, \
     getOpenAiZillizChatConversationDataChat, saveOpenAiZillizChatDataToMongo
-from third.thirdconfig import baiduaip_appid, baiduaip_secretkey, baiduaip_appkey, OPENAI_API_KEY, OPENAI_URL, \
-    OPENAI_MODEL, hokong_URL, max_token, aliyun_appcode, ZILLIZ_ENDPOINT, ZILLIZ_token, zilliz_collection_name, \
-    openai_embedding_model
+from third.thirdconfig import baiduaip_appid, baiduaip_secretkey, baiduaip_appkey, hokong_URL, max_token, \
+    aliyun_appcode, ZILLIZ_ENDPOINT, ZILLIZ_token, zilliz_collection_name, openai_embedding_model, BAICHUAN_CHAT_MODEL, \
+    BAICHUAN_URL, BAICHUAN_API_KEY
 from third.views.qiniufile import deleteqiniufile, qiniuuploadfile, qiniuuploaddata
 from utils.customClass import JSONResponse, InvestError
 from utils.somedef import file_iterator
@@ -298,7 +298,7 @@ def deleteUpload(request):
 def getopenaitextcompletions(request):
     try:
         data = request.data
-        data['model'] = OPENAI_MODEL
+        data['model'] = BAICHUAN_CHAT_MODEL
         topic_id = data.pop('topic_id', None)
         newmessages = data['messages']
         if not topic_id:
@@ -311,7 +311,7 @@ def getopenaitextcompletions(request):
             historydata.extend(newmessages)
             data['messages'] = historydata
         hokongdata = {
-            "aidata" : {'url': OPENAI_URL,'key': OPENAI_API_KEY},
+            "aidata" : {'url': BAICHUAN_URL,'key': BAICHUAN_API_KEY},
             "chatdata": data
         }
         url = hokong_URL + 'ai/'
@@ -362,12 +362,12 @@ def embeddingFileAndUploadToZillizCloud(request):
             'zilliz_key': ZILLIZ_token,
             'zilliz_collection_name': zilliz_collection_name,
             'embedding_model': openai_embedding_model,
-            'open_ai_key': OPENAI_API_KEY,
         }
         files = {'file': uploaddata}
         url = hokong_URL + 'embedzilliz/'
         res = requests.post(url, files=files, data=hokongdata).content.decode()
         response = json.loads(res)
+        print(response)
         file_key = response['result']
         if topic_id and response['success']:
             saveOpenAiZillizChatDataToMongo({
@@ -407,14 +407,13 @@ def chatgptWithZillizCloud(request):
         else:
             historydata = []
         hokongdata = {
-            "aidata": {'url': OPENAI_URL, 'key': OPENAI_API_KEY},
+            "ai_key": BAICHUAN_API_KEY,
             "chat_history": historydata,
             'zilliz_url': ZILLIZ_ENDPOINT,
             'zilliz_key': ZILLIZ_token,
             'zilliz_collection_name': zilliz_collection_name,
             'embedding_model': openai_embedding_model,
-            'open_ai_key': OPENAI_API_KEY,
-            'chat_model': OPENAI_MODEL,
+            'chat_model': BAICHUAN_CHAT_MODEL,
             'question': question
         }
         url = hokong_URL + 'zillizchat/'
@@ -447,8 +446,8 @@ def chatgptWithPDFFile(request):
         topic_id = request.data.get('topic_id')
         hokongdata = {
             'file_key': file_key,
-            'open_ai_key': OPENAI_API_KEY,
-            'chat_model': OPENAI_MODEL,
+            'ai_key': BAICHUAN_API_KEY,
+            'chat_model': BAICHUAN_CHAT_MODEL,
             'question': request.data['question']
         }
         url = hokong_URL + 'pdfchat/'
