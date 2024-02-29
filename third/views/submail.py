@@ -44,6 +44,10 @@ SMSCODE_projectsign = {
         'in':'dNody3',
         'out':None
         },
+    '99':{
+        'in':'52DI34',
+        'out':'52DI34'
+        },
     }
 
 
@@ -137,6 +141,8 @@ def xsendEmail(destination,projectsign,vars=None):
 def sendSmscode(request):
     try :
         source = request.META['HTTP_SOURCE']
+        if not source:
+            source = '99'
         if 'HTTP_X_FORWARDED_FOR' in request.META:
             ip = request.META['HTTP_X_FORWARDED_FOR']
         else:
@@ -154,10 +160,6 @@ def sendSmscode(request):
             raise InvestError(code=3004)
         mobilecode = MobileAuthCode(mobile=destination)
         mobilecode.save()
-        try:
-            datasource = DataSource.objects.get(id=source)
-        except DataSource.DoesNotExist:
-            raise InvestError(8888, msg='未知来源码，请联系工作人员', detail='datasource不合法')
         varsdict = {'code': mobilecode.code, 'time': '30'}
         if areacode in [u'86', '86', 86, None]:
             projectsign = SMSCODE_projectsign.get(str(source), {}).get('in')
