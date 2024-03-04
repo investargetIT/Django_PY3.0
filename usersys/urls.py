@@ -30,6 +30,10 @@ checkRequestTokenAvailable = views.UserView.as_view({
         'get': 'checkRequestTokenAvailable',
 })
 
+checkMobileSMSCodeAvailable = views.UserView.as_view({
+        'post': 'checkMobileSMSCode',
+})
+
 find_password = views.UserView.as_view({
         'post': 'findpassword',
 })
@@ -195,6 +199,7 @@ userGetStarInvestorCount = views.UserGetStarInvestorView.as_view({
 urlpatterns = [
     url(r'^$', user_list,name='user-list',),
     url(r'^simple$', getuserinfo_simple,name='getuserinfo_simple',),
+    url(r'^checkSms$', checkMobileSMSCodeAvailable,name='checkMobileSMSCodeAvailable',),
     url(r'^investor$', getUserInvestor,name='getUserInvestor_indGroup',),
     url(r'^indgroup/investor$', getQuitTraderInvestor,name='getindgroupQuitTraderInvestor',),
     url(r'^regsource$', getRegistSource, name='getRegistSource', ),

@@ -613,6 +613,28 @@ class UserView(viewsets.ModelViewSet):
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 
+    def checkMobileSMSCode(self, request, *args, **kwargs):
+        try:
+            data = request.data
+            mobile = data.get('mobile')
+            mobilecode = data.pop('mobilecode', '86')
+            mobilecodetoken = data.pop('mobilecodetoken', None)
+            if not mobilecodetoken:
+                raise InvestError(code=2005, msg='验证失败', detail='验证码token错误')
+            try:
+                mobileauthcode = MobileAuthCode.objects.get(mobile=mobile, code=mobilecode, token=mobilecodetoken)
+            except MobileAuthCode.DoesNotExist:
+                raise InvestError(code=2005, msg='验证失败', detail='验证码错误')
+            else:
+                if mobileauthcode.isexpired():
+                    raise InvestError(code=20051, msg='验证失败', detail='验证码已过期')
+            return JSONResponse(SuccessResponse(True))
+        except InvestError as err:
+            return JSONResponse(InvestErrorResponse(err))
+        except Exception:
+            catchexcption(request)
+            return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+
     @detail_route(methods=['put'])
     @loginTokenIsAvailable()
     def changepassword(self, request, *args, **kwargs):
