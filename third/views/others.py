@@ -310,17 +310,23 @@ def getopenaitextcompletions(request):
             historydata = getOpenAiChatConversationDataChat(topic_id)
             historydata.extend(newmessages)
             data['messages'] = historydata
+        data['input'] = {'messages': data['messages']}
+        data.pop('messages')
         hokongdata = {
             "aidata" : {'url': TONGYI_URL,'key': TONGYI_API_KEY},
             "chatdata": data
         }
+        print(data)
         url = hokong_URL + 'ai/'
         res = requests.post(url, data=json.dumps(hokongdata), headers={'Content-Type': "application/json"}).content.decode()
         response = json.loads(res)
         if response['success']:
+            print(response)
             result = json.loads(response['result'])
-            if result.get('choices'):
-                replymessage = result["choices"][0]["message"]
+            if result.get('output'):   # 通义千问
+                replymessage = result["output"]["text"]
+            # if result.get('choices'):  # openai /百川
+            #     replymessage = result["choices"][0]["message"]
                 saveOpenAiChatDataToMongo({
                     'topic_id': topic_id,
                     'user_id': request.user.id,

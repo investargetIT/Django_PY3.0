@@ -1015,11 +1015,11 @@ class OpenAiZillizChatDataView(viewsets.ModelViewSet):
 
 
 def getOpenAiChatConversationDataChat(topic_id):
-    queryset = OpenAiChatData.objects.all().filter(topic_id=topic_id).order_by('-msgtime')
+    queryset = OpenAiChatData.objects.all().filter(topic_id=topic_id).order_by('msgtime')
     chatdata = []
     if queryset.count() > 0:
         for instance in queryset:
-            if instance.isreset:
+            if instance.isreset or len(chatdata) >= 10:
                 break
             content = json.loads(instance.content)
             if instance.isAI:
