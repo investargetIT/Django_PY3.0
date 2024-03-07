@@ -34,7 +34,7 @@ def getAccessTokenWithCode(code):
           % (PeiDiWX_APPID, PeiDiWX_APPSECRET, code)
     response = requests.get(url).content
     res = json.loads(response.decode())
-    access_token, open_id = res['access_token'], res['open_id']
+    access_token, open_id = res['access_token'], res['openid']
     expires_in = res['expires_in'] < 360
     if expires_in:
         access_token, open_id = refreshAccessToken(res['refresh_token'])
@@ -46,7 +46,7 @@ def refreshAccessToken(refresh_token):
           (PeiDiWX_APPID, refresh_token)
     response = requests.get(url).content
     res = json.loads(response.decode())
-    access_token, open_id = res['access_token'], res['open_id']
+    access_token, open_id = res['access_token'], res['openid']
     return access_token, open_id
 
 def getUserInfo(access_token , open_id):
