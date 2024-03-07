@@ -324,7 +324,8 @@ def getopenaitextcompletions(request):
             print(response)
             result = json.loads(response['result'])
             if result.get('output'):   # 通义千问
-                replymessage = result["output"]["text"]
+                text = result["output"]["text"]
+                replymessage = {'role': 'assistant', 'content': text}
             # if result.get('choices'):  # openai /百川
             #     replymessage = result["choices"][0]["message"]
                 saveOpenAiChatDataToMongo({
