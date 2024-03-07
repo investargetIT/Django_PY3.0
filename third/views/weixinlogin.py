@@ -6,7 +6,7 @@ from rest_framework.decorators import api_view
 
 from third.thirdconfig import WX_APPID, WX_APPSECRET, PeiDiWX_APPID, PeiDiWX_APPSECRET
 from utils.customClass import InvestError, JSONResponse
-from utils.util import logexcption, catchexcption, SuccessResponse, ExceptionResponse
+from utils.util import logexcption, catchexcption, SuccessResponse, ExceptionResponse, InvestErrorResponse
 
 
 def get_openid(code):
@@ -34,6 +34,9 @@ def getAccessTokenWithCode(code):
           % (PeiDiWX_APPID, PeiDiWX_APPSECRET, code)
     response = requests.get(url).content
     res = json.loads(response.decode())
+    openid = res.get('openid')
+    if not openid:
+        raise InvestError(2050, msg=res['errmsg'])
     access_token, open_id = res['access_token'], res['openid']
     expires_in = res['expires_in'] < 360
     if expires_in:
@@ -46,6 +49,9 @@ def refreshAccessToken(refresh_token):
           (PeiDiWX_APPID, refresh_token)
     response = requests.get(url).content
     res = json.loads(response.decode())
+    openid = res.get('openid')
+    if not openid:
+        raise InvestError(2050, msg=res['errmsg'])
     access_token, open_id = res['access_token'], res['openid']
     return access_token, open_id
 
@@ -53,6 +59,9 @@ def getUserInfo(access_token , open_id):
     url = 'https://api.weixin.qq.com/sns/userinfo?access_token=%s&openid=%s&lang=zh_CN' % (access_token, open_id)
     response = requests.get(url).content
     res = json.loads(response.decode())
+    openid = res.get('openid')
+    if not openid:
+        raise InvestError(2050, msg=res['errmsg'])
     return res
 
 
@@ -63,6 +72,8 @@ def getWeiXinUserInfo(request):
         access_token, open_id = getAccessTokenWithCode(code)
         userinfo = getUserInfo(access_token, open_id)
         return JSONResponse(SuccessResponse(userinfo))
+    except InvestError as err:
+        return JSONResponse(InvestErrorResponse(err))
     except Exception:
         catchexcption(request)
         return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
