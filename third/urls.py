@@ -3,7 +3,7 @@ from django.conf.urls import url
 from third.views import submail
 from third.views import qiniufile
 from third.views import others
-
+from third.views import weixinlogin
 from third.views import audioTransfer
 from third.views import feishuyun
 
@@ -49,5 +49,6 @@ urlpatterns = [
     url(r'^openai/text/completions$', others.getopenaitextcompletions, name='getopenaitextcompletions', ),
     url(r'^openai/file/embedding$', others.embeddingFileAndUploadToZillizCloud, name='embeddingFileAndUploadToZillizCloud', ),
     url(r'^openai/file/completions$', others.chatgptWithZillizCloud, name='chatgptWithZillizCloud', ),
-    url(r'^openai/file/pdfchat', others.chatgptWithPDFFile, name='chatgptWithPDFFile', )
+    url(r'^openai/file/pdfchat$', others.chatgptWithPDFFile, name='chatgptWithPDFFile', )
+    url(r'^weixin/pduserinfo$', weixinlogin.getUserInfo, name='getPeidiWeixinUserInfo', )
 ]
