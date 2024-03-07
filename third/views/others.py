@@ -16,8 +16,8 @@ from invest.settings import APILOG_PATH
 from mongoDoc.views import saveOpenAiChatDataToMongo, updateOpenAiChatTopicChat, getOpenAiChatConversationDataChat, \
     getOpenAiZillizChatConversationDataChat, saveOpenAiZillizChatDataToMongo
 from third.thirdconfig import baiduaip_appid, baiduaip_secretkey, baiduaip_appkey, hokong_URL, max_token, \
-    aliyun_appcode, ZILLIZ_ENDPOINT, ZILLIZ_token, zilliz_collection_name, openai_embedding_model, BAICHUAN_CHAT_MODEL, \
-    BAICHUAN_URL, BAICHUAN_API_KEY
+    aliyun_appcode, ZILLIZ_ENDPOINT, ZILLIZ_token, zilliz_collection_name, openai_embedding_model, TONGYI_URL, \
+    TONGYI_API_KEY, TONGYI_CHAT_MODEL
 from third.views.qiniufile import deleteqiniufile, qiniuuploadfile, qiniuuploaddata
 from utils.customClass import JSONResponse, InvestError
 from utils.somedef import file_iterator
@@ -298,7 +298,7 @@ def deleteUpload(request):
 def getopenaitextcompletions(request):
     try:
         data = request.data
-        data['model'] = BAICHUAN_CHAT_MODEL
+        data['model'] = TONGYI_CHAT_MODEL
         topic_id = data.pop('topic_id', None)
         newmessages = data['messages']
         if not topic_id:
@@ -311,7 +311,7 @@ def getopenaitextcompletions(request):
             historydata.extend(newmessages)
             data['messages'] = historydata
         hokongdata = {
-            "aidata" : {'url': BAICHUAN_URL,'key': BAICHUAN_API_KEY},
+            "aidata" : {'url': TONGYI_URL,'key': TONGYI_API_KEY},
             "chatdata": data
         }
         url = hokong_URL + 'ai/'
@@ -407,13 +407,13 @@ def chatgptWithZillizCloud(request):
         else:
             historydata = []
         hokongdata = {
-            "ai_key": BAICHUAN_API_KEY,
+            "ai_key": TONGYI_API_KEY,
             "chat_history": historydata,
             'zilliz_url': ZILLIZ_ENDPOINT,
             'zilliz_key': ZILLIZ_token,
             'zilliz_collection_name': zilliz_collection_name,
             'embedding_model': openai_embedding_model,
-            'chat_model': BAICHUAN_CHAT_MODEL,
+            'chat_model': TONGYI_CHAT_MODEL,
             'question': question
         }
         url = hokong_URL + 'zillizchat/'
@@ -446,8 +446,8 @@ def chatgptWithPDFFile(request):
         topic_id = request.data.get('topic_id')
         hokongdata = {
             'file_key': file_key,
-            'ai_key': BAICHUAN_API_KEY,
-            'chat_model': BAICHUAN_CHAT_MODEL,
+            'ai_key': TONGYI_API_KEY,
+            'chat_model': TONGYI_CHAT_MODEL,
             'question': request.data['question']
         }
         url = hokong_URL + 'pdfchat/'
