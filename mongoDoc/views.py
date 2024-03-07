@@ -1029,7 +1029,7 @@ def getOpenAiChatConversationDataChat(topic_id):
     return chatdata
 
 def getOpenAiZillizChatConversationDataChat(topic_id):
-    queryset = OpenAiZillizChatData.objects.all().filter(topic_id=topic_id).order_by('-msgtime')
+    queryset = OpenAiZillizChatData.objects.all().filter(topic_id=topic_id).order_by('msgtime')
     chatdata = []
     if queryset.count() > 0:
         for instance in queryset:

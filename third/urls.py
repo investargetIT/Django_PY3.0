@@ -49,6 +49,6 @@ urlpatterns = [
     url(r'^openai/text/completions$', others.getopenaitextcompletions, name='getopenaitextcompletions', ),
     url(r'^openai/file/embedding$', others.embeddingFileAndUploadToZillizCloud, name='embeddingFileAndUploadToZillizCloud', ),
     url(r'^openai/file/completions$', others.chatgptWithZillizCloud, name='chatgptWithZillizCloud', ),
-    url(r'^openai/file/pdfchat$', others.chatgptWithPDFFile, name='chatgptWithPDFFile', )
+    url(r'^openai/file/pdfchat$', others.chatgptWithPDFFile, name='chatgptWithPDFFile', ),
     url(r'^weixin/pduserinfo$', weixinlogin.getUserInfo, name='getPeidiWeixinUserInfo', )
 ]
