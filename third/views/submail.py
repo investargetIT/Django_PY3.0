@@ -44,6 +44,10 @@ SMSCODE_projectsign = {
         'in':'dNody3',
         'out':None
         },
+    '7':{
+        'in':'2tpdO3',
+        'out':None
+        },
     '99':{
         'in':'52DI34',
         'out':'52DI34'

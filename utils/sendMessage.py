@@ -121,7 +121,7 @@ def sendmessage_userauditstatuchange(model,receiver,types,sender=None):
             receiver = self.receiver
             model = self.model
             sender = self.sender
-            if model.datasource_id == 3:
+            if model.datasource_id != 1:
                 types = ['sms']
             else:
                 types = self.types
@@ -173,6 +173,8 @@ def sendmessage_userauditstatuchange(model,receiver,types,sender=None):
                                 projectsign = 'votun1'
                             elif model.datasource_id == 6:
                                 projectsign = '3SenI3'
+                            elif model.datasource_id == 7:
+                                projectsign = 'Q5WL42'
                             else:
                                 projectsign = 'EXIDv1'
                             vars = {'user': model.usernameC}
@@ -280,6 +282,8 @@ def sendmessage_dataroomuseradd(model,receiver,types,sender=None):
                             projectsign = 'aJbDc1'
                         elif receiver.datasource_id == 6:
                             projectsign = 'yMgMP'
+                        elif receiver.datasource_id == 7:
+                            projectsign = 'KrhUa3'
                         else:
                             projectsign = '3a6W92'
                         vars = {'name': receiver.usernameC, 'projectC': getDataroomTitleWithSuperLink(model.dataroom, 'cn'), 'projectE': getDataroomTitleWithSuperLink(model.dataroom, 'en')}
