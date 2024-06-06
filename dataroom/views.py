@@ -270,7 +270,11 @@ class DataroomView(viewsets.ModelViewSet):
             zipfilepath = APILOG_PATH['dataroomFilePath'] + '/' + path  # 压缩文件路径
             direcpath = zipfilepath.replace('.zip', '')  # 文件夹路径
             if os.path.exists(zipfilepath):
-                response = JSONResponse(SuccessResponse({'code': 8005, 'msg': '压缩文件已备好', 'seconds': 0}))
+                if os.path.exists(direcpath):
+                    seconds, all = getRemainingTime(direcpath)
+                    response = JSONResponse(SuccessResponse({'code': 8004, 'msg': '压缩中', 'seconds': seconds, 'all': all}))
+                else:
+                    response = JSONResponse(SuccessResponse({'code': 8005, 'msg': '压缩文件已备好', 'seconds': 0}))
             else:
                 if os.path.exists(direcpath):
                     seconds, all = getRemainingTime(direcpath)
