@@ -225,7 +225,13 @@ class DataroomView(viewsets.ModelViewSet):
             dataroominstance = self.get_object()
             files = request.GET.get('files')
             userid = int(request.GET.get('user', request.user.id))
-            password = request.GET.get('password')
+            try:
+                temp = dataroominstance.dataroom_userTemp.all().get(user=request.user)
+            except Exception:
+                temp_password = '123456'
+            else:
+                temp_password = temp.password
+            password = request.GET.get('password', temp_password)
             nowater = True if request.GET.get('nowater') in ['1', 1, u'1'] else False
             is_adminPerm = True if request.user.has_perm('dataroom.admin_managedataroom') or is_dataroomTrader(request.user, dataroominstance) else False
             if not is_adminPerm and not request.user.has_perm('dataroom.downloadfile'):
