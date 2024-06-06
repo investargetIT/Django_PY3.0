@@ -782,8 +782,8 @@ def getmenulist(user):
         qslist.extend([27, 28, 33])
     if user.has_perm('usersys.as_trader') and not user.is_superuser:
         qslist.extend([12])
-    if user.has_perm('usersys.as_trader'):
-        qslist.extend([15])                        # 周报、OKR、个人中心、基本设置
+    # if user.has_perm('usersys.as_trader'):
+    #     qslist.extend([15])                        # 周报、OKR、个人中心、基本设置
     if user.has_perm('emailmanage.getemailmanage'):
         qslist.extend([3])
     if user.has_perm('BD.manageProjectBD'): # 项目bd管理
