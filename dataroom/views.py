@@ -226,7 +226,7 @@ class DataroomView(viewsets.ModelViewSet):
             files = request.GET.get('files')
             userid = int(request.GET.get('user', request.user.id))
             try:
-                temp = dataroominstance.dataroom_userTemp.all().get(user=request.user)
+                temp = dataroom_User_template.objects.filter(dataroom=dataroominstance, user_id=userid)
             except Exception:
                 temp_password = '123456'
             else:
