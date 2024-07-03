@@ -646,7 +646,7 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
                     destquery = directoryorfile.parent.asparent_directories.exclude(pk=directoryorfile.pk).filter(is_deleted=False,orderNO__gte=directoryorfile.orderNO)
                     if destquery.exists():
                         destquery.update(orderNO = F('orderNO') + 1)
-                if directoryorfile.isFile and directoryorfile.realfilekey:
+                if directoryorfile.isFile and directoryorfile.realfilekey and directoryorfile.datasource.id == 1:
                     threading.Thread(target=addProductSummary, args=(directoryorfile.createuser.usernameC, dataroominstance.proj.realname, directoryorfile.realfilekey, filename)).start()
                 return JSONResponse(SuccessResponse(returnDictChangeToLanguage(DataroomdirectoryorfileSerializer(directoryorfile).data, lang)))
         except InvestError as err:
