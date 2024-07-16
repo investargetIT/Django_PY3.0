@@ -265,6 +265,7 @@ class DataroomView(viewsets.ModelViewSet):
                 path = '%s_%s%s_part' % (zipfile_prefix, dataroominstance.id, ('_%s' % userid) if userid else '') + '.zip'  # 压缩文件名称
             else:
                 path = '%s_%s%s' % (zipfile_prefix, dataroominstance.id, ('_%s' % userid) if userid else '') + '.zip'  # 压缩文件名称
+            file_qs = file_qs.filter(isFile=True)
             if not file_qs.exists():
                 raise InvestError(20071, msg='下载dataroom文件失败，没有用户可见文件', detail='没有可见文件')
             zipfilepath = APILOG_PATH['dataroomFilePath'] + '/' + path  # 压缩文件路径
