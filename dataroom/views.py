@@ -4,7 +4,7 @@ import subprocess
 import threading
 import traceback
 import sys
-
+from PyPDF2 import PdfFileReader
 import pdfrw
 from django.core.paginator import Paginator, EmptyPage
 from django.core.serializers.json import DjangoJSONEncoder
@@ -634,6 +634,12 @@ class DataroomdirectoryorfileView(viewsets.ModelViewSet):
                     directoryorfile = directoryorfileserializer.save()
                 else:
                     raise InvestError(20071, msg='上传dataroom文件失败', detail='%s' % directoryorfileserializer.error_messages)
+                if directoryorfile.isFile and directoryorfile.realfilekey.split('.')[-1] == 'pdf':
+                    file_path = os.path.join(APILOG_PATH['uploadFilePath'], directoryorfile.realfilekey)
+                    with open(file_path, 'rb') as pdf_file:
+                        pdf_reader = PdfFileReader(pdf_file)
+                        if pdf_reader.isEncrypted:
+                            raise InvestError(20071, msg='上传dataroom文件失败', detail='文件被加密')
                 if directoryorfile.parent is not None:
                     destquery = directoryorfile.parent.asparent_directories.exclude(pk=directoryorfile.pk).filter(is_deleted=False,orderNO__gte=directoryorfile.orderNO)
                     if destquery.exists():
