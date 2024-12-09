@@ -2,6 +2,7 @@
 import json
 import subprocess
 import threading
+import time
 import traceback
 import sys
 from PyPDF2 import PdfFileReader
@@ -271,11 +272,12 @@ class DataroomView(viewsets.ModelViewSet):
             zipfilepath = APILOG_PATH['dataroomFilePath'] + '/' + path  # 压缩文件路径
             direcpath = zipfilepath.replace('.zip', '')  # 文件夹路径
             if os.path.exists(zipfilepath):
-                if os.path.exists(direcpath):
+                logpath = os.path.join(direcpath, 'zipProgress')
+                if check_zip_completion(zipfilepath, logpath):
+                    response = JSONResponse(SuccessResponse({'code': 8005, 'msg': '压缩文件已备好', 'seconds': 0}))
+                else:
                     seconds, all = getRemainingTime(direcpath)
                     response = JSONResponse(SuccessResponse({'code': 8004, 'msg': '压缩中', 'seconds': seconds, 'all': all}))
-                else:
-                    response = JSONResponse(SuccessResponse({'code': 8005, 'msg': '压缩文件已备好', 'seconds': 0}))
             else:
                 if os.path.exists(direcpath):
                     seconds, all = getRemainingTime(direcpath)
@@ -342,6 +344,22 @@ class DataroomView(viewsets.ModelViewSet):
         except Exception:
             catchexcption(request)
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
+def check_zip_completion(zip_file_path, logpath):
+    if not os.path.exists(logpath):
+        return False  # 文件不存在，压缩未完成
+    with open(logpath, encoding='utf-8', mode='r') as load_f:
+        load_data = json.load(load_f)
+    previous_size = int(load_data['zipSize']) if load_data.get('zipSize') else 0
+    if not os.path.exists(zip_file_path):
+        return False  # 文件不存在，压缩未完成
+    current_size = os.path.getsize(zip_file_path)
+    if previous_size >= current_size:  # 文件大小不再增长
+        return True  # 压缩完成
+    else:
+        load_data['zipSize'] = current_size
+        with open(logpath, encoding='utf-8', mode="w") as dump_f:
+            json.dump(load_data, dump_f)
+        return False
 
 def getRemainingTime(rootpath):
     # 若文件大小丢失，则默认为 10 MB （10*1024*1024 bytes）
@@ -400,7 +418,8 @@ def startMakeDataroomZipThread(directory_qs, file_qs, path, watermarkcontent=Non
                     fileSize = file_obj.size if file_obj.size else 10 * 1024 * 1024
                     fileSizes = fileSizes + fileSize
             data = {'unDownloadSize': fileSizes, 'allDownloadSize': fileSizes,
-                    'unEncryptSize': encrySizes, 'allEncryptSize': encrySizes}
+                    'unEncryptSize': encrySizes, 'allEncryptSize': encrySizes,
+                    'zipSize': 0}
             with open(self.progress_path, encoding='utf-8', mode="w") as f:
                 json.dump(data, f)
 
@@ -408,6 +427,13 @@ def startMakeDataroomZipThread(directory_qs, file_qs, path, watermarkcontent=Non
             with open(self.progress_path, encoding='utf-8', mode='r') as load_f:
                 load_data = json.load(load_f)
             load_data['unDownloadSize'] = 0 if load_data['unDownloadSize'] < size else load_data['unDownloadSize'] - size
+            with open(self.progress_path, encoding='utf-8', mode="w") as dump_f:
+                json.dump(load_data, dump_f)
+
+        def saveZipFileSize(self):
+            with open(self.progress_path, encoding='utf-8', mode='r') as load_f:
+                load_data = json.load(load_f)
+            load_data['zipSize'] = os.path.getsize(self.path + '.zip')
             with open(self.progress_path, encoding='utf-8', mode="w") as dump_f:
                 json.dump(load_data, dump_f)
 
@@ -441,8 +467,9 @@ def startMakeDataroomZipThread(directory_qs, file_qs, path, watermarkcontent=Non
             if not os.path.exists(self.path + '.zip'):
                 os.remove(self.progress_path)
                 shutil.make_archive(self.path, 'zip', self.path)
-            if os.path.exists(self.path):
-                shutil.rmtree(self.path)
+            # if os.path.exists(self.path):
+            #     shutil.rmtree(self.path)
+            self.saveZipFileSize()
 
     d = downloadAllDataroomFile(directory_qs, file_qs, path)
     d.start()
