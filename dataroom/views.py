@@ -354,7 +354,11 @@ def check_zip_completion(zip_file_path, logpath):
         return False  # 文件不存在，压缩未完成
     current_size = os.path.getsize(zip_file_path)
     if previous_size >= current_size:  # 文件大小不再增长
-        return True  # 压缩完成
+        time.sleep(30)
+        if previous_size >= os.path.getsize(zip_file_path):
+            return True  # 压缩完成
+        else:
+            return False
     else:
         load_data['zipSize'] = current_size
         with open(logpath, encoding='utf-8', mode="w") as dump_f:
