@@ -38,6 +38,8 @@ def fileChunkUpload(request):
     """
     try:
         data = request.data
+        if '~$' in data['filename']:
+            raise InvestError(8300, msg='文件上传失败', detail='文件名不合法，请修改名称后再次上传')
         file = {
             'name': unquote(data['filename']),
             'currentSize': data['currentSize'],
