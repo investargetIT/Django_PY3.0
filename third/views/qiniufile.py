@@ -473,7 +473,8 @@ def cloudconvert_create_job(input_file, output_format):
                 "input": [
                     "import-1"
                 ],
-                "output_format": output_format
+                "output_format": output_format,
+                "timeout": 300
             },
             "export-1": {
                 "operation": "export/url",
