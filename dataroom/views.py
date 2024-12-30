@@ -346,7 +346,7 @@ class DataroomView(viewsets.ModelViewSet):
             return JSONResponse(ExceptionResponse(traceback.format_exc().split('\n')[-2]))
 def check_zip_completion(zip_file_path, logpath):
     if not os.path.exists(logpath):
-        return False  # 文件不存在，压缩未完成
+        return True  # 文件不存在，压缩已完成
     with open(logpath, encoding='utf-8', mode='r') as load_f:
         load_data = json.load(load_f)
     previous_size = int(load_data['zipSize']) if load_data.get('zipSize') else 0
